@@ -3,29 +3,30 @@
 from __future__ import annotations
 
 __all__ = [
-    "Message",
-    "EditedMessage",
     "DeletedMessage",
-    "OutgoingMessage",
-    "OutgoingEditedMessage",
+    "EditedMessage",
+    "Message",
     "OutgoingDeletedMessage",
+    "OutgoingEditedMessage",
+    "OutgoingMessage",
 ]
 
 import pathlib
-from typing import TYPE_CHECKING, AsyncGenerator, ClassVar, Iterable, cast
+from collections.abc import AsyncGenerator, Iterable
+from typing import TYPE_CHECKING, ClassVar, cast
 
-from pywa.types.message import *  # noqa MUST BE IMPORTED FIRST
+from pywa.types.message import *
 from pywa.types.message import (
     DeletedMessage as _DeletedMessage,
-)  # noqa MUST BE IMPORTED FIRST
+)
 from pywa.types.message import (
     EditedMessage as _EditedMessage,
-)  # noqa MUST BE IMPORTED FIRST
+)
 from pywa.types.message import (
     Message as _Message,
-)  # noqa MUST BE IMPORTED FIRST
+)
 
-from .base_update import BaseUserUpdateAsync, _PinUnpinActionsAsync  # noqa
+from .base_update import BaseUserUpdateAsync, _PinUnpinActionsAsync
 from .callback import Button, FlowButton, SectionList, URLButton, VoiceCallButton
 from .media import Audio, Document, Image, Sticker, Video
 from .others import (
@@ -81,7 +82,7 @@ class Message(BaseUserUpdateAsync, _PinUnpinActionsAsync, _Message):
     document: Document | None
     audio: Audio | None
 
-    _media_objs = {
+    _media_objs: ClassVar[dict] = {
         "image": Image,
         "video": Video,
         "sticker": Sticker,
@@ -133,7 +134,9 @@ class Message(BaseUserUpdateAsync, _PinUnpinActionsAsync, _Message):
 
         >>> @wa.on_message(filters.image)
         ... async def on_message(_: WhatsApp, msg: types.Message):
-        ...     await msg.download_media(path=pathlib.Path('/path/to/save'), filename='my_image.jpg')
+        ...     await msg.download_media(
+        ...         path=pathlib.Path("/path/to/save"), filename="my_image.jpg"
+        ...     )
 
         Args:
             filepath: The path where to save the file (if not provided, the current working directory will be used).
@@ -173,7 +176,9 @@ class Message(BaseUserUpdateAsync, _PinUnpinActionsAsync, _Message):
         >>> @wa.on_message(filters.document)
         ... async def on_message(_: WhatsApp, msg: types.Message):
         ...     async with httpx.AsyncClient() as client:
-        ...        await client.post('https://example.com/upload', content=await msg.stream_media())
+        ...         await client.post(
+        ...             "https://example.com/upload", content=await msg.stream_media()
+        ...         )
 
         Args:
             chunk_size: The size (in bytes) of each chunk to read (default: ``64KB``).

@@ -1,4 +1,4 @@
-from pywa.types.flows import *  # noqa
+from pywa.types.flows import *
 
 image_carousel = FlowJSON(
     version="7.1",

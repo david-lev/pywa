@@ -1,5 +1,3 @@
-# ruff: noqa: T201
-
 """
 Standalone sanity check run against a built wheel/sdist in an isolated environment
 (no dev dependencies, no local source tree) to catch packaging mistakes such as

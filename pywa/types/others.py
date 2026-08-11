@@ -14,12 +14,12 @@ import dataclasses
 import datetime
 import logging
 import math
+from collections.abc import Iterable
 from typing import (
     TYPE_CHECKING,
     Any,
     ClassVar,
     Generic,
-    Iterable,
     Literal,
     Protocol,
     TypeVar,
@@ -154,7 +154,7 @@ class Location(helpers.FromDict):
         """Check if the shared location is the current location or manually selected."""
         return not any((self.name, self.address, self.url))
 
-    def in_radius(self, lat: float, lon: float, radius: float | int) -> bool:
+    def in_radius(self, lat: float, lon: float, radius: float) -> bool:
         """
         Check if the location is in a radius of another location.
 
@@ -198,7 +198,6 @@ class Contact:
     """
 
     name: Name | None
-    birthday: str | None
     birthday: str | None = None
     phones: Sequence[Phone] = dataclasses.field(default_factory=tuple)
     emails: Sequence[Email] = dataclasses.field(default_factory=tuple)
@@ -1175,7 +1174,6 @@ class BusinessPhoneNumber(helpers.APIObject):
             PywaDeprecationWarning,
             stacklevel=2,
         )
-        return None
 
 
 class QRCodeImageType(helpers.StrEnum):
@@ -1495,7 +1493,7 @@ class _ItemFactory(Protocol):
     def __call__(self, data: dict) -> _T: ...
 
 
-class Result(Generic[_T], Sequence[_T]):
+class Result(Sequence[_T], Generic[_T]):
     """
     This class is used to handle paginated results from the WhatsApp API. You can iterate over the results, and also access the next and previous pages of results.
 

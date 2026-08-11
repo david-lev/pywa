@@ -3,41 +3,39 @@ from __future__ import annotations
 """This module contains types related to WhatsApp calls, including call connection, termination, and status updates."""
 
 __all__ = [
-    "CallPermissionUpdate",
+    "BusinessPhoneNumberSettings",
+    "CallConnect",
+    "CallDirection",
+    "CallEvent",
+    "CallHours",
+    "CallIconVisibility",
+    "CallPermission",
+    "CallPermissionAction",
+    "CallPermissionActionLimit",
     "CallPermissionResponse",
     "CallPermissionResponseSource",
-    "CallConnect",
-    "SessionDescription",
-    "CallEvent",
-    "CallDirection",
-    "CallTerminate",
-    "CallTerminateStatus",
+    "CallPermissionStatus",
+    "CallPermissionUpdate",
+    "CallPermissions",
     "CallStatus",
     "CallStatusType",
-    "CallingSettingsStatus",
-    "CallIconVisibility",
+    "CallTerminate",
+    "CallTerminateStatus",
     "CallbackPermissionStatus",
-    "SIPStatus",
+    "CallingSettings",
+    "CallingSettingsStatus",
+    "Friday",
+    "HolidaySchedule",
+    "Monday",
     "SIPServer",
     "SIPSettings",
-    "Monday",
+    "SIPStatus",
+    "Saturday",
+    "SessionDescription",
+    "Sunday",
+    "Thursday",
     "Tuesday",
     "Wednesday",
-    "Thursday",
-    "Friday",
-    "Saturday",
-    "Sunday",
-    "HolidaySchedule",
-    "CallHours",
-    "CallingSettings",
-    "BusinessPhoneNumberSettings",
-    "CallPermissionStatus",
-    "CallPermissionActionLimit",
-    "CallPermissionAction",
-    "CallPermission",
-    "CallPermissionActionLimit",
-    "CallPermissionAction",
-    "CallPermissions",
 ]
 
 import dataclasses
@@ -767,8 +765,12 @@ def _day_to_weekday(day: dict[str, str]) -> WeekDay:
     """
     # noinspection PyArgumentList
     return _day_to_weekday_map[day["day_of_week"]](
-        open_time=datetime.datetime.strptime(day["open_time"], "%H%M").time(),
-        close_time=datetime.datetime.strptime(day["close_time"], "%H%M").time(),
+        open_time=datetime.datetime.strptime(  # noqa: DTZ007 (naive time-only string, no tz to attach)
+            day["open_time"], "%H%M"
+        ).time(),
+        close_time=datetime.datetime.strptime(  # noqa: DTZ007 (naive time-only string, no tz to attach)
+            day["close_time"], "%H%M"
+        ).time(),
     )
 
 
@@ -797,9 +799,15 @@ class HolidaySchedule:
     @classmethod
     def from_dict(cls, data: dict) -> HolidaySchedule:
         return cls(
-            date=datetime.datetime.strptime(data["date"], "%Y-%m-%d").date(),
-            start_time=datetime.datetime.strptime(data["start_time"], "%H%M").time(),
-            end_time=datetime.datetime.strptime(data["end_time"], "%H%M").time(),
+            date=datetime.datetime.strptime(  # noqa: DTZ007 (naive date-only string, no tz to attach)
+                data["date"], "%Y-%m-%d"
+            ).date(),
+            start_time=datetime.datetime.strptime(  # noqa: DTZ007 (naive time-only string, no tz to attach)
+                data["start_time"], "%H%M"
+            ).time(),
+            end_time=datetime.datetime.strptime(  # noqa: DTZ007 (naive time-only string, no tz to attach)
+                data["end_time"], "%H%M"
+            ).time(),
         )
 
 

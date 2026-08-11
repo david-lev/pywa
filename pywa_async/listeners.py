@@ -3,13 +3,13 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING, Any, TypeVar, cast
 
-from pywa.listeners import *  # noqa MUST BE IMPORTED FIRST
+from pywa.listeners import *
 from pywa.listeners import (
     BaseListenerIdentifier,
 )
 from pywa.listeners import (
     Listener as _Listener,
-)  # noqa MUST BE IMPORTED FIRST
+)
 from pywa.listeners import (
     ListenerCanceled as _ListenerCanceled,
 )

@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 import pathlib
+from collections.abc import AsyncIterator, Iterable
 from typing import (
     TYPE_CHECKING,
-    AsyncIterator,
     BinaryIO,
     ClassVar,
-    Iterable,
     overload,
 )
 

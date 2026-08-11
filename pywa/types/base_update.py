@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 __all__ = [
+    "ContinueHandling",
     "RawUpdate",
     "StopHandling",
-    "ContinueHandling",
 ]
 
 import abc
@@ -14,14 +14,11 @@ import datetime
 import json
 import pathlib
 import warnings
+from collections.abc import Awaitable, Generator, Iterable, Iterator
 from typing import (
     TYPE_CHECKING,
-    Awaitable,
     BinaryIO,
     ClassVar,
-    Generator,
-    Iterable,
-    Iterator,
     NoReturn,
 )
 
@@ -82,8 +79,6 @@ class StopHandling(Exception):
             ...     msg.reply_text("This message will not be sent")
     """
 
-    pass
-
 
 class ContinueHandling(Exception):
     """
@@ -106,8 +101,6 @@ class ContinueHandling(Exception):
             ... def not_called(_: WhatsApp, msg: Message):
             ...     msg.reply_text("This message will be sent")
     """
-
-    pass
 
 
 class _HandlingFlow:

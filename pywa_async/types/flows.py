@@ -3,17 +3,18 @@
 from __future__ import annotations
 
 import pathlib
-from typing import TYPE_CHECKING, BinaryIO, Iterable
+from collections.abc import Iterable
+from typing import TYPE_CHECKING, BinaryIO
 
 import httpx
 
-from pywa.types.flows import *  # noqa MUST BE IMPORTED FIRST
+from pywa.types.flows import *
 from pywa.types.flows import (
     FlowCompletion as _FlowCompletion,
 )
 from pywa.types.flows import (
     FlowDetails as _FlowDetails,
-)  # noqa MUST BE IMPORTED FIRST
+)
 from pywa.types.flows import (
     FlowRequest as _FlowRequest,
 )
@@ -56,7 +57,9 @@ class FlowRequest(_FlowRequest):
             >>> wa = WhatsApp(...)
             >>> @wa.on_flow_request("/my-flow-endpoint")
             ... async def my_flow_endpoint(_: WhatsApp, req: types.FlowRequest):
-            ...     decrypted_data = await req.decrypt_media(key="driver_license", index=0)
+            ...     decrypted_data = await req.decrypt_media(
+            ...         key="driver_license", index=0
+            ...     )
             ...     with open(decrypted_data.filename, "wb") as file:
             ...         file.write(decrypted_data.data)
             ...     return req.respond(...)
@@ -212,9 +215,9 @@ class FlowDetails(_FlowDetails):
             >>> wa = WhatsApp(waba_id='1234567890', ...)
             >>> my_flows = await wa.get_flows()
             >>> my_flows[0].update_metadata(
-            ...     name='Feedback',
+            ...     name="Feedback",
             ...     categories=[FlowCategory.SURVEY, FlowCategory.OTHER],
-            ...     endpoint_uri='https://my-api-server/feedback_flow'
+            ...     endpoint_uri="https://my-api-server/feedback_flow",
             ... )
 
         Returns:

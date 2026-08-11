@@ -5,14 +5,14 @@ from __future__ import annotations
 from .callback import _CallbackDataT
 
 __all__ = [
-    "MessageStatus",
-    "MessageStatusType",
     "Conversation",
     "ConversationCategory",
+    "MessageStatus",
+    "MessageStatusType",
     "Pricing",
+    "PricingCategory",
     "PricingModel",
     "PricingType",
-    "PricingCategory",
 ]
 
 import dataclasses
@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING, Generic
 
 from .. import _helpers as helpers
 from ..errors import WhatsAppError
-from .base_update import BaseUserUpdate, RawUpdate  # noqa
+from .base_update import BaseUserUpdate, RawUpdate
 from .others import Metadata
 
 if TYPE_CHECKING:
@@ -99,7 +99,7 @@ class MessageStatus(BaseUserUpdate, Generic[_CallbackDataT]):
         >>> from pywa.types import CallbackData
         >>> from dataclasses import dataclass
         >>> @dataclass(frozen=True, slots=True)
-        >>> class UserData(CallbackData): # Subclass CallbackData
+        >>> class UserData(CallbackData):  # Subclass CallbackData
         ...     id: int
         ...     name: str
         ...     admin: bool
@@ -108,14 +108,19 @@ class MessageStatus(BaseUserUpdate, Generic[_CallbackDataT]):
         >>> from pywa.types import Button, CallbackButton
         >>> wa = WhatsApp(...)
         >>> wa.send_message(
-        ...     to='972987654321',
-        ...     text='Hi user',
-        ...     tracker=UserData(id=123, name='david', admin=True) # Here ^^^ we use the UserData class as the tracker
-        ... )           # Here ^^^ we use the UserData class as the tracker data
+        ...     to="972987654321",
+        ...     text="Hi user",
+        ...     tracker=UserData(
+        ...         id=123, name="david", admin=True
+        ...     ),  # Here ^^^ we use the UserData class as the tracker
+        ... )  # Here ^^^ we use the UserData class as the tracker data
 
-        >>> @wa.on_message_status(factory=UserData) # Use the factory parameter to convert the tracker data
-        ... def on_status(_: WhatsApp, s: MessageStatus[UserData]): # For autocomplete
-        ...    if s.tracker.admin: print(s.tracker.id) # Access the tracker data
+        >>> @wa.on_message_status(
+        ...     factory=UserData
+        ... )  # Use the factory parameter to convert the tracker data
+        ... def on_status(_: WhatsApp, s: MessageStatus[UserData]):  # For autocomplete
+        ...     if s.tracker.admin:
+        ...         print(s.tracker.id)  # Access the tracker data
 
 
 

@@ -1,4 +1,4 @@
-from pywa.types.templates import *  # noqa: F403
+from pywa.types.templates import *
 
 carousel_template_media_cards_v1 = Template(
     name="carousel_template_media_cards_v1",

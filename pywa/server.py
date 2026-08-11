@@ -7,7 +7,8 @@ import threading
 import time
 import warnings
 from collections import OrderedDict
-from typing import TYPE_CHECKING, Callable
+from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 from . import _helpers as helpers
 from . import errors, handlers, utils
@@ -183,8 +184,10 @@ class Server:
                     "🚀  Starting Pywa server",
                     f"🌐  Server URL:   http://{host}:{port}",
                     f"📝  Log Level:    {log_level}",
-                    "💡  Tip:          Use the `pywa` CLI (`pywa dev`/`pywa run`) for hot-reload, "
-                    "multi-worker support and other features (`pywa run --help`)",
+                    (
+                        "💡  Tip:          Use the `pywa` CLI (`pywa dev`/`pywa run`) for hot-reload, "
+                        "multi-worker support and other features (`pywa run --help`)"
+                    ),
                 ]
             )
         )
@@ -623,7 +626,7 @@ class Server:
     def get_flow_request_handler(
         self: "WhatsApp",
         endpoint: str,
-        callback: handlers._FlowRequestHandlerT,
+        callback: handlers._FlowRequestCallback,
         acknowledge_errors: bool = True,
         private_key: str | None = None,
         private_key_password: str | None = None,

@@ -42,9 +42,8 @@ class _NoUnknown(helpers.StrEnum):
 
 
 def test_str_enum_without_unknown_member_raises_type_error():
-    with pytest.warns(PywaUnknownEnumMemberWarning):
-        with pytest.raises(TypeError):
-            _NoUnknown("green")
+    with pytest.warns(PywaUnknownEnumMemberWarning), pytest.raises(TypeError):
+        _NoUnknown("green")
 
 
 # --- resolve_buttons_param error branches -----------------------------
@@ -56,7 +55,7 @@ def test_resolve_buttons_param_not_iterable_raises():
 
 
 def test_resolve_buttons_param_non_button_item_raises():
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         helpers.resolve_buttons_param([object()])
 
 

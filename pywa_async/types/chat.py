@@ -1,1 +1,1 @@
-from pywa.types.chat import *  # noqa MUST BE IMPORTED FIRST
+from pywa.types.chat import *

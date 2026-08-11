@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import datetime
 import pathlib
-from typing import TYPE_CHECKING, AsyncIterator, BinaryIO, Callable, Iterable, Iterator
+from collections.abc import AsyncIterator, Callable, Iterable, Iterator
+from typing import TYPE_CHECKING, BinaryIO
 
-from pywa.types.base_update import *  # noqa MUST BE IMPORTED FIRST
+from pywa.types.base_update import *
 
 from .others import Contact, ProductsSection, SuccessResult
 from .user import User
@@ -636,7 +637,7 @@ class _ClientShortcutsAsync:
         """
         return await self._client.request_contact_info(
             sender=self._internal_recipient,
-            to=self._get_reply_to(),  # noqa
+            to=self._get_reply_to(),
             text=text,
             reply_to_message_id=self.message_id_to_reply if quote else None,
             tracker=tracker,

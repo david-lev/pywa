@@ -92,8 +92,12 @@ class QRCode(_QRCode):
 
         >>> from pywa_async import WhatsApp
         >>> wa = WhatsApp(...)
-        >>> qr_codes = await wa.get_qr_codes() # image_type is None by default for faster retrieval
-        >>> svg_qr = await qr_codes[0].fetch_image(QRCodeImageType.SVG) # Get the SVG version of the QR code
+        >>> qr_codes = (
+        ...     await wa.get_qr_codes()
+        ... )  # image_type is None by default for faster retrieval
+        >>> svg_qr = await qr_codes[0].fetch_image(
+        ...     QRCodeImageType.SVG
+        ... )  # Get the SVG version of the QR code
 
         Args:
             image_type: The type of the image (e.g., PNG, SVG).
@@ -239,10 +243,8 @@ class Result(_Result[_T], Sequence[_T]):
         >>> res = await wa.get_blocked_users(pagination=types.Pagination(limit=100))
         >>> for user in res:
         ...     print(user.name, user.wa_id)
-        ...
         >>> if res.has_next:
         ...     next_res = await res.next()
-        ...
         >>> print(await res.all())
     """
 

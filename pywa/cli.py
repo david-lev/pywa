@@ -1,4 +1,3 @@
-# ruff: noqa: T201
 """
 Pywa CLI
 
@@ -290,7 +289,8 @@ def send_messages(
                 f"✅ [{index + 1}/{len(to)}] Sent {send_type} to {recipient} (Msg ID: {sent.id})"
             )
 
-        except Exception as e:
+        # one recipient's failure shouldn't abort the batch
+        except Exception as e:  # noqa: BLE001
             print(
                 f"❌ [{index + 1}/{len(to)}] Failed to send {send_type} to {recipient}: {e}"
             )
@@ -810,7 +810,8 @@ def main() -> None:
                 generate_code(
                     target=args.target, is_async=args.is_async, out_path=args.out
                 )
-    except Exception as e:
+    # top-level CLI error boundary: report and exit, don't crash
+    except Exception as e:  # noqa: BLE001
         print(f"❌ Error: {e}")
         sys.exit(1)
 

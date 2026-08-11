@@ -11,17 +11,14 @@ import logging
 import pathlib
 import re
 import warnings
-from collections.abc import Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from typing import (
     TYPE_CHECKING,
     Any,
     BinaryIO,
     Generic,
-    Iterable,
     Literal,
-    Mapping,
     NoReturn,
-    Type,
     TypeAlias,
     TypeVar,
     cast,
@@ -34,7 +31,7 @@ import httpx
 from .. import _helpers as helpers
 from .. import utils
 from ..errors import PywaDeprecationWarning
-from .base_update import BaseUserUpdate, RawUpdate  # noqa
+from .base_update import BaseUserUpdate, RawUpdate
 from .media import ArrivedMedia
 from .others import (
     FacebookApplication,
@@ -52,84 +49,84 @@ if TYPE_CHECKING:
 _logger = logging.getLogger(__name__)
 
 __all__ = [
-    "FlowCompletion",
-    "FlowRequest",
-    "FlowResponse",
-    "FlowResponseError",
-    "FlowRequestCannotBeDecrypted",
-    "FlowRequestSignatureAuthenticationFailed",
-    "FlowTokenNoLongerValid",
-    "FlowCategory",
-    "FlowDetails",
-    "FlowMetricName",
-    "FlowMetricGranularity",
-    "FlowStatus",
-    "FlowPreview",
-    "FlowJSONUpdateResult",
-    "FlowValidationError",
-    "FlowAsset",
-    "CreatedFlow",
-    "MigratedFlow",
-    "MigratedFlowError",
-    "MigrateFlowsResponse",
-    "FlowJSON",
-    "Screen",
-    "ScreenData",
-    "ScreenDataUpdate",
-    "Layout",
-    "LayoutType",
-    "Form",
-    "ScreenDataRef",
-    "ComponentRef",
-    "FlowStr",
-    "Condition",
-    "MathExpression",
-    "TextHeading",
-    "TextSubheading",
-    "TextBody",
-    "TextCaption",
-    "RichText",
-    "FontWeight",
-    "TextInput",
-    "InputType",
-    "LabelVariant",
-    "TextArea",
-    "CheckboxGroup",
-    "ChipsSelector",
-    "RadioButtonsGroup",
-    "Footer",
-    "OptIn",
-    "Dropdown",
-    "EmbeddedLink",
-    "NavigationList",
-    "NavigationItem",
-    "NavigationItemStart",
-    "NavigationItemMainContent",
-    "NavigationItemEnd",
-    "DatePicker",
+    "CalendarDay",
     "CalendarPicker",
     "CalendarPickerMode",
     "CalendarRangeValues",
-    "CalendarDay",
-    "Image",
-    "ImageCarouselItem",
-    "ImageCarousel",
-    "PhotoPicker",
-    "PhotoSource",
-    "DocumentPicker",
-    "ScaleType",
-    "If",
-    "Switch",
-    "DataSource",
-    "DataExchangeAction",
-    "NavigateAction",
+    "CheckboxGroup",
+    "ChipsSelector",
     "CompleteAction",
-    "UpdateDataAction",
-    "OpenURLAction",
+    "ComponentRef",
+    "Condition",
+    "CreatedFlow",
+    "DataExchangeAction",
+    "DataSource",
+    "DatePicker",
+    "DocumentPicker",
+    "Dropdown",
+    "EmbeddedLink",
     "FlowActionType",
+    "FlowAsset",
+    "FlowCategory",
+    "FlowCompletion",
+    "FlowDetails",
+    "FlowJSON",
+    "FlowJSONUpdateResult",
+    "FlowMetricGranularity",
+    "FlowMetricName",
+    "FlowPreview",
+    "FlowRequest",
     "FlowRequestActionType",
+    "FlowRequestCannotBeDecrypted",
+    "FlowRequestSignatureAuthenticationFailed",
+    "FlowResponse",
+    "FlowResponseError",
+    "FlowStatus",
+    "FlowStr",
+    "FlowTokenNoLongerValid",
+    "FlowValidationError",
+    "FontWeight",
+    "Footer",
+    "Form",
+    "If",
+    "Image",
+    "ImageCarousel",
+    "ImageCarouselItem",
+    "InputType",
+    "LabelVariant",
+    "Layout",
+    "LayoutType",
+    "MathExpression",
+    "MigrateFlowsResponse",
+    "MigratedFlow",
+    "MigratedFlowError",
+    "NavigateAction",
+    "NavigationItem",
+    "NavigationItemEnd",
+    "NavigationItemMainContent",
+    "NavigationItemStart",
+    "NavigationList",
     "Next",
     "NextType",
+    "OpenURLAction",
+    "OptIn",
+    "PhotoPicker",
+    "PhotoSource",
+    "RadioButtonsGroup",
+    "RichText",
+    "ScaleType",
+    "Screen",
+    "ScreenData",
+    "ScreenDataRef",
+    "ScreenDataUpdate",
+    "Switch",
+    "TextArea",
+    "TextBody",
+    "TextCaption",
+    "TextHeading",
+    "TextInput",
+    "TextSubheading",
+    "UpdateDataAction",
 ]
 
 _FlowResMediaType = TypeVar("_FlowResMediaType", bound=ArrivedMedia)
@@ -198,7 +195,7 @@ class FlowCompletion(BaseUserUpdate):
 
     def get_media(
         self,
-        media_cls: Type[_FlowResMediaType],
+        media_cls: type[_FlowResMediaType],
         key: str,
         index: int = 0,
     ) -> _FlowResMediaType:
@@ -1372,7 +1369,7 @@ class ScreenData(Generic[_ScreenDataValTypeVar]):
         ... )
     """
 
-    __slots__ = "key", "example"
+    __slots__ = "example", "key"
 
     def __init__(
         self,
@@ -1625,7 +1622,7 @@ class LayoutType(helpers.StrEnum):
         SINGLE_COLUMN: A vertical flexbox container that stacks the components in a single column.
     """
 
-    _normalize = lambda s: s.replace("_", " ").title().replace(" ", "")  # noqa: E731
+    _normalize = lambda s: s.replace("_", " ").title().replace(" ", "")
 
     SINGLE_COLUMN = "SingleColumnLayout"
 
@@ -1664,7 +1661,7 @@ class Component(abc.ABC):
 class FlowComponentType(helpers.StrEnum):
     """Internal component types"""
 
-    _normalize = lambda s: s.replace("_", " ").title().replace(" ", "")  # noqa: E731
+    _normalize = lambda s: s.replace("_", " ").title().replace(" ", "")
 
     FORM = "Form"
     TEXT_HEADING = "TextHeading"
@@ -1694,10 +1691,10 @@ class FlowComponentType(helpers.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
-_LiteralT: TypeAlias = bool | int | float | str
-_CompareOperatorT: TypeAlias = Literal["==", "!=", ">", ">=", "<", "<="]
-_LogicalOperatorT: TypeAlias = Literal["&&", "||", "!"]
-_ArithmeticOperatorT: TypeAlias = Literal["+", "-", "*", "/", "%"]
+_Literal: TypeAlias = bool | int | float | str
+_CompareOperator: TypeAlias = Literal["==", "!=", ">", ">=", "<", "<="]
+_LogicalOperator: TypeAlias = Literal["&&", "||", "!"]
+_ArithmeticOperator: TypeAlias = Literal["+", "-", "*", "/", "%"]
 
 
 class _FlowExpr(abc.ABC):
@@ -1714,7 +1711,7 @@ class _FlowExpr(abc.ABC):
         return self.to_str()
 
     @staticmethod
-    def _format_literal(val: _LiteralT) -> str:
+    def _format_literal(val: _Literal) -> str:
         match val:
             case str():
                 return f"'{val}'"
@@ -1726,7 +1723,7 @@ class _FlowExpr(abc.ABC):
                 raise TypeError(f"Unsupported literal type: {type(val)!r}")
 
     @staticmethod
-    def _format_operand(val: _ConditionOperandT) -> str:
+    def _format_operand(val: _ConditionOperand) -> str:
         if isinstance(val, _FlowExpr):
             return val._fragment()
         return _FlowExpr._format_literal(val)
@@ -1737,62 +1734,60 @@ class _ArithmeticOpsMixin(_FlowExpr, abc.ABC):
 
     def _binop(
         self,
-        operator: _ArithmeticOperatorT,
-        other: _ArithmeticOperandT,
+        operator: _ArithmeticOperator,
+        other: _ArithmeticOperand,
         *,
         reverse: bool = False,
     ) -> MathExpression:
         left, right = (other, self) if reverse else (self, other)
         return MathExpression(left, operator, right)
 
-    def __add__(self, other: _ArithmeticOperandT) -> MathExpression:
+    def __add__(self, other: _ArithmeticOperand) -> MathExpression:
         return self._binop("+", other)
 
-    def __radd__(self, other: _ArithmeticOperandT) -> MathExpression:
+    def __radd__(self, other: _ArithmeticOperand) -> MathExpression:
         return self._binop("+", other, reverse=True)
 
-    def __sub__(self, other: _ArithmeticOperandT) -> MathExpression:
+    def __sub__(self, other: _ArithmeticOperand) -> MathExpression:
         return self._binop("-", other)
 
-    def __rsub__(self, other: _ArithmeticOperandT) -> MathExpression:
+    def __rsub__(self, other: _ArithmeticOperand) -> MathExpression:
         return self._binop("-", other, reverse=True)
 
-    def __mul__(self, other: _ArithmeticOperandT) -> MathExpression:
+    def __mul__(self, other: _ArithmeticOperand) -> MathExpression:
         return self._binop("*", other)
 
-    def __rmul__(self, other: _ArithmeticOperandT) -> MathExpression:
+    def __rmul__(self, other: _ArithmeticOperand) -> MathExpression:
         return self._binop("*", other, reverse=True)
 
-    def __truediv__(self, other: _ArithmeticOperandT) -> MathExpression:
+    def __truediv__(self, other: _ArithmeticOperand) -> MathExpression:
         return self._binop("/", other)
 
-    def __rtruediv__(self, other: _ArithmeticOperandT) -> MathExpression:
+    def __rtruediv__(self, other: _ArithmeticOperand) -> MathExpression:
         return self._binop("/", other, reverse=True)
 
-    def __mod__(self, other: _ArithmeticOperandT) -> MathExpression:
+    def __mod__(self, other: _ArithmeticOperand) -> MathExpression:
         return self._binop("%", other)
 
-    def __rmod__(self, other: _ArithmeticOperandT) -> MathExpression:
+    def __rmod__(self, other: _ArithmeticOperand) -> MathExpression:
         return self._binop("%", other, reverse=True)
 
 
-_ArithmeticOperandT: TypeAlias = _ArithmeticOpsMixin | int | float
+_ArithmeticOperand: TypeAlias = _ArithmeticOpsMixin | int | float
 
 
 class _LogicalOpsMixin(_FlowExpr, abc.ABC):
     """Mixin that adds logical operators and builds :class:`Condition` nodes."""
 
-    def _combine(
-        self, other: _LogicalOperandT, operator: _LogicalOperatorT
-    ) -> Condition:
+    def _combine(self, other: _LogicalOperand, operator: _LogicalOperator) -> Condition:
         if operator == "!":
             raise ValueError("Use __invert__ for unary logical not")
         return Condition(self, operator, other)
 
-    def __and__(self, other: _LogicalOperandT) -> Condition:
+    def __and__(self, other: _LogicalOperand) -> Condition:
         return self._combine(other, "&&")
 
-    def __or__(self, other: _LogicalOperandT) -> Condition:
+    def __or__(self, other: _LogicalOperand) -> Condition:
         return self._combine(other, "||")
 
     def __invert__(self) -> Condition:
@@ -1803,33 +1798,33 @@ class _ComparableOpsMixin(_FlowExpr, abc.ABC):
     """Mixin that adds comparison operators and builds :class:`Condition` nodes."""
 
     def _to_condition(
-        self, right: _CompareOperandT, operator: _CompareOperatorT
+        self, right: _CompareOperand, operator: _CompareOperator
     ) -> Condition:
         return Condition(self, operator, right)
 
-    def __eq__(self, other: _CompareOperandT) -> Condition:  # ty: ignore[invalid-method-override]
+    def __eq__(self, other: _CompareOperand) -> Condition:  # ty: ignore[invalid-method-override]
         return self._to_condition(other, "==")
 
-    def __ne__(self, other: _CompareOperandT) -> Condition:  # ty: ignore[invalid-method-override]
+    def __ne__(self, other: _CompareOperand) -> Condition:  # ty: ignore[invalid-method-override]
         return self._to_condition(other, "!=")
 
-    def __gt__(self, other: _OrderCompareOperandT) -> Condition:
+    def __gt__(self, other: _OrderCompareOperand) -> Condition:
         return self._to_condition(other, ">")
 
-    def __ge__(self, other: _OrderCompareOperandT) -> Condition:
+    def __ge__(self, other: _OrderCompareOperand) -> Condition:
         return self._to_condition(other, ">=")
 
-    def __lt__(self, other: _OrderCompareOperandT) -> Condition:
+    def __lt__(self, other: _OrderCompareOperand) -> Condition:
         return self._to_condition(other, "<")
 
-    def __le__(self, other: _OrderCompareOperandT) -> Condition:
+    def __le__(self, other: _OrderCompareOperand) -> Condition:
         return self._to_condition(other, "<=")
 
 
 class Ref(_ArithmeticOpsMixin, _LogicalOpsMixin, _ComparableOpsMixin):
     """Base class for all references"""
 
-    __slots__ = ("_prefix", "_field", "_screen_id")
+    __slots__ = ("_field", "_prefix", "_screen_id")
 
     def __init__(self, prefix: str, field: str, screen: Screen | str | None = None):
         self._prefix = prefix
@@ -1838,11 +1833,7 @@ class Ref(_ArithmeticOpsMixin, _LogicalOpsMixin, _ComparableOpsMixin):
 
     def to_str(self) -> str:
         screen_prefix = f"screen.{self._screen_id}." if self._screen_id else ""
-        return "${%s%s.%s}" % (
-            screen_prefix,
-            self._prefix,
-            self._field,
-        )
+        return f"${{{screen_prefix}{self._prefix}.{self._field}}}"
 
     def __repr__(self) -> str:
         return (
@@ -1907,9 +1898,9 @@ class MathExpression(_ArithmeticOpsMixin):
 
     def __init__(
         self,
-        left: _ArithmeticOperandT,
-        operator: _ArithmeticOperatorT,
-        right: _ArithmeticOperandT,
+        left: _ArithmeticOperand,
+        operator: _ArithmeticOperator,
+        right: _ArithmeticOperand,
     ):
         self.left = left
         self.operator = operator
@@ -1928,10 +1919,10 @@ class MathExpression(_ArithmeticOpsMixin):
         )
 
 
-_CompareOperandT: TypeAlias = Ref | _LiteralT
-_OrderCompareOperandT: TypeAlias = Ref | int | float
-_ConditionOperandT: TypeAlias = _FlowExpr | _LiteralT
-_FlowStrValueT: TypeAlias = Ref | MathExpression
+_CompareOperand: TypeAlias = Ref | _Literal
+_OrderCompareOperand: TypeAlias = Ref | int | float
+_ConditionOperand: TypeAlias = _FlowExpr | _Literal
+_FlowStrValue: TypeAlias = Ref | MathExpression
 
 _RefT = TypeVar("_RefT", bound=Ref)
 
@@ -2003,9 +1994,9 @@ class Condition(_LogicalOpsMixin):
 
     def __init__(
         self,
-        left: _ConditionOperandT,
-        operator: _CompareOperatorT | _LogicalOperatorT,
-        right: _ConditionOperandT | None = None,
+        left: _ConditionOperand,
+        operator: _CompareOperator | _LogicalOperator,
+        right: _ConditionOperand | None = None,
         *,
         wrap_with_backticks: bool = True,
     ) -> None:
@@ -2036,7 +2027,7 @@ class Condition(_LogicalOpsMixin):
         )
 
 
-_LogicalOperandT: TypeAlias = Ref | Condition
+_LogicalOperand: TypeAlias = Ref | Condition
 
 
 class ScreenDataRef(Ref, Generic[_ScreenDataValTypeVar]):
@@ -2161,7 +2152,7 @@ class FlowStr(_FlowExpr):
 
     __slots__ = ("string", "variables")
 
-    def __init__(self, string: str, **variables: _FlowStrValueT):
+    def __init__(self, string: str, **variables: _FlowStrValue):
         """
         Initialize the dynamic string.
 

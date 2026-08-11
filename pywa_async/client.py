@@ -9,16 +9,13 @@ import hashlib
 import json
 import mimetypes
 import pathlib
+from collections.abc import AsyncGenerator, AsyncIterator, Iterable, Iterator, Sequence
 from types import ModuleType
 from typing import (
     Any,
-    AsyncGenerator,
-    AsyncIterator,
     BinaryIO,
-    Iterable,
-    Iterator,
+    ClassVar,
     Literal,
-    Sequence,
     cast,
 )
 
@@ -31,7 +28,7 @@ from pywa.client import (
 )
 from pywa.client import (
     WhatsApp as _WhatsApp,
-)  # noqa MUST BE IMPORTED FIRST
+)
 from pywa.types.base_update import BaseUpdate
 from pywa.types.callback import BaseCarouselCard
 
@@ -203,7 +200,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
     api: GraphAPIAsync  # IDE type hinting
     _listeners: dict[BaseListenerIdentifier, Listener]  # IDE type hinting
 
-    _handlers_to_updates: dict[type[Handler], type[BaseUpdate]] = {
+    _handlers_to_updates: ClassVar[dict[type[Handler], type[BaseUpdate]]] = {
         MessageHandler: Message,
         MessageStatusHandler: MessageStatus,
         GroupMessageStatusesHandler: GroupMessageStatuses,
@@ -258,7 +255,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         flows_response_encryptor: utils.FlowResponseEncryptor
         | None = utils.default_flow_response_encryptor,
         api_version: (
-            str | int | float | Literal[utils.Version.GRAPH_API]
+            str | float | Literal[utils.Version.GRAPH_API]
         ) = utils.Version.GRAPH_API,
         handlers_modules: Iterable[ModuleType] | None = None,
         user_identifier_priority: tuple[UserIdentifier, ...] = (

@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 __all__ = [
-    "ListenerTimeout",
     "ListenerCanceled",
     "ListenerStopped",
-    "UserUpdateListenerIdentifier",
+    "ListenerTimeout",
     "TemplateStatusUpdateListenerIdentifier",
+    "UserUpdateListenerIdentifier",
 ]
 
 import dataclasses
@@ -169,7 +169,7 @@ class Listener:
         return bool(self.cancelers) and self.cancelers.check_sync(wa, update)
 
 
-def _warn_anyio_thread_limit(wa: "WhatsApp") -> None:
+def _warn_anyio_thread_limit(wa: WhatsApp) -> None:
     from . import server
 
     if wa._server_type in {

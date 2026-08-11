@@ -3,13 +3,11 @@ from __future__ import annotations
 import dataclasses
 import datetime
 import pathlib
+from collections.abc import Iterable, Iterator, Sequence
 from typing import (
     TYPE_CHECKING,
     BinaryIO,
     ClassVar,
-    Iterable,
-    Iterator,
-    Sequence,
     TypeVar,
     overload,
 )

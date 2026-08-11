@@ -2,15 +2,12 @@ import asyncio
 import itertools
 import mimetypes
 import pathlib
+from collections.abc import AsyncIterator, Coroutine, Iterator, Sequence
 from contextlib import _AsyncGeneratorContextManager
 from typing import (
     TYPE_CHECKING,
-    AsyncIterator,
     BinaryIO,
-    Coroutine,
-    Iterator,
     Literal,
-    Sequence,
     cast,
 )
 
@@ -356,8 +353,8 @@ async def internal_upload_media(
                 await client.aclose()
             if media_source == MediaSource.PATH:
                 media_info.content.close()  # ty: ignore[unresolved-attribute]
-        except Exception:
-            pass
+        except Exception:  # noqa: BLE001
+            logger.debug("Failed to close media resource during cleanup", exc_info=True)
 
 
 async def upload_template_media_components(
@@ -393,12 +390,12 @@ async def _run_all_and_cancel_on_exception(*coros: Coroutine):
 
     try:
         return await asyncio.gather(*tasks)
-    except Exception as e:
+    except Exception:
         for task in tasks:
             if not task.done():
                 task.cancel()
         await asyncio.gather(*tasks, return_exceptions=True)
-        raise e
+        raise
 
 
 async def internal_upload_file(
@@ -433,13 +430,13 @@ async def internal_upload_file(
         case MediaSource.PATH:
             assert isinstance(file, (str, pathlib.Path))
             p = pathlib.Path(file)
-            with p.open("rb") as f:
-                media_info = MediaInfo(
-                    content=f.read(),
-                    filename=p.name,
-                    mime_type=mimetypes.guess_type(p.as_posix())[0],
-                    length=p.stat().st_size,
-                )
+            content = await asyncio.to_thread(p.read_bytes)
+            media_info = MediaInfo(
+                content=content,
+                filename=p.name,
+                mime_type=mimetypes.guess_type(p.as_posix())[0],
+                length=len(content),
+            )
         case MediaSource.MEDIA_ID | MediaSource.MEDIA_OBJ | MediaSource.MEDIA_URL:
             assert isinstance(file, (str, Media))
             media_info = await get_media_from_media_id_or_obj_or_url(
@@ -531,8 +528,9 @@ async def internal_upload_file(
         try:
             if client:
                 await client.aclose()
-        except Exception:
-            pass
+        # best-effort cleanup, never mask the real error
+        except Exception:  # noqa: BLE001
+            logger.debug("Failed to close media resource during cleanup", exc_info=True)
 
 
 async def _upload_comps_example(

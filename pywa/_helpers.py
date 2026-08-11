@@ -16,21 +16,23 @@ import re
 import threading
 import types
 import warnings
+from collections.abc import (
+    AsyncIterable,
+    AsyncIterator,
+    Callable,
+    Iterable,
+    Iterator,
+    Sequence,
+)
 from concurrent import futures
 from typing import (
     TYPE_CHECKING,
     Any,
-    AsyncIterable,
-    AsyncIterator,
     BinaryIO,
-    Callable,
     ClassVar,
-    Iterable,
-    Iterator,
     Literal,
     NamedTuple,
     Protocol,
-    Sequence,
     TypedDict,
     cast,
 )
@@ -135,17 +137,17 @@ def is_async_callable(obj: Any) -> bool:
     )
 
 
-from . import utils  # noqa: E402
-from .types.callback import (  # noqa: E402
+from . import utils
+from .types.callback import (
     BaseButton,
     Button,
     CallbackData,
 )
-from .types.flows import FlowJSON, FlowMetricGranularity, FlowMetricName  # noqa: E402
-from .types.media import Media  # noqa: E402
-from .types.others import InteractiveType  # noqa: E402
-from .types.sent_update import RecipientType  # noqa: E402
-from .types.templates import (  # noqa: E402
+from .types.flows import FlowJSON, FlowMetricGranularity, FlowMetricName
+from .types.media import Media
+from .types.others import InteractiveType
+from .types.sent_update import RecipientType
+from .types.templates import (
     BaseParams,
     Carousel,
     HeaderFormatType,
@@ -175,7 +177,7 @@ def resolve_buttons_param(
             ) from None
         for b in buttons:
             if not isinstance(b, Button):
-                raise ValueError(
+                raise TypeError(
                     f"All items in `buttons` iterable must be Button objects. got {type(b)}"
                 ) from None
         return InteractiveType.BUTTON, {"buttons": tuple(b.to_dict() for b in buttons)}
@@ -677,8 +679,8 @@ def internal_upload_media(
                 client.close()
             if media_source == MediaSource.PATH:
                 media_info.content.close()  # ty: ignore[unresolved-attribute]
-        except Exception:
-            pass
+        except Exception:  # best-effort cleanup, never mask the real error
+            logger.debug("Failed to close media resource during cleanup", exc_info=True)
 
 
 def filter_not_uploaded_comps(
@@ -844,8 +846,8 @@ def internal_upload_file(
                 client.close()
             if source == MediaSource.PATH:
                 media_info.content.close()  # ty: ignore[unresolved-attribute]
-        except Exception:
-            pass
+        except Exception:  # best-effort cleanup, never mask the real error
+            logger.debug("Failed to close media resource during cleanup", exc_info=True)
 
 
 def upload_comps_example(
@@ -1471,7 +1473,7 @@ def register_routes_flask(
             )
 
 
-from .handlers import FlowRequestCallbackWrapper  # noqa: E402
+from .handlers import FlowRequestCallbackWrapper
 
 
 def register_flow_endpoint_starlette(

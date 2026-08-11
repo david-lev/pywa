@@ -1,4 +1,3 @@
-# ruff: noqa: T201
 """
 One-time setup script.
 

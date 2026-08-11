@@ -13,16 +13,13 @@ import logging
 import mimetypes
 import pathlib
 import warnings
+from collections.abc import Callable, Generator, Iterable, Iterator, Sequence
 from types import ModuleType
 from typing import (
     Any,
     BinaryIO,
-    Callable,
-    Generator,
-    Iterable,
-    Iterator,
+    ClassVar,
     Literal,
-    Sequence,
     cast,
 )
 
@@ -63,7 +60,7 @@ from .handlers import (
     _flow_request_handler_attr,
     _HandlerDecorators,
     _handlers_attr,
-)  # noqa
+)
 from .listeners import BaseListenerIdentifier, Listener, _Listeners
 from .server import Server
 from .types import (
@@ -215,7 +212,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
     _group_participant_cls = GroupParticipant
     _httpx_client = httpx.Client
     _async_allowed = False
-    _handlers_to_updates: dict[type[Handler], type[BaseUpdate]] = {
+    _handlers_to_updates: ClassVar[dict[type[Handler], type[BaseUpdate]]] = {
         MessageHandler: Message,
         MessageStatusHandler: MessageStatus,
         GroupMessageStatusesHandler: GroupMessageStatuses,
@@ -269,7 +266,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         flows_response_encryptor: utils.FlowResponseEncryptor
         | None = utils.default_flow_response_encryptor,
         api_version: (
-            str | int | float | Literal[utils.Version.GRAPH_API]
+            str | float | Literal[utils.Version.GRAPH_API]
         ) = utils.Version.GRAPH_API,
         handlers_modules: Iterable[ModuleType] | None = None,
         user_identifier_priority: tuple[UserIdentifier, ...] = (
@@ -2173,8 +2170,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         """
         with self.api.stream_media_bytes(media_url=url, **httpx_kwargs) as res:
             res.raise_for_status()
-            for chunk in res.iter_bytes(chunk_size=chunk_size):
-                yield chunk
+            yield from res.iter_bytes(chunk_size=chunk_size)
 
     def delete_media(
         self,

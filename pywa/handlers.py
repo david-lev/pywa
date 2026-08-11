@@ -38,31 +38,31 @@ Handlers for incoming updates.
 from __future__ import annotations
 
 __all__ = [
-    "MessageHandler",
+    "AccountUpdateHandler",
+    "CallConnectHandler",
+    "CallPermissionUpdateHandler",
+    "CallStatusHandler",
+    "CallTerminateHandler",
     "CallbackButtonHandler",
     "CallbackSelectionHandler",
-    "RawUpdateHandler",
-    "MessageStatusHandler",
-    "GroupMessageStatusesHandler",
-    "TemplateStatusUpdateHandler",
-    "TemplateCategoryUpdateHandler",
-    "TemplateQualityUpdateHandler",
-    "TemplateComponentsUpdateHandler",
+    "DeletedMessageHandler",
+    "EditedMessageHandler",
     "FlowCompletionHandler",
     "FlowRequestHandler",
-    "PhoneNumberChangeHandler",
+    "GroupMessageStatusesHandler",
     "IdentityChangeHandler",
-    "CallConnectHandler",
-    "CallTerminateHandler",
-    "CallStatusHandler",
-    "CallPermissionUpdateHandler",
-    "UserMarketingPreferencesHandler",
-    "EditedMessageHandler",
-    "DeletedMessageHandler",
-    "OutgoingMessageHandler",
-    "OutgoingEditedMessageHandler",
+    "MessageHandler",
+    "MessageStatusHandler",
     "OutgoingDeletedMessageHandler",
-    "AccountUpdateHandler",
+    "OutgoingEditedMessageHandler",
+    "OutgoingMessageHandler",
+    "PhoneNumberChangeHandler",
+    "RawUpdateHandler",
+    "TemplateCategoryUpdateHandler",
+    "TemplateComponentsUpdateHandler",
+    "TemplateQualityUpdateHandler",
+    "TemplateStatusUpdateHandler",
+    "UserMarketingPreferencesHandler",
 ]
 
 import abc
@@ -70,11 +70,10 @@ import collections
 import dataclasses
 import functools
 import logging
+from collections.abc import Awaitable, Callable
 from typing import (
     TYPE_CHECKING,
     Any,
-    Awaitable,
-    Callable,
     Generic,
     TypeAlias,
     TypedDict,
@@ -121,12 +120,12 @@ from .types.flows import (
     FlowRequestCannotBeDecrypted,
     FlowResponseError,
     Screen,
-)  # noqa
+)
 
 if TYPE_CHECKING:
     from .client import WhatsApp
 
-_FlowRequestHandlerT: TypeAlias = Callable[
+_FlowRequestCallback: TypeAlias = Callable[
     ["WhatsApp", FlowRequest],
     FlowResponse | dict | None | Awaitable[FlowResponse | dict | None],
 ]
@@ -220,7 +219,6 @@ _pywa_logger = logging.getLogger("pywa")
 
 
 _UpdateType = TypeVar("_UpdateType")
-_CallbackT = TypeVar("_CallbackT", bound=Callable)
 _WhatsAppT = TypeVar("_WhatsAppT", bound="WhatsApp")
 """
 Bound to the actual ``WhatsApp`` subtype (sync or async) the decorator is called on, so that
@@ -362,7 +360,7 @@ class MessageHandler(Handler[Message]):
     _update = Message
 
 
-class _FactoryHandler(Generic[_UpdateType], Handler[_UpdateType]):
+class _FactoryHandler(Handler[_UpdateType], Generic[_UpdateType]):
     """Base class for handlers that use a factory to construct the callback data."""
 
     _update = None
@@ -954,7 +952,7 @@ class _CallbackWrapperDecorators(abc.ABC):
     def add_handler(
         self,
         *,
-        callback: _FlowRequestHandlerT,
+        callback: _FlowRequestCallback,
         action: FlowRequestActionType,
         screen: Screen | str | None = None,
         filters: Filter[FlowRequest] | None = None,
@@ -972,7 +970,7 @@ class _CallbackWrapperDecorators(abc.ABC):
         action: FlowRequestActionType,
         screen: Screen | str | None = None,
         filters: Filter[FlowRequest] | None = None,
-    ) -> Callable[[_FlowRequestHandlerT], _FlowRequestHandlerT] | _FlowRequestHandlerT:
+    ) -> Callable[[_FlowRequestCallback], _FlowRequestCallback] | _FlowRequestCallback:
         """
         Decorator to help you add more handlers to the same endpoint and split the logic into multiple functions.
 
@@ -987,7 +985,7 @@ class _CallbackWrapperDecorators(abc.ABC):
             The function itself.
         """
 
-        def decorator(callback: _FlowRequestHandlerT) -> _FlowRequestHandlerT:
+        def decorator(callback: _FlowRequestCallback) -> _FlowRequestCallback:
             self.add_handler(
                 callback=callback, action=action, screen=screen, filters=filters
             )
@@ -1001,22 +999,22 @@ class _CallbackWrapperDecorators(abc.ABC):
         filters: Filter[FlowRequest] | None = None,
         *,
         call_on_error: bool = False,
-    ) -> Callable[[_FlowRequestHandlerT], _FlowRequestHandlerT]: ...
+    ) -> Callable[[_FlowRequestCallback], _FlowRequestCallback]: ...
 
     @overload
     def on_init(
         self: _CallbackWrapperDecorators,
-        filters: _FlowRequestHandlerT,
+        filters: _FlowRequestCallback,
         *,
         call_on_error: bool = False,
-    ) -> _FlowRequestHandlerT: ...
+    ) -> _FlowRequestCallback: ...
 
     def on_init(
         self: _CallbackWrapperDecorators,
-        filters: Filter[FlowRequest] | _FlowRequestHandlerT | None = None,
+        filters: Filter[FlowRequest] | _FlowRequestCallback | None = None,
         *,
         call_on_error: bool = False,
-    ) -> Callable[[_FlowRequestHandlerT], _FlowRequestHandlerT] | _FlowRequestHandlerT:
+    ) -> Callable[[_FlowRequestCallback], _FlowRequestCallback] | _FlowRequestCallback:
         """
         Decorator to add a handler for the :class:`FlowRequestActionType.INIT` action.
 
@@ -1047,7 +1045,7 @@ class _CallbackWrapperDecorators(abc.ABC):
             The callback function.
         """
         if callable(filters):  # @handler.on_init
-            callback = cast("_FlowRequestHandlerT", filters)
+            callback = cast("_FlowRequestCallback", filters)
             self.add_handler(
                 callback=callback,
                 action=FlowRequestActionType.INIT,
@@ -1055,7 +1053,7 @@ class _CallbackWrapperDecorators(abc.ABC):
             )
             return callback
 
-        def deco(callback: _FlowRequestHandlerT) -> _FlowRequestHandlerT:
+        def deco(callback: _FlowRequestCallback) -> _FlowRequestCallback:
             self.add_handler(
                 callback=callback,
                 action=FlowRequestActionType.INIT,
@@ -1072,24 +1070,24 @@ class _CallbackWrapperDecorators(abc.ABC):
         filters: Filter[FlowRequest] | None = None,
         *,
         call_on_error: bool = False,
-    ) -> Callable[[_FlowRequestHandlerT], _FlowRequestHandlerT]: ...
+    ) -> Callable[[_FlowRequestCallback], _FlowRequestCallback]: ...
 
     @overload
     def on_data_exchange(
         self: _CallbackWrapperDecorators,
-        screen: _FlowRequestHandlerT,
+        screen: _FlowRequestCallback,
         filters: Filter[FlowRequest] | None = None,
         *,
         call_on_error: bool = False,
-    ) -> _FlowRequestHandlerT: ...
+    ) -> _FlowRequestCallback: ...
 
     def on_data_exchange(
         self: _CallbackWrapperDecorators,
-        screen: Screen | str | _FlowRequestHandlerT | None = None,
+        screen: Screen | str | _FlowRequestCallback | None = None,
         filters: Filter[FlowRequest] | None = None,
         *,
         call_on_error: bool = False,
-    ) -> Callable[[_FlowRequestHandlerT], _FlowRequestHandlerT] | _FlowRequestHandlerT:
+    ) -> Callable[[_FlowRequestCallback], _FlowRequestCallback] | _FlowRequestCallback:
         """
         Decorator to add a handler for the :class:`FlowRequestActionType.DATA_EXCHANGE` action.
 
@@ -1117,7 +1115,7 @@ class _CallbackWrapperDecorators(abc.ABC):
             The callback function.
         """
         if callable(screen):  # @handler.on_data_exchange
-            callback = cast("_FlowRequestHandlerT", screen)
+            callback = cast("_FlowRequestCallback", screen)
             self.add_handler(
                 callback=callback,
                 action=FlowRequestActionType.DATA_EXCHANGE,
@@ -1126,7 +1124,7 @@ class _CallbackWrapperDecorators(abc.ABC):
             )
             return callback
 
-        def deco(callback: _FlowRequestHandlerT) -> _FlowRequestHandlerT:
+        def deco(callback: _FlowRequestCallback) -> _FlowRequestCallback:
             self.add_handler(
                 callback=callback,
                 action=FlowRequestActionType.DATA_EXCHANGE,
@@ -1143,22 +1141,22 @@ class _CallbackWrapperDecorators(abc.ABC):
         *,
         screen: Screen | str | None = None,
         filters: Filter[FlowRequest] | None = None,
-    ) -> Callable[[_FlowRequestHandlerT], _FlowRequestHandlerT]: ...
+    ) -> Callable[[_FlowRequestCallback], _FlowRequestCallback]: ...
 
     @overload
     def on_back(
         self: _CallbackWrapperDecorators,
         *,
-        screen: _FlowRequestHandlerT,
+        screen: _FlowRequestCallback,
         filters: Filter[FlowRequest] | None = None,
-    ) -> _FlowRequestHandlerT: ...
+    ) -> _FlowRequestCallback: ...
 
     def on_back(
         self: _CallbackWrapperDecorators,
         *,
-        screen: Screen | str | _FlowRequestHandlerT | None = None,
+        screen: Screen | str | _FlowRequestCallback | None = None,
         filters: Filter[FlowRequest] | None = None,
-    ) -> Callable[[_FlowRequestHandlerT], _FlowRequestHandlerT] | _FlowRequestHandlerT:
+    ) -> Callable[[_FlowRequestCallback], _FlowRequestCallback] | _FlowRequestCallback:
         """
         Decorator to add a handler for the :class:`FlowRequestActionType.BACK` action.
 
@@ -1185,7 +1183,7 @@ class _CallbackWrapperDecorators(abc.ABC):
             The callback function.
         """
         if callable(screen):
-            callback = cast("_FlowRequestHandlerT", screen)
+            callback = cast("_FlowRequestCallback", screen)
             self.add_handler(
                 callback=callback,
                 action=FlowRequestActionType.BACK,
@@ -1194,7 +1192,7 @@ class _CallbackWrapperDecorators(abc.ABC):
             )
             return callback
 
-        def deco(callback: _FlowRequestHandlerT) -> _FlowRequestHandlerT:
+        def deco(callback: _FlowRequestCallback) -> _FlowRequestCallback:
             self.add_handler(
                 callback=callback,
                 action=FlowRequestActionType.BACK,
@@ -1287,7 +1285,7 @@ class FlowRequestHandler(_CallbackWrapperDecorators):
 
     def __init__(
         self,
-        callback: _FlowRequestHandlerT,
+        callback: _FlowRequestCallback,
         *,
         endpoint: str,
         acknowledge_errors: bool = True,
@@ -1299,7 +1297,7 @@ class FlowRequestHandler(_CallbackWrapperDecorators):
         self._main_handler = callback
         self._handlers: dict[
             tuple[FlowRequestActionType | str, str | None],
-            list[tuple[Filter[FlowRequest] | None, _FlowRequestHandlerT]],
+            list[tuple[Filter[FlowRequest] | None, _FlowRequestCallback]],
         ] = collections.defaultdict(list)  # {(action, screen?): [(filters?, callback)]}
         self._completion_handlers: list[FlowCompletionHandler] = []
         self._endpoint = endpoint
@@ -1312,7 +1310,7 @@ class FlowRequestHandler(_CallbackWrapperDecorators):
     def add_handler(
         self,
         *,
-        callback: _FlowRequestHandlerT,
+        callback: _FlowRequestCallback,
         action: FlowRequestActionType,
         screen: Screen | str | None = None,
         filters: Filter[FlowRequest] | None = None,
@@ -3202,7 +3200,7 @@ class _HandlerDecorators:
         request_decryptor: utils.FlowRequestDecryptor | None = None,
         response_encryptor: utils.FlowResponseEncryptor | None = None,
     ) -> Callable[
-        [_FlowRequestHandlerT],
+        [_FlowRequestCallback],
         FlowRequestCallbackWrapper | FlowRequestHandler,
     ]: ...
 
@@ -3216,7 +3214,7 @@ class _HandlerDecorators:
         request_decryptor: utils.FlowRequestDecryptor | None = None,
         response_encryptor: utils.FlowResponseEncryptor | None = None,
     ) -> Callable[
-        [_FlowRequestHandlerT],
+        [_FlowRequestCallback],
         FlowRequestCallbackWrapper | FlowRequestHandler,
     ]:
         """
@@ -3250,7 +3248,7 @@ class _HandlerDecorators:
         """
 
         def decorator(
-            callback: _FlowRequestHandlerT,
+            callback: _FlowRequestCallback,
         ) -> FlowRequestCallbackWrapper | FlowRequestHandler:
             ep = (self if isinstance(self, str) else endpoint) or endpoint
             if not ep:
@@ -3304,7 +3302,7 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
         self,
         wa: WhatsApp,
         endpoint: str,
-        callback: _FlowRequestHandlerT,
+        callback: _FlowRequestCallback,
         acknowledge_errors: bool = True,
         private_key: str | None = None,
         private_key_password: str | None = None,
@@ -3317,7 +3315,7 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
         self._main_handler = callback
         self._handlers: dict[
             tuple[FlowRequestActionType | str, str | None],
-            list[tuple[Filter[FlowRequest] | None, _FlowRequestHandlerT]],
+            list[tuple[Filter[FlowRequest] | None, _FlowRequestCallback]],
         ] = collections.defaultdict(list)  # {(action, screen?): [(filters?, callback)]}
         self._acknowledge_errors = acknowledge_errors
         self._private_key = private_key or wa._private_key
@@ -3357,7 +3355,7 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
     def add_handler(
         self,
         *,
-        callback: _FlowRequestHandlerT,
+        callback: _FlowRequestCallback,
         action: FlowRequestActionType | str,
         screen: Screen | str | None = None,
         filters: Filter[FlowRequest] | None = None,
@@ -3411,7 +3409,7 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
         self._wa.add_handlers(handler)
         return self
 
-    def _get_callback(self, req: FlowRequest) -> _FlowRequestHandlerT:
+    def _get_callback(self, req: FlowRequest) -> _FlowRequestCallback:
         """Resolve the callback to use for the incoming request."""
         for filters, callback in (
             *self._handlers[(req.action, None)],  # Precedence to no-screen handlers
@@ -3421,7 +3419,7 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
                 return callback
         return self._main_handler
 
-    async def _get_callback_async(self, req: FlowRequest) -> _FlowRequestHandlerT:
+    async def _get_callback_async(self, req: FlowRequest) -> _FlowRequestCallback:
         """Resolve the callback to use for the incoming request (async version)."""
         for filters, callback in (
             *self._handlers[(req.action, None)],  # Precedence to no-screen handlers
@@ -3443,7 +3441,8 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
         """
         try:
             decrypted_request, aes_key, iv = self._decrypt_request(payload)
-        except Exception:
+        # untrusted webhook payload: never crash on malformed/tampered input
+        except Exception:  # noqa: BLE001
             return "Decryption failed", FlowRequestCannotBeDecrypted.status_code
 
         if decrypted_request["action"] == "ping":
@@ -3485,7 +3484,8 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
         """
         try:
             decrypted_request, aes_key, iv = self._decrypt_request(payload)
-        except Exception:
+        # untrusted webhook payload: never crash on malformed/tampered input
+        except Exception:  # noqa: BLE001
             return "Decryption failed", FlowRequestCannotBeDecrypted.status_code
 
         if decrypted_request["action"] == "ping":

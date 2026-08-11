@@ -4,7 +4,7 @@ details → review), each exchanging data with the server (`main.py`) so we can 
 compute an estimated monthly payment before the applicant submits.
 """
 
-from pywa_async.types.flows import *  # noqa: F403
+from pywa_async.types.flows import *
 
 personal_info_screen = Screen(
     id="PERSONAL_INFO",

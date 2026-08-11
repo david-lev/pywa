@@ -1,4 +1,4 @@
-from pywa.types.flows import *  # noqa
+from pywa.types.flows import *
 
 chips_selector = FlowJSON(
     version="6.3",

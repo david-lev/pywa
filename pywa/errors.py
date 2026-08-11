@@ -3,9 +3,11 @@ from __future__ import annotations
 """
 This module contains the errors that can be raised by the WhatsApp Cloud API or incoming error from the webhook.
 """
+import builtins
 import dataclasses
 import functools
-from typing import ClassVar, Iterable, Type
+from collections.abc import Iterable
+from typing import ClassVar
 
 import httpx
 
@@ -95,7 +97,7 @@ class WhatsAppError(Exception):
         return self.raw_response.status_code if self.raw_response is not None else None
 
     @classmethod
-    def _get_exception(cls, code: int) -> Type[WhatsAppError]:
+    def _get_exception(cls, code: int) -> builtins.type[WhatsAppError]:
         """Get the exception class from the error code."""
         return _all_exceptions().get(code, WhatsAppError)
 

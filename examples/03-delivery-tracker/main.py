@@ -1,4 +1,3 @@
-# ruff: noqa: T201
 """
 Delivery Status Notifier Bot
 =============================

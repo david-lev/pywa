@@ -1,4 +1,4 @@
-from pywa.types.flows import *  # noqa: F403
+from pywa.types.flows import *
 
 switch = FlowJSON(
     version="4.0",

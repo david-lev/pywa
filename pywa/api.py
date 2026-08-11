@@ -1,9 +1,12 @@
 """The internal API for the WhatsApp client."""
 
+from __future__ import annotations
+
 import logging
 import pathlib
+from collections.abc import Iterator
 from contextlib import _GeneratorContextManager
-from typing import TYPE_CHECKING, Any, BinaryIO, Iterator, TypedDict, cast
+from typing import TYPE_CHECKING, Any, BinaryIO, TypedDict, cast
 
 import httpx
 
@@ -398,7 +401,7 @@ class GraphAPI:
     def upload_media(
         self,
         phone_id: str,
-        media: bytes | str | BinaryIO | Iterator[bytes] | "GeneratorStreamer",
+        media: bytes | str | BinaryIO | Iterator[bytes] | GeneratorStreamer,
         mime_type: str,
         filename: str,
         ttl_minutes: int | None = None,
@@ -2226,7 +2229,7 @@ class GraphAPI:
     def upload_file(
         self,
         upload_session_id: str,
-        file: bytes | Iterator[bytes] | BinaryIO | "GeneratorStreamer",
+        file: bytes | Iterator[bytes] | BinaryIO | GeneratorStreamer,
         file_offset: int = 0,
         content_length: int | None = None,
     ) -> dict:

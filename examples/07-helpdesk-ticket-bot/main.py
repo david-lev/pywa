@@ -1,4 +1,3 @@
-# ruff: noqa: T201
 """
 Multi-Channel Helpdesk Ticket Bot
 ===================================

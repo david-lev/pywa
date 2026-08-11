@@ -1,6 +1,6 @@
 import re
 
-from pywa.types.flows import *  # noqa
+from pywa.types.flows import *
 
 regex = FlowJSON(
     version="6.2",

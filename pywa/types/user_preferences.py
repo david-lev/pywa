@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 __all__ = [
+    "MarketingPreference",
     "UserMarketingPreferences",
     "UserPreferenceCategory",
-    "MarketingPreference",
 ]
 
 import dataclasses
@@ -13,7 +13,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from .. import _helpers as helpers
-from .base_update import BaseUserUpdate, RawUpdate  # noqa
+from .base_update import BaseUserUpdate, RawUpdate
 from .others import Metadata
 
 if TYPE_CHECKING:

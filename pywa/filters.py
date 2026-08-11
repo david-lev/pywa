@@ -12,116 +12,114 @@ Usefully filters to use in your handlers.
 from __future__ import annotations
 
 __all__ = [
-    "new",
-    "true",
-    "false",
-    "private",
-    "group",
-    "update_id",
-    "waba_id",
-    "forwarded",
-    "forwarded_many_times",
-    "reply",
-    "replays_to",
-    "has_referred_product",
-    "sent_to",
-    "sent_to_me",
-    "from_users",
-    "without_wa_id",
-    "from_countries",
-    "matches",
-    "contains",
-    "startswith",
-    "endswith",
-    "regex",
-    "message",
-    "text",
-    "is_command",
-    "command",
-    "media",
-    "mimetypes",
-    "extensions",
-    "has_caption",
-    "image",
-    "video",
-    "audio",
-    "audio_only",
-    "voice",
-    "document",
-    "sticker",
-    "animated_sticker",
-    "static_sticker",
-    "reaction",
-    "reaction_added",
-    "reaction_removed",
-    "reaction_emojis",
-    "unsupported",
-    "location",
-    "current_location",
-    "location_in_radius",
-    "contacts",
-    "contact_info_shared",
-    "contacts_has_wa",
-    "order",
-    "callback_button",
-    "callback_selection",
-    "message_status",
-    "sent",
-    "delivered",
-    "read",
-    "played",
-    "failed",
-    "failed_with",
-    "with_tracker",
-    "flow_completion",
-    "template_status",
-    "template_status_approved",
-    "template_status_rejected",
-    "template_quality",
-    "template_category",
-    "template_components",
-    "call_connect",
-    "outgoing_call",
-    "incoming_call",
-    "call_status",
-    "call_answered",
-    "call_rejected",
-    "call_ringing",
-    "call_permission_update",
-    "call_permission_accepted",
-    "call_permission_rejected",
-    "call_terminate",
-    "phone_number_change",
-    "identity_change",
-    "user_marketing_preferences",
-    "user_marketing_preferences_stop",
-    "user_marketing_preferences_resume",
-    "account_update",
     "account_deleted",
+    "account_disabled",
+    "account_offboarded",
+    "account_reconnected",
     "account_restriction",
+    "account_update",
     "account_violation",
     "ad_account_linked",
+    "animated_sticker",
+    "audio",
+    "audio_only",
     "auth_intl_price_eligibility_update",
     "business_primary_location_country_update",
-    "account_disabled",
+    "call_answered",
+    "call_connect",
+    "call_permission_accepted",
+    "call_permission_rejected",
+    "call_permission_update",
+    "call_rejected",
+    "call_ringing",
+    "call_status",
+    "call_terminate",
+    "callback_button",
+    "callback_selection",
+    "command",
+    "contact_info_shared",
+    "contacts",
+    "contacts_has_wa",
+    "contains",
+    "current_location",
+    "delivered",
+    "document",
+    "endswith",
+    "extensions",
+    "failed",
+    "failed_with",
+    "false",
+    "flow_completion",
+    "forwarded",
+    "forwarded_many_times",
+    "from_countries",
+    "from_users",
+    "group",
+    "has_caption",
+    "has_referred_product",
+    "identity_change",
+    "image",
+    "incoming_call",
+    "is_command",
+    "location",
+    "location_in_radius",
+    "matches",
+    "media",
+    "message",
+    "message_status",
+    "mimetypes",
+    "new",
+    "order",
+    "outgoing_call",
     "partner_added",
     "partner_app_installed",
     "partner_app_uninstalled",
     "partner_client_certification_status_update",
     "partner_removed",
+    "phone_number_change",
+    "played",
+    "private",
+    "reaction",
+    "reaction_added",
+    "reaction_emojis",
+    "reaction_removed",
+    "read",
+    "regex",
+    "replays_to",
+    "reply",
+    "sent",
+    "sent_to",
+    "sent_to_me",
+    "startswith",
+    "static_sticker",
+    "sticker",
+    "template_category",
+    "template_components",
+    "template_quality",
+    "template_status",
+    "template_status_approved",
+    "template_status_rejected",
+    "text",
+    "true",
+    "unsupported",
+    "update_id",
+    "user_marketing_preferences",
+    "user_marketing_preferences_resume",
+    "user_marketing_preferences_stop",
+    "video",
+    "voice",
     "volume_based_pricing_tier_update",
-    "account_offboarded",
-    "account_reconnected",
+    "waba_id",
+    "with_tracker",
+    "without_wa_id",
 ]
 
 import re
+from collections.abc import Awaitable, Callable, Iterable
 from typing import (
     TYPE_CHECKING,
     Any,
-    Awaitable,
-    Callable,
     Generic,
-    Iterable,
     TypeVar,
     cast,
     overload,
@@ -136,50 +134,50 @@ from .types.others import ContactsOrigin
 if TYPE_CHECKING:
     from pywa.client import WhatsApp
 
-_T = TypeVar("_T", contravariant=True)
+_T_contra = TypeVar("_T_contra", contravariant=True)
 _V = TypeVar("_V")
 
 
-class Filter(Generic[_T]):
+class Filter(Generic[_T_contra]):
     """Base filter class handling both sync and async."""
 
-    def check_sync(self, wa: WhatsApp, update: _T) -> bool:
+    def check_sync(self, wa: WhatsApp, update: _T_contra) -> bool:
         raise NotImplementedError
 
-    async def check_async(self, wa: WhatsApp, update: _T) -> bool:
+    async def check_async(self, wa: WhatsApp, update: _T_contra) -> bool:
         raise NotImplementedError
 
     def has_async(self) -> bool:
         raise NotImplementedError
 
-    def __and__(self, other: Filter[_T]) -> Filter[_T]:
+    def __and__(self, other: Filter[_T_contra]) -> Filter[_T_contra]:
         return AndFilter(self, other)
 
-    def __rand__(self, other: Filter[_T]) -> Filter[_T]:
+    def __rand__(self, other: Filter[_T_contra]) -> Filter[_T_contra]:
         return AndFilter(other, self)
 
-    def __or__(self, other: Filter[_T]) -> Filter[_T]:
+    def __or__(self, other: Filter[_T_contra]) -> Filter[_T_contra]:
         return OrFilter(self, other)
 
-    def __ror__(self, other: Filter[_T]) -> Filter[_T]:
+    def __ror__(self, other: Filter[_T_contra]) -> Filter[_T_contra]:
         return OrFilter(other, self)
 
-    def __invert__(self) -> Filter[_T]:
+    def __invert__(self) -> Filter[_T_contra]:
         return NotFilter(self)
 
     def __repr__(self) -> str:
         return self.__class__.__name__
 
 
-class AndFilter(Filter[_T]):
-    def __init__(self, left: Filter[_T], right: Filter[_T]):
+class AndFilter(Filter[_T_contra]):
+    def __init__(self, left: Filter[_T_contra], right: Filter[_T_contra]):
         self.left = left
         self.right = right
 
-    def check_sync(self, wa: WhatsApp, update: _T) -> bool:
+    def check_sync(self, wa: WhatsApp, update: _T_contra) -> bool:
         return self.left.check_sync(wa, update) and self.right.check_sync(wa, update)
 
-    async def check_async(self, wa: WhatsApp, update: _T) -> bool:
+    async def check_async(self, wa: WhatsApp, update: _T_contra) -> bool:
         return await self.left.check_async(wa, update) and await self.right.check_async(
             wa, update
         )
@@ -191,15 +189,15 @@ class AndFilter(Filter[_T]):
         return f"({self.left!r} & {self.right!r})"
 
 
-class OrFilter(Filter[_T]):
-    def __init__(self, left: Filter[_T], right: Filter[_T]):
+class OrFilter(Filter[_T_contra]):
+    def __init__(self, left: Filter[_T_contra], right: Filter[_T_contra]):
         self.left = left
         self.right = right
 
-    def check_sync(self, wa: WhatsApp, update: _T) -> bool:
+    def check_sync(self, wa: WhatsApp, update: _T_contra) -> bool:
         return self.left.check_sync(wa, update) or self.right.check_sync(wa, update)
 
-    async def check_async(self, wa: WhatsApp, update: _T) -> bool:
+    async def check_async(self, wa: WhatsApp, update: _T_contra) -> bool:
         return await self.left.check_async(wa, update) or await self.right.check_async(
             wa, update
         )
@@ -211,14 +209,14 @@ class OrFilter(Filter[_T]):
         return f"({self.left!r} | {self.right!r})"
 
 
-class NotFilter(Filter[_T]):
-    def __init__(self, fil: Filter[_T]):
+class NotFilter(Filter[_T_contra]):
+    def __init__(self, fil: Filter[_T_contra]):
         self.filter = fil
 
-    def check_sync(self, wa: WhatsApp, update: _T) -> bool:
+    def check_sync(self, wa: WhatsApp, update: _T_contra) -> bool:
         return not self.filter.check_sync(wa, update)
 
-    async def check_async(self, wa: WhatsApp, update: _T) -> bool:
+    async def check_async(self, wa: WhatsApp, update: _T_contra) -> bool:
         return not await self.filter.check_async(wa, update)
 
     def has_async(self) -> bool:
@@ -279,8 +277,6 @@ def new(
             return new(f, name=name or (func if isinstance(func, str) else None))
 
         return decorator
-    if not callable(func):
-        raise Exception
     is_async = helpers.is_async_callable(func)
     sync_func = cast("Callable[[WhatsApp, Any], bool]", func)
     async_func = cast("Callable[[WhatsApp, Any], Awaitable[bool]]", func)
@@ -847,9 +843,7 @@ current_location: Filter[types.Message] = new(
 """Filter for location messages that are current locations."""
 
 
-def location_in_radius(
-    lat: float, lon: float, radius: float | int
-) -> Filter[types.Message]:
+def location_in_radius(lat: float, lon: float, radius: float) -> Filter[types.Message]:
     """
     Filter for location messages that are in a given radius.
 
@@ -918,12 +912,8 @@ contacts_has_wa: Filter[types.Message] = new(
         m.contacts is not None
         and (
             any(
-                (
-                    p.wa_id
-                    for p in (
-                        phone for contact in m.contacts for phone in contact.phones
-                    )
-                )
+                p.wa_id
+                for p in (phone for contact in m.contacts for phone in contact.phones)
             )
         )
     ),
@@ -1005,7 +995,7 @@ def failed_with(
         lambda _, s: (
             s.status == types.MessageStatusType.FAILED
             and (
-                any((isinstance(s.error, e) for e in exceptions))
+                any(isinstance(s.error, e) for e in exceptions)
                 or (s.error is not None and s.error.code in error_codes)
             )
         ),

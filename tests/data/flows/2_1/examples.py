@@ -1,4 +1,4 @@
-from pywa.types.flows import *  # noqa: F403
+from pywa.types.flows import *
 
 customer_satisfaction_survey = FlowJSON(
     version="2.1",

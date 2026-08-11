@@ -1,12 +1,15 @@
 """The internal API for the WhatsApp client."""
 
-from contextlib import _AsyncGeneratorContextManager
-from typing import TYPE_CHECKING, AsyncIterator
+from __future__ import annotations
 
-from pywa.api import *  # noqa MUST BE IMPORTED FIRST
+from collections.abc import AsyncIterator
+from contextlib import _AsyncGeneratorContextManager
+from typing import TYPE_CHECKING
+
+from pywa.api import *
 from pywa.api import (
-    _logger,  # noqa MUST BE IMPORTED FIRST
-    _UnpauseTemplateResult,  # noqa MUST BE IMPORTED FIRST
+    _logger,
+    _UnpauseTemplateResult,
 )
 
 from .errors import WhatsAppError
@@ -28,7 +31,7 @@ class GraphAPIAsync(GraphAPI):
     ):
         super().__init__(
             token=token,
-            session=cast("httpx.Client", session),  # noqa
+            session=cast("httpx.Client", session),
             api_version=api_version,
         )
 
@@ -370,7 +373,7 @@ class GraphAPIAsync(GraphAPI):
     async def upload_media(
         self,
         phone_id: str,
-        media: bytes | str | BinaryIO | Iterator[bytes] | "GeneratorStreamer",
+        media: bytes | str | BinaryIO | Iterator[bytes] | GeneratorStreamer,
         mime_type: str,
         filename: str,
         ttl_minutes: int | None = None,

@@ -5,21 +5,22 @@ import pathlib
 """This module contains the types related to messages."""
 
 __all__ = [
-    "Message",
-    "EditedMessage",
     "DeletedMessage",
-    "OutgoingMessage",
-    "OutgoingEditedMessage",
+    "EditedMessage",
+    "Message",
     "OutgoingDeletedMessage",
+    "OutgoingEditedMessage",
+    "OutgoingMessage",
 ]
 
 import dataclasses
 import datetime
-from typing import TYPE_CHECKING, ClassVar, Generator, Iterable, Type, cast
+from collections.abc import Generator, Iterable
+from typing import TYPE_CHECKING, ClassVar, cast
 
 from .. import _helpers as helpers
 from ..errors import WhatsAppError
-from .base_update import BaseUserUpdate, RawUpdate, _PinUnpinActions  # noqa
+from .base_update import BaseUserUpdate, RawUpdate, _PinUnpinActions
 from .callback import Button, FlowButton, SectionList, URLButton, VoiceCallButton
 from .chat import Chat, ChatType
 from .media import Audio, Document, Image, Sticker, Video
@@ -560,7 +561,7 @@ class EditedMessage(BaseUserUpdate):
         message: The updated version of the message after the edit.
     """
 
-    _msg_cls: ClassVar[Type[Message]] = Message
+    _msg_cls: ClassVar[type[Message]] = Message
     type: MessageType
     chat: Chat
     original_message_id: str
@@ -712,7 +713,7 @@ class OutgoingEditedMessage(_Outgoing, EditedMessage):
         message: The updated version of the message after the edit.
     """
 
-    _msg_cls: ClassVar[Type[OutgoingMessage]] = OutgoingMessage
+    _msg_cls: ClassVar[type[OutgoingMessage]] = OutgoingMessage
     _webhook_field = "smb_message_echoes"
     _messages_field = "message_echoes"
 

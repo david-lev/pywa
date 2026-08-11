@@ -1,5 +1,4 @@
 import dataclasses
-from typing import Optional
 
 import pytest
 
@@ -56,7 +55,7 @@ def test_callback_supported_types():
         integer: int
         string: str
         boolean: bool
-        optional: Optional[str]
+        optional: str | None
         new_optional: str | None
 
     with pytest.raises(TypeError):

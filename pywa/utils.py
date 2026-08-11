@@ -11,7 +11,8 @@ import importlib.util
 import json
 import logging
 import warnings
-from typing import TYPE_CHECKING, Any, Callable, Iterable, Protocol, TypeAlias
+from collections.abc import Callable, Iterable
+from typing import TYPE_CHECKING, Any, Protocol, TypeAlias
 
 import httpx
 

@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 __all__ = [
-    "SentMessage",
-    "SentMediaMessage",
-    "SentVoiceMessage",
-    "SentLocationRequest",
+    "InitiatedCall",
     "SentContactInfoRequest",
+    "SentLocationRequest",
+    "SentMediaMessage",
+    "SentMessage",
     "SentReaction",
     "SentTemplate",
     "SentTemplateStatus",
-    "InitiatedCall",
+    "SentVoiceMessage",
 ]
 
 import abc
@@ -135,15 +135,11 @@ def _ignore_updates_canceler(_, u: BaseUserUpdate) -> bool:
 
 
 def _failed_canceler(_, u: BaseUserUpdate) -> bool:
-    if isinstance(u, MessageStatus) and u.status == MessageStatusType.FAILED:
-        return True
-    return False
+    return isinstance(u, MessageStatus) and u.status == MessageStatusType.FAILED
 
 
 def _new_update_canceler(_, u: BaseUserUpdate) -> bool:
-    if u._is_user_action:
-        return True
-    return False
+    return bool(u._is_user_action)
 
 
 ignore_updates_canceler = pywa_filters.new(_ignore_updates_canceler)
@@ -151,8 +147,6 @@ failed_canceler = pywa_filters.new(_failed_canceler)
 new_update_canceler = pywa_filters.new(_new_update_canceler)
 
 _SentMessageType = TypeVar("_SentMessageType", bound="SentMessage")
-_SentTemplateType = TypeVar("_SentTemplateType", bound="SentTemplate")
-_InitiatedCallType = TypeVar("_InitiatedCallType", bound="InitiatedCall")
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
@@ -971,6 +965,9 @@ class SentTemplateStatus(helpers.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
+_SentTemplateType = TypeVar("_SentTemplateType", bound="SentTemplate")
+
+
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class SentTemplate(SentMessage):
     """
@@ -1009,6 +1006,9 @@ class SentTemplate(SentMessage):
             ),
             **kwargs,
         )
+
+
+_InitiatedCallType = TypeVar("_InitiatedCallType", bound="InitiatedCall")
 
 
 @dataclasses.dataclass(slots=True, kw_only=True, frozen=True)

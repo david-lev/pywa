@@ -3,70 +3,70 @@
 from __future__ import annotations
 
 __all__ = [
-    "TemplateStatusUpdate",
-    "TemplateStatus",
-    "TemplateRejectionReason",
-    "TemplateCategoryUpdate",
-    "TemplateCategory",
-    "TemplateComponentsUpdate",
-    "TemplateQualityUpdate",
-    "QualityScore",
-    "QualityScoreType",
-    "TemplateLanguage",
-    "ParamFormat",
-    "TemplateBaseComponent",
-    "HeaderText",
-    "HeaderImage",
-    "HeaderVideo",
-    "HeaderGIF",
-    "HeaderDocument",
-    "HeaderLocation",
-    "HeaderProduct",
-    "BodyText",
-    "DateTime",
-    "Currency",
-    "AuthenticationBody",
-    "FooterText",
-    "AuthenticationFooter",
-    "Buttons",
-    "CopyCodeButton",
-    "FlowButton",
-    "FlowButtonIcon",
-    "PhoneNumberButton",
-    "VoiceCallButton",
-    "QuickReplyButton",
-    "URLButton",
     "AppDeepLink",
-    "CatalogButton",
-    "MPMButton",
-    "SPMButton",
-    "CallPermissionRequestButton",
-    "ContactInfoRequestButton",
+    "ArchiveTemplatesResult",
+    "AuthenticationBody",
+    "AuthenticationFooter",
     "BaseOTPButton",
-    "CopyCodeOTPButton",
-    "OneTapOTPButton",
-    "ZeroTapOTPButton",
-    "OTPSupportedApp",
-    "LimitedTimeOffer",
+    "BodyText",
+    "Buttons",
+    "CallPermissionRequestButton",
     "Carousel",
     "CarouselCard",
-    "Template",
+    "CatalogButton",
+    "ContactInfoRequestButton",
+    "CopyCodeButton",
+    "CopyCodeOTPButton",
     "CreatedTemplate",
-    "UpdatedTemplate",
     "CreatedTemplates",
-    "TemplateDetails",
-    "TemplatesResult",
-    "TemplatesCompareResult",
-    "TemplateUnpauseResult",
-    "ArchiveTemplatesResult",
-    "UnarchiveTemplatesResult",
+    "CreativeFeaturesSpec",
+    "Currency",
+    "DateTime",
+    "DegreesOfFreedomSpec",
+    "FlowButton",
+    "FlowButtonIcon",
+    "FooterText",
+    "HeaderDocument",
+    "HeaderGIF",
+    "HeaderImage",
+    "HeaderLocation",
+    "HeaderProduct",
+    "HeaderText",
+    "HeaderVideo",
+    "LibraryTemplate",
+    "LimitedTimeOffer",
+    "MPMButton",
     "MigrateTemplatesResult",
     "MigratedTemplate",
     "MigratedTemplateError",
-    "LibraryTemplate",
-    "DegreesOfFreedomSpec",
-    "CreativeFeaturesSpec",
+    "OTPSupportedApp",
+    "OneTapOTPButton",
+    "ParamFormat",
+    "PhoneNumberButton",
+    "QualityScore",
+    "QualityScoreType",
+    "QuickReplyButton",
+    "SPMButton",
     "TapTargetConfiguration",
+    "Template",
+    "TemplateBaseComponent",
+    "TemplateCategory",
+    "TemplateCategoryUpdate",
+    "TemplateComponentsUpdate",
+    "TemplateDetails",
+    "TemplateLanguage",
+    "TemplateQualityUpdate",
+    "TemplateRejectionReason",
+    "TemplateStatus",
+    "TemplateStatusUpdate",
+    "TemplateUnpauseResult",
+    "TemplatesCompareResult",
+    "TemplatesResult",
+    "URLButton",
+    "UnarchiveTemplatesResult",
+    "UpdatedTemplate",
+    "VoiceCallButton",
+    "ZeroTapOTPButton",
 ]
 
 import abc
@@ -78,15 +78,11 @@ import logging
 import pathlib
 import re
 import warnings
+from collections.abc import AsyncIterator, Generator, Iterator, Sequence
 from typing import (
     TYPE_CHECKING,
-    AsyncIterator,
     BinaryIO,
-    Generator,
-    Iterator,
     Literal,
-    NoReturn,
-    Sequence,
     TypeVar,
     cast,
     overload,
@@ -836,19 +832,19 @@ class CreativeFeaturesSpec:
     """
 
     __slots__ = (
-        "image_brightness_and_contrast",
-        "image_touchups",
         "add_text_overlay",
+        "auto_promotion_tag",
+        "dynamic_cta_text",
+        "hyperlink_formatting",
         "image_animation",
         "image_background_gen",
+        "image_banner",
+        "image_brightness_and_contrast",
+        "image_touchups",
+        "product_extensions",
         "text_extraction_for_headline",
         "text_extraction_for_tap_target",
-        "product_extensions",
         "text_formatting_optimization",
-        "auto_promotion_tag",
-        "hyperlink_formatting",
-        "image_banner",
-        "dynamic_cta_text",
     )
 
     def __init__(
@@ -1099,7 +1095,7 @@ class DateTime(_TextParam):
 class _BaseTextComponent:
     type: Literal[ComponentType.HEADER, ComponentType.BODY]
 
-    __slots__ = ("text", "example", "param_format", "_params_required")
+    __slots__ = ("_params_required", "example", "param_format", "text")
 
     def __init__(self, text: str, *positionals_examples, **named_examples):
         """
@@ -1269,7 +1265,7 @@ class _BaseTextComponent:
         else:
             return self.text
 
-    def validate(self, *positionals, **named) -> NoReturn | None:
+    def validate(self, *positionals, **named) -> None:
         """
         Validates the provided parameters against the component's expected parameters.
 
@@ -3783,9 +3779,7 @@ class _BaseTemplateActions:
             or []
         )
 
-    def validate_params(
-        self, params: Sequence[BaseParams | dict] | None
-    ) -> NoReturn | None:
+    def validate_params(self, params: Sequence[BaseParams | dict] | None) -> None:
         """
         Validate the provided parameters against the template's components.
 
@@ -4043,7 +4037,7 @@ class _TemplateJSONEncoder(json.JSONEncoder):
         return super().default(o)
 
 
-def _template_to_json(template: "helpers.DataclassInstance") -> str:
+def _template_to_json(template: helpers.DataclassInstance) -> str:
     return json.dumps(
         dataclasses.asdict(
             obj=template,
@@ -4157,7 +4151,7 @@ def _validate_params(
 
     missing = []
     for comp in required_comps:
-        if isinstance(comp, (Buttons, Carousel)) or isinstance(comp, dict):
+        if isinstance(comp, (Buttons, Carousel, dict)):
             continue
         comp_params_cls = getattr(comp, "_Params", None)
         assert comp_params_cls is not None

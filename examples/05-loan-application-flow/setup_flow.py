@@ -1,4 +1,3 @@
-# ruff: noqa: T201
 """
 One-time setup script.
 
@@ -12,6 +11,7 @@ Then copy the printed flow ID into `LOAN_FLOW_ID` in your `.env`.
 
 import asyncio
 import os
+import pathlib
 
 import dotenv
 from flow_json import loan_application_flow
@@ -30,8 +30,8 @@ async def main():
 
     # Upload your business public key once (required for encrypted flow data exchange).
     # See README.md for how to generate the private.pem / public.pem pair.
-    with open(os.environ["BUSINESS_PUBLIC_KEY_PATH"]) as f:
-        await wa.set_business_public_key(f.read())
+    key_path = pathlib.Path(os.environ["BUSINESS_PUBLIC_KEY_PATH"])
+    await wa.set_business_public_key(await asyncio.to_thread(key_path.read_text))
 
     created = await wa.create_flow(
         name="Loan Application",

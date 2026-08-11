@@ -1,20 +1,20 @@
 """This module contains the callback types."""
 
 __all__ = [
-    "CallbackButton",
-    "CallbackSelection",
     "Button",
-    "URLButton",
-    "VoiceCallButton",
     "CallPermissionRequestButton",
+    "CallbackButton",
+    "CallbackData",
+    "CallbackSelection",
     "ContactInfoRequestButton",
-    "SectionRow",
-    "Section",
-    "SectionList",
     "FlowButton",
     "ImageCarouselCard",
+    "Section",
+    "SectionList",
+    "SectionRow",
+    "URLButton",
     "VideoCarouselCard",
-    "CallbackData",
+    "VoiceCallButton",
 ]
 
 import abc
@@ -23,12 +23,12 @@ import datetime
 import enum
 import types
 import typing
+from collections.abc import Iterable
 from typing import (
     TYPE_CHECKING,
     Any,
     ClassVar,
     Generic,
-    Iterable,
     Literal,
     TypeVar,
     Union,
@@ -38,7 +38,7 @@ from typing import (
 
 from .. import _helpers as helpers
 from .. import utils
-from .base_update import BaseUserUpdate, RawUpdate  # noqa
+from .base_update import BaseUserUpdate, RawUpdate
 from .flows import FlowActionType, FlowStatus
 from .others import InteractiveType, MessageType, Metadata, ReplyToMessage
 
@@ -115,7 +115,7 @@ class CallbackData:
         float,
     )
     """The allowed types in the callback data."""
-    __callback_fields__: dict[str, type] = {}
+    __callback_fields__: ClassVar[dict[str, type]] = {}
     """The fields in the subclassed callback data."""
 
     def __init_subclass__(cls, **kwargs):
@@ -132,7 +132,8 @@ class CallbackData:
 
         try:
             all_hints = typing.get_type_hints(cls)
-        except Exception:
+        # unresolved forward refs shouldn't break subclassing
+        except Exception:  # noqa: BLE001
             all_hints = getattr(cls, "__annotations__", {})
 
         cls.__callback_fields__ = {
@@ -183,7 +184,7 @@ class CallbackData:
                     T = next(a for a in get_args(T) if a is not type(None))
 
                 if T is bool:
-                    args.append(True if val == cls.__callback_bool_true__ else False)
+                    args.append(val == cls.__callback_bool_true__)
                 else:
                     args.append(T(val))
 
@@ -194,7 +195,7 @@ class CallbackData:
     def to_str(self) -> str:
         parts = [str(self.__callback_id__)]
 
-        for name in self.__callback_fields__.keys():
+        for name in self.__callback_fields__:
             val = getattr(self, name)
             if val is None:
                 res = self.__callback_null__

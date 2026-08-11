@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from pywa.types.user import *  # noqa MUST BE IMPORTED FIRST
+from pywa.types.user import *
 from pywa.types.user import User as _User
 
 if TYPE_CHECKING:

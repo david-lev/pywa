@@ -8,7 +8,7 @@ import pytest
 from pywa import _helpers as helpers
 from pywa import types
 from pywa.types import flows
-from pywa.types.templates import *  # noqa: F403
+from pywa.types.templates import *
 
 
 def _resolve_example_handles(template: Template):
@@ -712,7 +712,7 @@ def test_comp_and_params_to_dict():
             "has_expiration": True,
         },
     }
-    now = datetime.datetime.now()
+    now = datetime.datetime.now(tz=datetime.timezone.utc)
     assert lto.params(expiration_time=now).to_dict() == {
         "type": "LIMITED_TIME_OFFER",
         "parameters": [
