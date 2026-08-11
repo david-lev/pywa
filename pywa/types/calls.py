@@ -45,7 +45,7 @@ from typing import TYPE_CHECKING, Generic
 
 from .. import _helpers as helpers
 from ..errors import PywaDeprecationWarning, WhatsAppError
-from .base_update import BaseUpdate, BaseUserUpdate, RawUpdate, _ClientShortcuts  # noqa
+from .base_update import BaseUpdate, BaseUserUpdate, RawUpdate, _ClientShortcuts
 from .callback import CallbackData, _CallbackDataT
 from .others import (
     MessageType,

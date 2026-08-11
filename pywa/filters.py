@@ -266,7 +266,9 @@ def new(
 
     Or passing the function directly:
 
-    >>> @wa.on_message(filters.new(lambda _, msg: my_db.is_user_registered(msg.from_user.bsuid)))
+    >>> @wa.on_message(
+    ...     filters.new(lambda _, msg: my_db.is_user_registered(msg.from_user.bsuid))
+    ... )
     ... def only_registered_users(wa: WhatsApp, msg: types.Message):
     ...     msg.reply("Hello registered user!")"""
     if func is None or not callable(func):
@@ -499,7 +501,7 @@ def from_countries(
     - You can pass either country codes (e.g. "US", "IL") or phone number prefixes (e.g. "+1", "972").
     - See https://countrycode.org/ for a list of country codes.
 
-    >>> from_countries("972", "1", "+972", "US", "IL") # Israel and USA
+    >>> from_countries("972", "1", "+972", "US", "IL")  # Israel and USA
     """
     codes = tuple(str(p) for p in prefixes_or_codes)
     country_codes = {c.upper() for c in codes if c.isalpha()}
@@ -886,7 +888,7 @@ def reaction_emojis(*emojis: str) -> Filter[types.Message]:
     """
     Filter for custom reaction messages. pass emojis as strings.
 
-    >>> reaction_emojis("👍","👎")
+    >>> reaction_emojis("👍", "👎")
     """
     return new(
         lambda _, m: m.reaction is not None and m.reaction.emoji in emojis,

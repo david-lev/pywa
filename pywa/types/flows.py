@@ -207,7 +207,7 @@ class FlowCompletion(BaseUserUpdate):
             >>> wa = WhatsApp(...)
             >>> @wa.on_flow_completion
             ... def on_flow_completion(_: WhatsApp, flow: types.FlowCompletion):
-            ...     img = flow.get_media(types.Image,key="image")
+            ...     img = flow.get_media(types.Image, key="image")
             ...     img.download()
 
         Args:
@@ -929,9 +929,9 @@ class FlowDetails(helpers.APIObject):
             >>> wa = WhatsApp(waba_id='1234567890', ...)
             >>> my_flows = wa.get_flows()
             >>> my_flows[0].update_metadata(
-            ...     name='Feedback',
+            ...     name="Feedback",
             ...     categories=[FlowCategory.SURVEY, FlowCategory.OTHER],
-            ...     endpoint_uri='https://my-api-server/feedback_flow'
+            ...     endpoint_uri="https://my-api-server/feedback_flow",
             ... )
 
         Returns:
@@ -1305,8 +1305,8 @@ class DataSource:
 
     Example:
 
-        >>> option_1 = DataSource(id='1', title='Option 1')
-        >>> option_2 = DataSource(id='2', title='Option 2')
+        >>> option_1 = DataSource(id="1", title="Option 1")
+        >>> option_2 = DataSource(id="2", title="Option 2")
         >>> checkbox_group = CheckboxGroup(data_source=[option_1, option_2], ...)
 
     Attributes:
@@ -1493,7 +1493,9 @@ class ScreenDataUpdate(Generic[_ScreenDataValTypeVar]):
                             payload=[is_txt_visible.update(True)]  # a much cleaner way
                         ),
                         on_unselect_action=UpdateDataAction(
-                            payload=[ScreenDataUpdate(key="is_txt_visible", new_value=False)]  # only when you don't have access to the `ScreenData` object
+                            payload=[
+                                ScreenDataUpdate(key="is_txt_visible", new_value=False)
+                            ]  # only when you don't have access to the `ScreenData` object
                         ),
                     ),
                     TextBody(
@@ -1501,7 +1503,7 @@ class ScreenDataUpdate(Generic[_ScreenDataValTypeVar]):
                         visible=is_txt_visible.ref,
                     ),
                 ]
-            )
+            ),
         )
     """
 
@@ -1564,12 +1566,12 @@ class Screen:
     Example:
 
         >>> Screen(
-        ...     id='START',
-        ...     title='Welcome',
-        ...     data=[ScreenData(key='welcome', example='Welcome to my store!')],
+        ...     id="START",
+        ...     title="Welcome",
+        ...     data=[ScreenData(key="welcome", example="Welcome to my store!")],
         ...     terminal=True,
         ...     layout=Layout(children=[Form(children=[...])]),
-        ...     refresh_on_back=True
+        ...     refresh_on_back=True,
         ... )
 
     Attributes:
@@ -2377,7 +2379,7 @@ class TextHeading(TextComponent):
 
     Example:
 
-        >>> TextHeading(text='Heading', visible=True)
+        >>> TextHeading(text="Heading", visible=True)
 
     Attributes:
         text: The text of the heading. Limited to 80 characters.
@@ -2400,7 +2402,7 @@ class TextSubheading(TextComponent):
 
     Example:
 
-        >>> TextSubheading(text='Subheading', visible=True)
+        >>> TextSubheading(text="Subheading", visible=True)
 
     Attributes:
         text: The text of the subheading. Limited to 80 characters.
@@ -2424,10 +2426,10 @@ class TextBody(TextComponent):
     Example:
 
         >>> TextBody(
-        ...     text='Body',
+        ...     text="Body",
         ...     font_weight=FontWeight.BOLD,
         ...     strikethrough=True,
-        ...     visible=True
+        ...     visible=True,
         ... )
 
     Attributes:
@@ -2467,7 +2469,7 @@ class TextCaption(TextComponent):
     Example:
 
         >>> TextCaption(
-        ...     text='Caption',
+        ...     text="Caption",
         ...     font_weight=FontWeight.ITALIC,
         ...     strikethrough=True,
         ... )
@@ -2623,13 +2625,13 @@ class TextInput(TextEntryComponent):
     Example:
 
         >>> TextInput(
-        ...     name='email',
-        ...     label='Email',
+        ...     name="email",
+        ...     label="Email",
         ...     input_type=InputType.EMAIL,
         ...     required=True,
         ...     min_chars=5,
         ...     max_chars=50,
-        ...     helper_text='Enter your email address',
+        ...     helper_text="Enter your email address",
         ... )
 
     Attributes:
@@ -2679,11 +2681,11 @@ class TextArea(TextEntryComponent):
     Example:
 
         >>> TextArea(
-        ...     name='description',
-        ...     label='Description',
+        ...     name="description",
+        ...     label="Description",
         ...     required=True,
         ...     max_length=100,
-        ...     helper_text='Enter your description',
+        ...     helper_text="Enter your description",
         ... )
 
     Attributes:
@@ -2744,17 +2746,17 @@ class CheckboxGroup(FormComponent[list[str]]):
     Example:
 
         >>> CheckboxGroup(
-        ...     name='options',
+        ...     name="options",
         ...     data_source=[
-        ...         DataSource(id='1', title='Option 1'),
-        ...         DataSource(id='2', title='Option 2'),
-        ...         DataSource(id='3', title='Option 3'),
+        ...         DataSource(id="1", title="Option 1"),
+        ...         DataSource(id="2", title="Option 2"),
+        ...         DataSource(id="3", title="Option 3"),
         ...     ],
-        ...     label='Options',
+        ...     label="Options",
         ...     min_selected_items=1,
         ...     max_selected_items=2,
         ...     required=True,
-        ...     init_value=['1', '2']
+        ...     init_value=["1", "2"],
         ... )
 
     Attributes:
@@ -2802,15 +2804,15 @@ class RadioButtonsGroup(FormComponent[str]):
     Example:
 
         >>> RadioButtonsGroup(
-        ...     name='options',
+        ...     name="options",
         ...     data_source=[
-        ...         DataSource(id='1', title='Option 1'),
-        ...         DataSource(id='2', title='Option 2'),
-        ...         DataSource(id='3', title='Option 3'),
+        ...         DataSource(id="1", title="Option 1"),
+        ...         DataSource(id="2", title="Option 2"),
+        ...         DataSource(id="3", title="Option 3"),
         ...     ],
-        ...     label='Options',
+        ...     label="Options",
         ...     required=True,
-        ...     init_value='1'
+        ...     init_value="1",
         ... )
 
     Attributes:
@@ -2854,15 +2856,15 @@ class Dropdown(FormComponent[str]):
     Example:
 
         >>> Dropdown(
-        ...     name='options',
+        ...     name="options",
         ...     data_source=[
-        ...         DataSource(id='1', title='Option 1'),
-        ...         DataSource(id='2', title='Option 2'),
-        ...         DataSource(id='3', title='Option 3'),
+        ...         DataSource(id="1", title="Option 1"),
+        ...         DataSource(id="2", title="Option 2"),
+        ...         DataSource(id="3", title="Option 3"),
         ...     ],
-        ...     label='Options',
+        ...     label="Options",
         ...     required=True,
-        ...     init_value='1'
+        ...     init_value="1",
         ... )
 
     Attributes:
@@ -2902,17 +2904,17 @@ class ChipsSelector(FormComponent[list[str]]):
     Example:
 
         >>> ChipsSelector(
-        ...     name='options',
+        ...     name="options",
         ...     data_source=[
-        ...         DataSource(id='1', title='Option 1'),
-        ...         DataSource(id='2', title='Option 2'),
-        ...         DataSource(id='3', title='Option 3'),
+        ...         DataSource(id="1", title="Option 1"),
+        ...         DataSource(id="2", title="Option 2"),
+        ...         DataSource(id="3", title="Option 3"),
         ...     ],
-        ...     label='Options',
+        ...     label="Options",
         ...     min_selected_items=1,
         ...     max_selected_items=2,
         ...     required=True,
-        ...     init_value=['1', '2']
+        ...     init_value=["1", "2"],
         ... )
 
     Attributes:
@@ -2987,10 +2989,10 @@ class OptIn(FormComponent[bool]):
     Example:
 
         >>> OptIn(
-        ...     name='opt_in',
-        ...     label='I agree to the terms and conditions',
+        ...     name="opt_in",
+        ...     label="I agree to the terms and conditions",
         ...     required=True,
-        ...     init_value=True
+        ...     init_value=True,
         ... )
 
     Attributes:
@@ -3028,11 +3030,10 @@ class EmbeddedLink(Component):
     Example:
 
         >>> EmbeddedLink(
-        ...     text='Sign up',
+        ...     text="Sign up",
         ...     on_click_action=NavigateAction(
-        ...         next=Next(name='SIGNUP_SCREEN'),
-        ...         payload={'data': 'value'}
-        ...     )
+        ...         next=Next(name="SIGNUP_SCREEN"), payload={"data": "value"}
+        ...     ),
         ... )
 
     Attributes:
@@ -3066,17 +3067,19 @@ class NavigationList(Component):
     Example:
 
         >>> NavigationList(
-        ...     name='navigation_list',
+        ...     name="navigation_list",
         ...     list_items=[
         ...         NavigationItem(
-        ...             id='1',
-        ...             main_content=NavigationItemMainContent(title='Title 1', description='Description 1'),
-        ...             start=NavigationItemStart(image='base64image...'),
+        ...             id="1",
+        ...             main_content=NavigationItemMainContent(
+        ...                 title="Title 1", description="Description 1"
+        ...             ),
+        ...             start=NavigationItemStart(image="base64image..."),
         ...             end=NavigationItemEnd(title="$100", description="/ month"),
-        ...             badge='New',
-        ...             on_click_action=NavigateAction(next=Next(name='SCREEN_1'))
+        ...             badge="New",
+        ...             on_click_action=NavigateAction(next=Next(name="SCREEN_1")),
         ...         ),
-        ...         ...
+        ...         ...,
         ...     ],
         ... )
 
@@ -3199,16 +3202,16 @@ class DatePicker(FormComponent[str]):
     Example:
 
         >>> DatePicker(
-        ...     name='date',
-        ...     label='Appointment Date',
+        ...     name="date",
+        ...     label="Appointment Date",
         ...     min_date=datetime.date(2024, 7, 21),
         ...     max_date=datetime.date(2024, 10, 21),
         ...     unavailable_dates=[
         ...         datetime.date(2024, 7, 25),
         ...         datetime.date(2024, 7, 26),
         ...     ],
-        ...     helper_text='Select a date',
-        ...     required=True
+        ...     helper_text="Select a date",
+        ...     required=True,
         ... )
 
 
@@ -3345,8 +3348,8 @@ class CalendarPicker(FormComponent[str]):
     Example:
 
         >>> CalendarPicker(
-        ...     name='date',
-        ...     label='Appointment Date',
+        ...     name="date",
+        ...     label="Appointment Date",
         ...     mode=CalendarPickerMode.SINGLE,
         ...     min_date=datetime.date(2024, 7, 21),
         ...     max_date=datetime.date(2024, 10, 21),
@@ -3354,8 +3357,8 @@ class CalendarPicker(FormComponent[str]):
         ...         datetime.date(2024, 7, 25),
         ...         datetime.date(2024, 7, 26),
         ...     ],
-        ...     helper_text='Select a date',
-        ...     required=True
+        ...     helper_text="Select a date",
+        ...     required=True,
         ... )
 
 
@@ -3490,12 +3493,12 @@ class Image(Component):
     Example:
 
         >>> Image(
-        ...     src='iVBORw0KGgoAAAANSUhEUgAAAlgAAAM...',
+        ...     src="iVBORw0KGgoAAAANSUhEUgAAAlgAAAM...",
         ...     width=100,
         ...     height=100,
         ...     scale_type=ScaleType.CONTAIN,
         ...     aspect_ratio=1,
-        ...     alt_text='Image of a cat'
+        ...     alt_text="Image of a cat",
         ... )
 
     Attributes:
@@ -3531,8 +3534,7 @@ class ImageCarouselItem:
     Example:
 
         >>> ImageCarouselItem(
-        ...     src='iVBORw0KGgoAAAANSUhEUgAAAlgAAAM...',
-        ...     alt_text='Image of a cat'
+        ...     src="iVBORw0KGgoAAAANSUhEUgAAAlgAAAM...", alt_text="Image of a cat"
         ... )
 
     Attributes:
@@ -3558,11 +3560,15 @@ class ImageCarousel(Component):
     Example:
         >>> ImageCarousel(
         ...     images=[
-        ...         ImageCarouselItem(src='iVBORw0KGgoAAAANSUhEUgAAAlgAAAM...', alt_text='Image 1'),
-        ...         ImageCarouselItem(src='iVBORw0KGgoAAAANSUhEUgAAAlgAAAN...', alt_text='Image 2'),
+        ...         ImageCarouselItem(
+        ...             src="iVBORw0KGgoAAAANSUhEUgAAAlgAAAM...", alt_text="Image 1"
+        ...         ),
+        ...         ImageCarouselItem(
+        ...             src="iVBORw0KGgoAAAANSUhEUgAAAlgAAAN...", alt_text="Image 2"
+        ...         ),
         ...     ],
-        ...     aspect_ratio='4:3',
-        ...     scale_type=ScaleType.CONTAIN
+        ...     aspect_ratio="4:3",
+        ...     scale_type=ScaleType.CONTAIN,
         ... )
 
     Attributes:
@@ -3614,9 +3620,9 @@ class PhotoPicker(FormComponent):
     Example:
 
         >>> PhotoPicker(
-        ...     name='photo',
-        ...     label='Take a photo',
-        ...     description='We need your photo for verification',
+        ...     name="photo",
+        ...     label="Take a photo",
+        ...     description="We need your photo for verification",
         ...     photo_source=PhotoSource.CAMERA,
         ...     max_file_size_kb=10_000,  # 10MB
         ...     min_uploaded_photos=1,
@@ -3670,13 +3676,13 @@ class DocumentPicker(FormComponent):
     Example:
 
         >>> DocumentPicker(
-        ...     name='document',
-        ...     label='Upload your Driving License',
-        ...     description='We need your document for verification',
+        ...     name="document",
+        ...     label="Upload your Driving License",
+        ...     description="We need your document for verification",
         ...     max_file_size_kb=5_000,  # 5MB
         ...     min_uploaded_documents=1,
         ...     max_uploaded_documents=1,
-        ...     allowed_mime_types=['application/pdf', 'image/jpeg', 'image/png'],
+        ...     allowed_mime_types=["application/pdf", "image/jpeg", "image/png"],
         ... )
 
     Attributes:
@@ -3773,7 +3779,7 @@ class Switch(Component):
 
     Example:
 
-            >>> age = TextInput(name='age', label='Age')
+            >>> age = TextInput(name="age", label="Age")
             >>> switch = Switch(
             ...     value=age.ref,
             ...     cases={
@@ -3890,9 +3896,7 @@ class DataExchangeAction(BaseAction):
 
     Example:
 
-        >>> DataExchangeAction(
-        ...     payload={'data': 'value'}
-        ... )
+        >>> DataExchangeAction(payload={"data": "value"})
 
     Attributes:
         payload: The payload of the action (Pass data to the WhatsApp Flows Data Endpoint).
@@ -3916,10 +3920,7 @@ class NavigateAction(BaseAction):
 
     Example:
 
-        >>> NavigateAction(
-        ...     next=Next(name='NEXT_SCREEN'),
-        ...     payload={'data': 'value'}
-        ... )
+        >>> NavigateAction(next=Next(name="NEXT_SCREEN"), payload={"data": "value"})
 
     Attributes:
         next: The next action to perform
@@ -3945,9 +3946,7 @@ class OpenURLAction(BaseAction):
 
     Example:
 
-        >>> OpenURLAction(
-        ...     url='https://pywa.readthedocs.io'
-        ... )
+        >>> OpenURLAction(url="https://pywa.readthedocs.io")
 
     Attributes:
         url: The URL to open
@@ -3969,12 +3968,8 @@ class UpdateDataAction(BaseAction, Generic[_ScreenDataValTypeVar]):
 
     Example:
 
-        >>> is_visible = ScreenData(key='is_visible', example=True)
-        >>> UpdateDataAction(
-        ...     payload=[
-        ...         is_visible.update(value=False)
-        ...     ]
-        ... )
+        >>> is_visible = ScreenData(key="is_visible", example=True)
+        >>> UpdateDataAction(payload=[is_visible.update(value=False)])
 
     Attributes:
         payload: The data to update for the current screen.
@@ -4001,9 +3996,7 @@ class CompleteAction(BaseAction):
 
     Example:
 
-        >>> CompleteAction(
-        ...     payload={'data': 'value'}
-        ... )
+        >>> CompleteAction(payload={"data": "value"})
 
     Attributes:
         payload: The payload to include in the :class:`FlowCompletion` `.response` attribute.

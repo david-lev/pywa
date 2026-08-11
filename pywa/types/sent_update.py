@@ -310,7 +310,7 @@ class SentMessage(_SentUpdate, _PinUnpinActions):
                     try:
                         r.wait_until_read(cancel_on_new_update=True)
                     except ListenerCanceled as e:
-                        print(e.update) # The update that canceled the listener
+                        print(e.update)  # The update that canceled the listener
                         r.reply("You turned off read receipts")
                     r.reply("You read this message", quote=True)
 
@@ -411,13 +411,17 @@ class SentMessage(_SentUpdate, _PinUnpinActions):
                 )
                 try:
                     failed = m.wait_until_failed(
-                        filters=filters.failed_with(errors.ReEngagementMessage),  # message was send after 24 hours
-                        cancel_if_delivered=True, # defaults to True, so the listener will be canceled if the message was delivered
+                        filters=filters.failed_with(
+                            errors.ReEngagementMessage
+                        ),  # message was send after 24 hours
+                        cancel_if_delivered=True,  # defaults to True, so the listener will be canceled if the message was delivered
                         timeout=5,
                     )
                     failed.reply_template(...)
                 except ListenerCanceled:
-                    print("The message was delivered successfully, so the listener was canceled.")
+                    print(
+                        "The message was delivered successfully, so the listener was canceled."
+                    )
                 except ListenerTimeout:
                     pass
 
@@ -836,9 +840,14 @@ class SentLocationRequest(SentMessage):
 
                 @wa.on_message(filters.command("start"))
                 def start(w: WhatsApp, m: Message):
-                    r = m.reply_location_request(text="Please share your location",)
+                    r = m.reply_location_request(
+                        text="Please share your location",
+                    )
                     location_message = r.wait_for_location()
-                    r.reply(f"You shared your location: {location_message.location}", quote=True)
+                    r.reply(
+                        f"You shared your location: {location_message.location}",
+                        quote=True,
+                    )
 
         Args:
             force_current_location: Whether to only accept current location messages.
@@ -899,9 +908,14 @@ class SentContactInfoRequest(SentMessage):
 
                 @wa.on_message(filters.command("start"))
                 def start(w: WhatsApp, m: Message):
-                    r = m.reply_contact_info_request(text="Please share your contact",)
+                    r = m.reply_contact_info_request(
+                        text="Please share your contact",
+                    )
                     contact_message = r.wait_for_contact_info()
-                    r.reply(f"You shared your contact: {contact_message.contacts.first.name}", quote=True)
+                    r.reply(
+                        f"You shared your contact: {contact_message.contacts.first.name}",
+                        quote=True,
+                    )
 
         Args:
             filters: The filters to apply to the contact message.

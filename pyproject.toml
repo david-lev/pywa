@@ -109,16 +109,24 @@ pywa = "pywa.cli:main"
 "Funding" = "https://github.com/sponsors/david-lev"
 "Changelog" = "https://github.com/david-lev/pywa/blob/master/CHANGELOG.md"
 
-[tool.ruff]
-extend-exclude = [
-    "pywa*/__init__.py",
-]
+[tool.ruff.format]
+docstring-code-format = true
 
 [tool.ruff.lint]
 ignore = [
-    "PLC0414", # `pywa_async` re-exports `pywa` names as `from pywa.X import Y as Y` on purpose
+    "PLC0414", # `pywa_async` do `from pywa.X import Y as Z` on purpose to override sync methods with async ones
     "PYI019", # `Self` needs Python 3.11+; pywa supports 3.10+ without `typing_extensions`
+    "F401", # `pywa_async` re-exports `pywa` names as `from pywa.X import Y as Y` on purpose
+    "E731", # we use lambdas in some places for brevity (for example in `StrEnum._normalize` overrides)
 ]
+extend-select = ["T20", "E711", "E712", "E731", "E741"]
+
+[tool.ruff.lint.per-file-ignores]
+"pywa*/types/__init__.py" = ["I001"]
+"pywa/cli.py" = ["T201"]
+"tests/test_flows.py" = ["E712"]
+"tests/smoke_test.py" = ["T201"]
+"examples/**" = ["T201"]
 
 [tool.ty.src]
 include = ["pywa*"]

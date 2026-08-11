@@ -6,6 +6,7 @@
 - 📦 `PyPI <https://pypi.org/project/pywa>`_
 """
 
+from pywa import __author__, __license__, __version__
+
 from .client import WhatsApp
 from .utils import Version
-from pywa import __version__, __author__, __license__

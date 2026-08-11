@@ -33,8 +33,8 @@ class MessageStatus(BaseUserUpdateAsync, _MessageStatus[_CallbackDataT]):
     Here is an example:
 
         >>> from pywa_async.types import CallbackData
-        >>> from dataclasses import dataclass
-        >>> @dataclass(frozen=True, slots=True)
+        >>> import dataclasses  # Use dataclass to get free ordered __init__
+        >>> @dataclasses.dataclass(frozen=True, slots=True) # Do not use kw_only=True
         >>> class UserData(CallbackData):  # Subclass CallbackData
         ...     id: int
         ...     name: str

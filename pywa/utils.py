@@ -241,8 +241,12 @@ def default_flow_request_decryptor(
         >>> from pywa.types.flows import FlowRequest, FlowResponse
         >>> from pywa.utils import default_flow_request_decryptor
         >>> wa = WhatsApp(...)
-        >>> @wa.on_flow_request("/sign-up-flow", request_decryptor=default_flow_request_decryptor)
-        ... def on_sign_up_request(_: WhatsApp, flow: FlowRequest) -> FlowResponse | None: ...
+        >>> @wa.on_flow_request(
+        ...     "/sign-up-flow", request_decryptor=default_flow_request_decryptor
+        ... )
+        ... def on_sign_up_request(
+        ...     _: WhatsApp, flow: FlowRequest
+        ... ) -> FlowResponse | None: ...
     """
     from cryptography.hazmat.primitives.asymmetric.padding import MGF1, OAEP, hashes
     from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
@@ -304,8 +308,12 @@ def default_flow_response_encryptor(response: dict, aes_key: bytes, iv: bytes) -
         >>> from pywa.types.flows import FlowRequest, FlowResponse
         >>> from pywa.utils import default_flow_response_encryptor
         >>> wa = WhatsApp(...)
-        >>> @wa.on_flow_request("/sign-up-flow", response_encryptor=default_flow_response_encryptor)
-        ... def on_sign_up_request(_: WhatsApp, flow: FlowRequest) -> FlowResponse | None: ...
+        >>> @wa.on_flow_request(
+        ...     "/sign-up-flow", response_encryptor=default_flow_response_encryptor
+        ... )
+        ... def on_sign_up_request(
+        ...     _: WhatsApp, flow: FlowRequest
+        ... ) -> FlowResponse | None: ...
     """
     from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
@@ -372,7 +380,9 @@ def flow_request_media_decryptor(
         >>> from pywa import WhatsApp, types
         >>> wa = WhatsApp(...)
         >>> @wa.on_flow_request("/media-upload")
-        ... def on_media_upload_request(_: WhatsApp, req: types.FlowRequest) -> types.FlowResponse | None:
+        ... def on_media_upload_request(
+        ...     _: WhatsApp, req: types.FlowRequest
+        ... ) -> types.FlowResponse | None:
         ...     dec = req.decrypt_media(key="driver_license", index=0)
         ...     with open(dec.filename, "wb") as file:
         ...         file.write(dec.data)
@@ -471,8 +481,8 @@ def start_ngrok_tunnel(
     >>> from pywa import WhatsApp
 
     >>> callback_url = start_ngrok_tunnel(
-    ...     auth_token="your_ngrok_auth_token", # https://dashboard.ngrok.com/get-started/your-authtoken
-    ...     domain="subdomain.ngrok-free.app", # https://dashboard.ngrok.com/domains
+    ...     auth_token="your_ngrok_auth_token",  # https://dashboard.ngrok.com/get-started/your-authtoken
+    ...     domain="subdomain.ngrok-free.app",  # https://dashboard.ngrok.com/domains
     ... )
 
     >>> wa = WhatsApp(callback_url=callback_url, ...) # when using a static domain, you can comment out the callback_url parameter after the first run to avoid unnecessary webhook re-registration every time you restart the server.

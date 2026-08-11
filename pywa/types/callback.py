@@ -72,9 +72,9 @@ class CallbackData:
     Example:
 
         >>> from pywa.types import CallbackData
-        >>> from dataclasses import dataclass # Use dataclass to get free ordered __init__
-        >>> @dataclass(frozen=True, slots=True) # Do not use kw_only=True
-        >>> class UserData(CallbackData): # Subclass CallbackData
+        >>> import dataclasses  # Use dataclass to get free ordered __init__
+        >>> @dataclasses.dataclass(frozen=True, slots=True) # Do not use kw_only=True
+        >>> class UserData(CallbackData):  # Subclass CallbackData
         ...     id: int
         ...     name: str | None
         ...     admin: bool = False
@@ -83,19 +83,24 @@ class CallbackData:
         >>> from pywa.types import Button
         >>> wa = WhatsApp(...)
         >>> wa.send_message(
-        ...     to='972987654321',
-        ...     text='Click the button to get the user',
+        ...     to="972987654321",
+        ...     text="Click the button to get the user",
         ...     buttons=[
         ...         Button(
-        ...             title='Get user',
-        ...             callback_data=UserData(id=123, name='John', admin=True)
+        ...             title="Get user",
+        ...             callback_data=UserData(id=123, name="John", admin=True),
         ...         )
-        ...     ]
+        ...     ],
         ... )
 
-        >>> @wa.on_callback_button(factory=UserData) # Use the factory parameter to convert the callback data
-        ... def on_user_data(client: WhatsApp, btn: CallbackButton[UserData]): # For autocomplete
-        ...    if btn.data.admin: print(btn.data.id) # Access the data object as an attribute
+        >>> @wa.on_callback_button(
+        ...     factory=UserData
+        ... )  # Use the factory parameter to convert the callback data
+        ... def on_user_data(
+        ...     client: WhatsApp, btn: CallbackButton[UserData]
+        ... ):  # For autocomplete
+        ...     if btn.data.admin:
+        ...         print(btn.data.id)  # Access the data object as an attribute
     """
 
     __callback_id__: int = 0
@@ -232,9 +237,9 @@ class CallbackButton(BaseUserUpdate, Generic[_CallbackDataT]):
     Here is an example:
 
         >>> from pywa.types import CallbackData
-        >>> from dataclasses import dataclass
-        >>> @dataclass(frozen=True, slots=True)
-        >>> class UserData(CallbackData): # Subclass CallbackData
+        >>> import dataclasses  # Use dataclass to get free ordered __init__
+        >>> @dataclasses.dataclass(frozen=True, slots=True) # Do not use kw_only=True
+        >>> class UserData(CallbackData):  # Subclass CallbackData
         ...     id: int
         ...     name: str
         ...     admin: bool
@@ -243,14 +248,24 @@ class CallbackButton(BaseUserUpdate, Generic[_CallbackDataT]):
         >>> from pywa.types import Button, CallbackButton
         >>> wa = WhatsApp(...)
         >>> wa.send_message(
-        ...     to='972987654321',
-        ...     text='Click the button to get the user',
-        ...     buttons=[Button(title='Get user', callback_data=UserData(id=123, name='david', admin=True))]
-        ... )                                     # Here ^^^ we use the UserData class as the callback data
+        ...     to="972987654321",
+        ...     text="Click the button to get the user",
+        ...     buttons=[
+        ...         Button(
+        ...             title="Get user",
+        ...             callback_data=UserData(id=123, name="david", admin=True),
+        ...         )
+        ...     ],
+        ... )  # Here ^^^ we use the UserData class as the callback data
 
-        >>> @wa.on_callback_button(factory=UserData) # Use the factory parameter to convert the callback data
-        ... def on_user_data(_: WhatsApp, btn: CallbackButton[UserData]): # For autocomplete
-        ...    if btn.data.admin: print(btn.data.id) # Access the data object as an attribute
+        >>> @wa.on_callback_button(
+        ...     factory=UserData
+        ... )  # Use the factory parameter to convert the callback data
+        ... def on_user_data(
+        ...     _: WhatsApp, btn: CallbackButton[UserData]
+        ... ):  # For autocomplete
+        ...     if btn.data.admin:
+        ...         print(btn.data.id)  # Access the data object as an attribute
 
 
     Attributes:
@@ -326,9 +341,9 @@ class CallbackSelection(BaseUserUpdate, Generic[_CallbackDataT]):
     Here is an example:
 
         >>> from pywa.types import CallbackData
-        >>> from dataclasses import dataclass
-        >>> @dataclass(frozen=True, slots=True)
-        >>> class UserData(CallbackData): # Subclass CallbackData
+        >>> import dataclasses  # Use dataclass to get free ordered __init__
+        >>> @dataclasses.dataclass(frozen=True, slots=True) # Do not use kw_only=True
+        >>> class UserData(CallbackData):  # Subclass CallbackData
         ...     id: int
         ...     name: str
         ...     admin: bool
@@ -337,20 +352,34 @@ class CallbackSelection(BaseUserUpdate, Generic[_CallbackDataT]):
         >>> from pywa.types import SectionList, Section, SectionRow, CallbackSelection
         >>> wa = WhatsApp(...)
         >>> wa.send_message(
-        ...     to='972987654321',
-        ...     text='Click the button to get the user',
+        ...     to="972987654321",
+        ...     text="Click the button to get the user",
         ...     buttons=SectionList(
-        ...         button_title='Get user', sections=[
-        ...             Section(title='Users', rows=[
-        ...                 SectionRow(title='Get user', callback_data=UserData(id=123, name='david', admin=True))
-        ...             ])                              # Here ^^^ we use the UserData class as the callback data
-        ...         ]
-        ...     )
+        ...         button_title="Get user",
+        ...         sections=[
+        ...             Section(
+        ...                 title="Users",
+        ...                 rows=[
+        ...                     SectionRow(
+        ...                         title="Get user",
+        ...                         callback_data=UserData(
+        ...                             id=123, name="david", admin=True
+        ...                         ),
+        ...                     )
+        ...                 ],
+        ...             )  # Here ^^^ we use the UserData class as the callback data
+        ...         ],
+        ...     ),
         ... )
 
-        >>> @wa.on_callback_selection(factory=UserData) # Use the factory parameter to convert the callback data
-        ... def on_user_data(_: WhatsApp, sel: CallbackSelection[UserData]): # For autocomplete
-        ...    if sel.data.admin: print(sel.data.id) # Access the data object as an attribute
+        >>> @wa.on_callback_selection(
+        ...     factory=UserData
+        ... )  # Use the factory parameter to convert the callback data
+        ... def on_user_data(
+        ...     _: WhatsApp, sel: CallbackSelection[UserData]
+        ... ):  # For autocomplete
+        ...     if sel.data.admin:
+        ...         print(sel.data.id)  # Access the data object as an attribute
 
     Attributes:
         id: The ID of the message.
@@ -457,7 +486,7 @@ class VoiceCallButton(BaseButton):
     Represents a button that initiates a voice call on WhatsApp.
 
     >>> VoiceCallButton(
-    ...     title='Call us',
+    ...     title="Call us",
     ...     ttl_minutes=datetime.timedelta(days=3),
     ... )
 

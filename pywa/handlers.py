@@ -29,7 +29,9 @@ Handlers for incoming updates.
 # Register a callback programmatically
 
 >>> print_msg_handler = handlers.MessageHandler(lambda w, m: print(m))
->>> print_txt_handler = handlers.MessageHandler(lambda w, m: print(m.text), filters.text)
+>>> print_txt_handler = handlers.MessageHandler(
+...     lambda w, m: print(m.text), filters.text
+... )
 >>> wa.add_handlers(print_msg_handler, print_txt_handler)
 >>> wa.remove_handlers(print_msg_handler, print_txt_handler)
 
@@ -419,7 +421,7 @@ class CallbackButtonHandler(_FactoryHandler[CallbackButton]):
         >>> from pywa import WhatsApp, filters
         >>> wa = WhatsApp(...)
         >>> print_btn = lambda _, btn: print(btn)
-        >>> wa.add_handlers(CallbackButtonHandler(print_btn, filters.startswith('id:')))
+        >>> wa.add_handlers(CallbackButtonHandler(print_btn, filters.startswith("id:")))
 
     Args:
         callback: The callback function. (Takes a :class:`~pywa.client.WhatsApp` instance and a :class:`~pywa.types.CallbackButton` as positional arguments)
@@ -443,7 +445,9 @@ class CallbackSelectionHandler(_FactoryHandler[CallbackSelection]):
         >>> from pywa import WhatsApp, filters
         >>> wa = WhatsApp(...)
         >>> print_selection = lambda _, sel: print(sel)
-        >>> wa.add_handlers(CallbackSelectionHandler(print_selection, filters.startswith('id:')))
+        >>> wa.add_handlers(
+        ...     CallbackSelectionHandler(print_selection, filters.startswith("id:"))
+        ... )
 
     Args:
         callback: The callback function. (Takes a :class:`~pywa.client.WhatsApp` instance and a :class:`~pywa.types.callback.CallbackSelection` as positional arguments)
@@ -492,7 +496,9 @@ class GroupMessageStatusesHandler(Handler[GroupMessageStatuses]):
 
         >>> from pywa import WhatsApp, filters
         >>> wa = WhatsApp(...)
-        >>> wa.add_handlers(GroupMessageStatusesHandler(lambda _, status: print(status)))
+        >>> wa.add_handlers(
+        ...     GroupMessageStatusesHandler(lambda _, status: print(status))
+        ... )
 
     Args:
         callback: The callback function (Takes a :class:`~pywa.client.WhatsApp` instance and a :class:`~pywa.types.groups.GroupMessageStatuses` as positional arguments).
@@ -581,7 +587,9 @@ class TemplateCategoryUpdateHandler(Handler[TemplateCategoryUpdate]):
         >>> from pywa import WhatsApp
         >>> wa = WhatsApp(...)
         >>> print_template_category_update = lambda _, msg: print(msg)
-        >>> wa.add_handlers(TemplateCategoryUpdateHandler(print_template_category_update))
+        >>> wa.add_handlers(
+        ...     TemplateCategoryUpdateHandler(print_template_category_update)
+        ... )
 
     Args:
         callback: The callback function (Takes a :class:`~pywa.client.WhatsApp` instance and a :class:`~pywa.types.templates.TemplateCategoryUpdate` as positional arguments)
@@ -626,7 +634,9 @@ class TemplateComponentsUpdateHandler(Handler[TemplateComponentsUpdate]):
         >>> from pywa import WhatsApp
         >>> wa = WhatsApp(...)
         >>> print_template_components_update = lambda _, msg: print(msg)
-        >>> wa.add_handlers(TemplateComponentsUpdateHandler(print_template_components_update))
+        >>> wa.add_handlers(
+        ...     TemplateComponentsUpdateHandler(print_template_components_update)
+        ... )
 
     Args:
         callback: The callback function (Takes a :class:`~pywa.client.WhatsApp` instance and a :class:`~pywa.types.templates.TemplateComponentsUpdate` as positional arguments)
@@ -648,7 +658,9 @@ class UserMarketingPreferencesHandler(Handler[UserMarketingPreferences]):
         >>> from pywa import WhatsApp
         >>> wa = WhatsApp(...)
         >>> print_user_marketing_preferences = lambda _, msg: print(msg)
-        >>> wa.add_handlers(UserMarketingPreferencesHandler(print_user_marketing_preferences))
+        >>> wa.add_handlers(
+        ...     UserMarketingPreferencesHandler(print_user_marketing_preferences)
+        ... )
 
     Args:
         callback: The callback function (Takes a :class:`~pywa.client.WhatsApp` instance and a :class:`~pywa.types.user_preferences.UserMarketingPreferences` as positional arguments)
@@ -870,7 +882,9 @@ class OutgoingDeletedMessageHandler(Handler[OutgoingDeletedMessage]):
         >>> from pywa import WhatsApp
         >>> wa = WhatsApp(...)
         >>> print_outgoing_deleted_message = lambda _, msg: print(msg)
-        >>> wa.add_handlers(OutgoingDeletedMessageHandler(print_outgoing_deleted_message))
+        >>> wa.add_handlers(
+        ...     OutgoingDeletedMessageHandler(print_outgoing_deleted_message)
+        ... )
 
     Args:
         callback: The callback function (Takes a :class:`~pywa.client.WhatsApp` instance and a :class:`~pywa.types.OutgoingDeletedMessage` as positional arguments)
@@ -1030,8 +1044,7 @@ class _CallbackWrapperDecorators(abc.ABC):
             ... ))
 
             >>> @wa.on_flow_request("/feedback_flow")
-            >>> def feedback_flow_handler(_: WhatsApp, req: FlowRequest):
-            ...    ...
+            >>> def feedback_flow_handler(_: WhatsApp, req: FlowRequest): ...
 
             >>> @feedback_flow_handler.on_init  # This will be called when the flow is started.
             >>> def on_init(_: WhatsApp, req: FlowRequest) -> FlowResponse:
@@ -1099,11 +1112,12 @@ class _CallbackWrapperDecorators(abc.ABC):
             >>> wa = WhatsApp(...)
 
             >>> @wa.on_flow_request("/feedback_flow")
-            >>> def feedback_flow_handler(_: WhatsApp, req: FlowRequest):
-            ...    ...
+            >>> def feedback_flow_handler(_: WhatsApp, req: FlowRequest): ...
 
             >>> @feedback_flow_handler.on_data_exchange(screen="SURVEY", filters=filters.new(lambda _, r: r.data["rating"] == "5"))
-            >>> def on_survey_with_rating_5(_: WhatsApp, req: FlowRequest) -> FlowResponse:
+            >>> def on_survey_with_rating_5(
+            ...     _: WhatsApp, req: FlowRequest
+            ... ) -> FlowResponse:
             ...     return req.respond(...)
 
         Args:
@@ -1168,8 +1182,7 @@ class _CallbackWrapperDecorators(abc.ABC):
             >>> wa = WhatsApp(...)
 
             >>> @wa.on_flow_request("/feedback_flow")
-            >>> def feedback_flow_handler(_: WhatsApp, req: FlowRequest):
-            ...     ...
+            >>> def feedback_flow_handler(_: WhatsApp, req: FlowRequest): ...
 
             >>> @feedback_flow_handler.on_back(screen="SURVEY")
             >>> def on_back(_: WhatsApp, req: FlowRequest) -> FlowResponse:
@@ -1240,10 +1253,13 @@ class _CallbackWrapperDecorators(abc.ABC):
             >>> wa.send_message(to=..., buttons=types.FlowButton(flow_name="feedback", flow_token="feedback:123")
 
             >>> @wa.on_flow_request("/feedback_flow")
-            ... def feedback_flow_handler(_: WhatsApp, req: FlowRequest):
-            ...     ...
+            ... def feedback_flow_handler(_: WhatsApp, req: FlowRequest): ...
 
-            >>> @feedback_flow_handler.on_completion(filters.new(lambda _, c: c.token.startswith("feedback") and c.rating == 5))
+            >>> @feedback_flow_handler.on_completion(
+            ...     filters.new(
+            ...         lambda _, c: c.token.startswith("feedback") and c.rating == 5
+            ...     )
+            ... )
             ... def on_flow_completion(_: WhatsApp, flow: FlowCompletion):
             ...     print("Flow completed with rating 5")
         """
@@ -1517,10 +1533,15 @@ class _HandlerDecorators:
 
             >>> from pywa import WhatsApp, types, filters
             >>> wa = WhatsApp(...)
-            >>> @wa.on_message(filters.command("start") | filters.matches("hello", ignore_case=True))
+            >>> @wa.on_message(
+            ...     filters.command("start")
+            ...     | filters.matches("hello", ignore_case=True)
+            ... )
             ... def hello_handler(_: WhatsApp, msg: types.Message):
             ...     msg.react("👋")
-            ...     msg.reply_text(text=f"Hello {msg.from_user.name}! How can I help you?")
+            ...     msg.reply_text(
+            ...         text=f"Hello {msg.from_user.name}! How can I help you?"
+            ...     )
 
         Args:
             filters: Filters to apply to the incoming messages.
@@ -1599,7 +1620,9 @@ class _HandlerDecorators:
             ...     admin: bool
             >>> @wa.on_callback_button(factory=UserData)
             ... def on_user_click(_: WhatsApp, btn: types.CallbackButton[UserData]):
-            ...     print(f"User {btn.data.id} (admin: {btn.data.admin}) clicked the button")
+            ...     print(
+            ...         f"User {btn.data.id} (admin: {btn.data.admin}) clicked the button"
+            ...     )
 
         Args:
             filters: Filters to apply to the incoming callback button presses.
@@ -1682,8 +1705,12 @@ class _HandlerDecorators:
             ...     item_id: str
             ...     price: float
             >>> @wa.on_callback_selection(factory=ShopData)
-            ... def on_shop_selection(_: WhatsApp, sel: types.CallbackSelection[ShopData]):
-            ...     sel.reply_text(text=f"You selected item {sel.data.item_id} which costs {sel.data.price}$")
+            ... def on_shop_selection(
+            ...     _: WhatsApp, sel: types.CallbackSelection[ShopData]
+            ... ):
+            ...     sel.reply_text(
+            ...         text=f"You selected item {sel.data.item_id} which costs {sel.data.price}$"
+            ...     )
 
         Args:
             filters: Filters to apply to the incoming callback selections.
@@ -1763,7 +1790,9 @@ class _HandlerDecorators:
             >>> wa = WhatsApp(...)
             >>> @wa.on_message_status(filters.failed_with(errors.ReEngagementMessage))
             ... def on_re_engagement_failed(_: WhatsApp, status: types.MessageStatus):
-            ...     print(f"Message failed to send to {status.from_user} because 24h passed")
+            ...     print(
+            ...         f"Message failed to send to {status.from_user} because 24h passed"
+            ...     )
 
 
         Args:
@@ -1841,7 +1870,9 @@ class _HandlerDecorators:
             >>> wa = WhatsApp(...)
             >>> @wa.on_group_message_statuses(filters.read)
             ... def on_group_read(_: WhatsApp, statuses: types.GroupMessageStatuses):
-            ...     print(f"Message {statuses.id} was read by {len(statuses.statuses)} participants in {statuses.group_id}")
+            ...     print(
+            ...         f"Message {statuses.id} was read by {len(statuses.statuses)} participants in {statuses.group_id}"
+            ...     )
 
         Args:
             filters: Filters to apply to the incoming group message status changes.
@@ -2056,8 +2087,12 @@ class _HandlerDecorators:
             >>> from pywa import WhatsApp, types, filters
             >>> wa = WhatsApp(...)
             >>> @wa.on_template_status_update(filters.template_status_approved)
-            ... def on_template_approved(_: WhatsApp, update: types.TemplateStatusUpdate):
-            ...     print(f"Template {update.template_name} is now approved and ready to use!")
+            ... def on_template_approved(
+            ...     _: WhatsApp, update: types.TemplateStatusUpdate
+            ... ):
+            ...     print(
+            ...         f"Template {update.template_name} is now approved and ready to use!"
+            ...     )
 
         Args:
             filters: Filters to apply to the incoming template status changes.
@@ -2133,8 +2168,12 @@ class _HandlerDecorators:
             >>> from pywa import WhatsApp, types, filters
             >>> wa = WhatsApp(...)
             >>> @wa.on_template_category_update
-            ... def category_update_handler(client: WhatsApp, update: types.TemplateCategoryUpdate):
-            ...     print(f"Template {update.template_name} category changed from {update.previous_category} to {update.new_category}!")
+            ... def category_update_handler(
+            ...     client: WhatsApp, update: types.TemplateCategoryUpdate
+            ... ):
+            ...     print(
+            ...         f"Template {update.template_name} category changed from {update.previous_category} to {update.new_category}!"
+            ...     )
 
         Args:
             filters: Filters to apply to the incoming template category changes.
@@ -2206,8 +2245,12 @@ class _HandlerDecorators:
             >>> from pywa import WhatsApp, types, filters
             >>> wa = WhatsApp(...)
             >>> @wa.on_template_quality_update
-            ... def quality_update_handler(client: WhatsApp, update: types.TemplateQualityUpdate):
-            ...     print(f"Template {update.template_name} quality changed to {update.new_quality_score}!")
+            ... def quality_update_handler(
+            ...     client: WhatsApp, update: types.TemplateQualityUpdate
+            ... ):
+            ...     print(
+            ...         f"Template {update.template_name} quality changed to {update.new_quality_score}!"
+            ...     )
 
         Args:
             filters: Filters to apply to the incoming template quality changes.
@@ -2285,7 +2328,9 @@ class _HandlerDecorators:
             >>> from pywa import WhatsApp, types, filters
             >>> wa = WhatsApp(...)
             >>> @wa.on_template_components_update
-            ... def components_update_handler(client: WhatsApp, update: types.TemplateComponentsUpdate):
+            ... def components_update_handler(
+            ...     client: WhatsApp, update: types.TemplateComponentsUpdate
+            ... ):
             ...     print(f"Template {update.template_name} components updated!")
 
         Args:
@@ -2354,7 +2399,9 @@ class _HandlerDecorators:
 
             >>> from pywa import WhatsApp, types, filters
             >>> wa = WhatsApp(...)
-            >>> @wa.on_flow_completion(filters.startswith("feedback")) # flow.token startswith "filters"
+            >>> @wa.on_flow_completion(
+            ...     filters.startswith("feedback")
+            ... )  # flow.token startswith "filters"
             ... def on_feedback_complete(_: WhatsApp, flow: types.FlowCompletion):
             ...     print(f"User {flow.from_user.name} completed feedback: {flow.body}")
 
@@ -2494,7 +2541,9 @@ class _HandlerDecorators:
             >>> wa = WhatsApp(...)
             >>> @wa.on_call_terminate
             ... def on_call_terminate(_: WhatsApp, call: types.CallTerminate):
-            ...     print(f"Call with {call.from_user.name} ended. duration: {call.duration}s")
+            ...     print(
+            ...         f"Call with {call.from_user.name} ended. duration: {call.duration}s"
+            ...     )
 
         Args:
             filters: Filters to apply to the incoming call terminate.
@@ -2567,7 +2616,9 @@ class _HandlerDecorators:
             >>> wa = WhatsApp(...)
             >>> @wa.on_call_status(filters.call_answered)
             ... def on_call_answered(_: WhatsApp, call: types.CallStatus):
-            ...     print(f"Call with {call.from_user.name} answered at {call.timestamp}")
+            ...     print(
+            ...         f"Call with {call.from_user.name} answered at {call.timestamp}"
+            ...     )
 
         Args:
             filters: Filters to apply to the incoming call status.
@@ -2641,8 +2692,12 @@ class _HandlerDecorators:
             >>> from pywa import WhatsApp, types
             >>> wa = WhatsApp(...)
             >>> @wa.on_call_permission_update
-            ... def call_permission_handler(client: WhatsApp, update: types.CallPermissionUpdate):
-            ...     if update: # Use boolean context to check if the call permission is granted
+            ... def call_permission_handler(
+            ...     client: WhatsApp, update: types.CallPermissionUpdate
+            ... ):
+            ...     if (
+            ...         update
+            ...     ):  # Use boolean context to check if the call permission is granted
             ...         update.reply("We will now be able to call you!")
             ...         update.call(...)
 
@@ -2721,9 +2776,15 @@ class _HandlerDecorators:
 
             >>> from pywa import WhatsApp, types, filters
             >>> wa = WhatsApp(...)
-            >>> @wa.on_user_marketing_preferences(filters.user_marketing_preferences_stop)
-            ... def on_marketing_stop(_: WhatsApp, pref: types.UserMarketingPreferences):
-            ...     print(f"User {pref.from_user.wa_id} wants to stop receiving marketing messages")
+            >>> @wa.on_user_marketing_preferences(
+            ...     filters.user_marketing_preferences_stop
+            ... )
+            ... def on_marketing_stop(
+            ...     _: WhatsApp, pref: types.UserMarketingPreferences
+            ... ):
+            ...     print(
+            ...         f"User {pref.from_user.wa_id} wants to stop receiving marketing messages"
+            ...     )
 
         Args:
             filters: Filters to apply to the incoming user marketing preferences updates.
@@ -2792,8 +2853,12 @@ class _HandlerDecorators:
             >>> from pywa import WhatsApp, types, filters
             >>> wa = WhatsApp(...)
             >>> @wa.on_edited_message(filters.text)
-            ... def edited_message_handler(client: WhatsApp, edited_msg: types.EditedMessage):
-            ...     print(f"The user {edited_msg.from_user} just edited their message to: {edited_msg.message.text}")
+            ... def edited_message_handler(
+            ...     client: WhatsApp, edited_msg: types.EditedMessage
+            ... ):
+            ...     print(
+            ...         f"The user {edited_msg.from_user} just edited their message to: {edited_msg.message.text}"
+            ...     )
 
         Args:
             filters: Filters to apply to the incoming edited messages.
@@ -2863,7 +2928,9 @@ class _HandlerDecorators:
             >>> wa = WhatsApp(...)
             >>> @wa.on_deleted_message
             ... def on_delete(_: WhatsApp, msg: types.DeletedMessage):
-            ...     print(f"User {msg.from_user.name} revoked a message (ID: {msg.original_message_id})")
+            ...     print(
+            ...         f"User {msg.from_user.name} revoked a message (ID: {msg.original_message_id})"
+            ...     )
 
         Args:
             filters: Filters to apply to the incoming deleted messages.
@@ -2935,8 +3002,12 @@ class _HandlerDecorators:
             >>> from pywa import WhatsApp, types, filters
             >>> wa = WhatsApp(...)
             >>> @wa.on_outgoing_message(filters.text)
-            ... def outgoing_message_handler(client: WhatsApp, msg: types.OutgoingMessage):
-            ...     print(f"You just sent a message to {msg.to_user.wa_id} with content: {msg.text}")
+            ... def outgoing_message_handler(
+            ...     client: WhatsApp, msg: types.OutgoingMessage
+            ... ):
+            ...     print(
+            ...         f"You just sent a message to {msg.to_user.wa_id} with content: {msg.text}"
+            ...     )
 
         Args:
             filters: Filters to apply to the outgoing messages.
@@ -3008,8 +3079,12 @@ class _HandlerDecorators:
             >>> from pywa import WhatsApp, types, filters
             >>> wa = WhatsApp(...)
             >>> @wa.on_outgoing_edited_message(filters.text)
-            ... def outgoing_message_edit_handler(client: WhatsApp, msg: types.OutgoingEditedMessage):
-            ...     print(f"You just edited a message to {msg.to_user.wa_id} with new content: {msg.message.text}")
+            ... def outgoing_message_edit_handler(
+            ...     client: WhatsApp, msg: types.OutgoingEditedMessage
+            ... ):
+            ...     print(
+            ...         f"You just edited a message to {msg.to_user.wa_id} with new content: {msg.message.text}"
+            ...     )
 
         Args:
             filters: Filters to apply to the outgoing message edits.
@@ -3085,8 +3160,12 @@ class _HandlerDecorators:
             >>> from pywa import WhatsApp, types, filters
             >>> wa = WhatsApp(...)
             >>> @wa.on_outgoing_deleted_message
-            ... def outgoing_message_delete_handler(client: WhatsApp, msg: types.OutgoingDeletedMessage):
-            ...     print(f"You just deleted a message to {msg.to_user.wa_id} with id {msg.original_message_id}")
+            ... def outgoing_message_delete_handler(
+            ...     client: WhatsApp, msg: types.OutgoingDeletedMessage
+            ... ):
+            ...     print(
+            ...         f"You just deleted a message to {msg.to_user.wa_id} with id {msg.original_message_id}"
+            ...     )
 
         Args:
             filters: Filters to apply to the outgoing message deletions.
@@ -3226,16 +3305,18 @@ class _HandlerDecorators:
 
             >>> from pywa import WhatsApp, types
             >>> wa = WhatsApp(business_private_key='...', ...)
-            >>> @wa.on_flow_request('/feedback_flow')
-            ... def feedback_handler(_: WhatsApp, req: types.FlowRequest):
-            ...     ...
+            >>> @wa.on_flow_request("/feedback_flow")
+            ... def feedback_handler(_: WhatsApp, req: types.FlowRequest): ...
             >>> @feedback_handler.on_init
             ... def on_init(_: WhatsApp, req: types.FlowRequest):
             ...     return req.respond(screen="SURVEY")
             >>> @feedback_handler.on_data_exchange(screen="SURVEY")
             ... def on_survey(_: WhatsApp, req: types.FlowRequest):
             ...     print(f"Received rating: {req.data['rating']}")
-            ...     return req.respond(screen="THANKS", data={"message": "We appreciate your feedback!"})
+            ...     return req.respond(
+            ...         screen="THANKS",
+            ...         data={"message": "We appreciate your feedback!"},
+            ...     )
 
         Args:
             endpoint: The endpoint to listen to (The endpoint uri you set to the flow. e.g ``/feedback_flow``).
@@ -3368,12 +3449,13 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
         Example:
 
             >>> wa = WhatsApp(...)
-            >>> def feedback_flow_handler(_: WhatsApp, req: FlowRequest):
-            ...    ...
+            >>> def feedback_flow_handler(_: WhatsApp, req: FlowRequest): ...
             >>> on_init = lambda _, req: ...
             >>> on_survey_data_exchange = lambda _, req: ...
             >>> wa.add_flow_request_handler(
-            ...     FlowRequestHandler(callback=feedback_flow_handler, endpoint="/feedback_flow")
+            ...     FlowRequestHandler(
+            ...         callback=feedback_flow_handler, endpoint="/feedback_flow"
+            ...     )
             ... ).add_handler(callback=on_init, action=FlowRequestActionType.INIT)
 
         Args:

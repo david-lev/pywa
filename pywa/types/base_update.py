@@ -116,12 +116,12 @@ class _HandlingFlow:
 
             >>> from pywa import WhatsApp
             >>> from pywa.types import Message
-            >>> wa = WhatsApp(continue_handling=True) # NOT THE DEFAULT BEHAVIOR!
+            >>> wa = WhatsApp(continue_handling=True)  # NOT THE DEFAULT BEHAVIOR!
 
             >>> @wa.on_message
             ... def callback(_: WhatsApp, msg: Message):
             ...     msg.reply_text("Hello from PyWa!")
-            ...     msg.stop_handling() # overwrite the default `continue_handling` behavior
+            ...     msg.stop_handling()  # overwrite the default `continue_handling` behavior
 
             >>> @wa.on_message
             ... def callback_not_called(_: WhatsApp, msg: Message):
@@ -146,7 +146,7 @@ class _HandlingFlow:
             >>> @wa.on_message
             ... def callback(_: WhatsApp, msg: Message):
             ...     msg.reply_text("Hello from PyWa!")
-            ...     msg.continue_handling() # overwrite the default `continue_handling` behavior
+            ...     msg.continue_handling()  # overwrite the default `continue_handling` behavior
 
             >>> @wa.on_message
             ... def callback_called(_: WhatsApp, msg: Message):
@@ -315,7 +315,10 @@ class _ClientShortcuts(abc.ABC):
             >>> wa = WhatsApp(...)
             >>> @wa.on_message
             ... def callback(_: WhatsApp, msg: Message):
-            ...     msg.reply(f"Hello {msg.from_user.name}! This is a reply to your message.", quote=True)
+            ...     msg.reply(
+            ...         f"Hello {msg.from_user.name}! This is a reply to your message.",
+            ...         quote=True,
+            ...     )
 
         Args:
             text: The text to reply with (`markdown <https://faq.whatsapp.com/539178204879377>`_ allowed, max 4096 characters).
@@ -696,8 +699,8 @@ class _ClientShortcuts(abc.ABC):
             ...     msg.reply_location(
             ...         latitude=37.4847483695049,
             ...         longitude=-122.1473373086664,
-            ...         name='WhatsApp HQ',
-            ...        address='Menlo Park, 1601 Willow Rd, United States',
+            ...         name="WhatsApp HQ",
+            ...         address="Menlo Park, 1601 Willow Rd, United States",
             ...     )
 
         Args:
@@ -747,7 +750,7 @@ class _ClientShortcuts(abc.ABC):
             >>> wa = WhatsApp(...)
             >>> @wa.on_message
             ... def callback(_: WhatsApp, msg: Message):
-            ...     msg.reply_location_request(text='Please share your location')
+            ...     msg.reply_location_request(text="Please share your location")
 
         Args:
             text: The text to send with the request.
@@ -790,7 +793,7 @@ class _ClientShortcuts(abc.ABC):
             ... def callback(_: WhatsApp, msg: Message):
             ...     # check in your db if the user has shared their contact info before, if not, request it:
             ...     msg.reply_contact_info_request(
-            ...         text='Please share your contact info to continue using the bot',
+            ...         text="Please share your contact info to continue using the bot",
             ...         quote=True,
             ...     )
 
@@ -836,10 +839,18 @@ class _ClientShortcuts(abc.ABC):
             ... def callback(_: WhatsApp, msg: Message):
             ...     msg.reply_contact(
             ...         contact=Contact(
-            ...             name=Contact.Name(formatted_name='David Lev', first_name='David'),
-            ...             phones=[Contact.Phone(phone='1234567890', wa_id='1234567890', type='MOBILE')],
-            ...             emails=[Contact.Email(email='test@test.com', type='WORK')],
-            ...             urls=[Contact.Url(url='https://exmaple.com', type='HOME')],
+            ...             name=Contact.Name(
+            ...                 formatted_name="David Lev", first_name="David"
+            ...             ),
+            ...             phones=[
+            ...                 Contact.Phone(
+            ...                     phone="1234567890",
+            ...                     wa_id="1234567890",
+            ...                     type="MOBILE",
+            ...                 )
+            ...             ],
+            ...             emails=[Contact.Email(email="test@test.com", type="WORK")],
+            ...             urls=[Contact.Url(url="https://exmaple.com", type="HOME")],
             ...         ),
             ...         quote=True,
             ...     )
@@ -968,9 +979,9 @@ class _ClientShortcuts(abc.ABC):
             >>> @wa.on_message
             ... def callback(_: WhatsApp, msg: Message):
             ...     msg.reply_catalog(
-            ...         body='Check out our products!',
-            ...         footer='Powered by PyWa',
-            ...         thumbnail_product_sku='SKU123',  # Optional, if not provided,
+            ...         body="Check out our products!",
+            ...         footer="Powered by PyWa",
+            ...         thumbnail_product_sku="SKU123",  # Optional, if not provided,
             ...         # the first item in the catalog will be used.
             ...     )
 
@@ -1023,10 +1034,10 @@ class _ClientShortcuts(abc.ABC):
             >>> @wa.on_message
             ... def callback(_: WhatsApp, msg: Message):
             ...     msg.reply_product(
-            ...         catalog_id='1234567890',
-            ...         sku='SKU123',
-            ...         body='Check out this product!',
-            ...         footer='Powered by PyWa',
+            ...         catalog_id="1234567890",
+            ...         sku="SKU123",
+            ...         body="Check out this product!",
+            ...         footer="Powered by PyWa",
             ...     )
 
         Args:
@@ -1081,23 +1092,23 @@ class _ClientShortcuts(abc.ABC):
             >>> wa = WhatsApp(...)
             >>> @wa.on_message
             ... def callback(_: WhatsApp, msg: Message):
-            ...    msg.reply_products(
-            ...        catalog_id='1234567890',
-            ...        title='Tech Products',
-            ...        body='Check out our products!',
-            ...        product_sections=[
-            ...            ProductsSection(
-            ...                title='Smartphones',
-            ...                skus=['IPHONE12', 'GALAXYS21'],
-            ...            ),
-            ...            ProductsSection(
-            ...                title='Laptops',
-            ...                skus=['MACBOOKPRO', 'SURFACEPRO'],
-            ...            ),
-            ...        ],
-            ...        footer='Powered by PyWa',
-            ...        quote=True,
-            ...    )
+            ...     msg.reply_products(
+            ...         catalog_id="1234567890",
+            ...         title="Tech Products",
+            ...         body="Check out our products!",
+            ...         product_sections=[
+            ...             ProductsSection(
+            ...                 title="Smartphones",
+            ...                 skus=["IPHONE12", "GALAXYS21"],
+            ...             ),
+            ...             ProductsSection(
+            ...                 title="Laptops",
+            ...                 skus=["MACBOOKPRO", "SURFACEPRO"],
+            ...             ),
+            ...         ],
+            ...         footer="Powered by PyWa",
+            ...         quote=True,
+            ...     )
 
         Args:
             catalog_id: The ID of the catalog to send the product from (To get the catalog ID
@@ -1275,7 +1286,7 @@ class _ClientShortcuts(abc.ABC):
             >>> wa = WhatsApp(...)
             >>> @wa.on_message
             ... def callback(_: WhatsApp, msg: Message):
-            ...    msg.call(...)
+            ...     msg.call(...)
 
         Args:
             sdp: The SDP object containing the call information.

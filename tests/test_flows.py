@@ -1,3 +1,4 @@
+# ruff:
 import dataclasses
 import datetime
 import importlib

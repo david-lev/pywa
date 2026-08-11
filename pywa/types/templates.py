@@ -1101,8 +1101,14 @@ class _BaseTextComponent:
         """
         Initializes a text component for a template.
 
-        >>> positionals = HeaderText("Hi {{1}}!, How are you? Get {{2}}% OFF!", "David", 15)
-        >>> named = BodyText("Hi {{name}}!, How are you? Get {{discount}}% OFF!", name="David", discount=15)
+        >>> positionals = HeaderText(
+        ...     "Hi {{1}}!, How are you? Get {{2}}% OFF!", "David", 15
+        ... )
+        >>> named = BodyText(
+        ...     "Hi {{name}}!, How are you? Get {{discount}}% OFF!",
+        ...     name="David",
+        ...     discount=15,
+        ... )
         >>> print(positionals.preview(), named.preview())
 
         Args:
@@ -1199,12 +1205,18 @@ class _BaseTextComponent:
             ...         )
             ...     ]
             ... )
-            >>> body = temp.get_component(BodyText) # get the body component of the template
+            >>> body = temp.get_component(
+            ...     BodyText
+            ... )  # get the body component of the template
             >>> body.param_names
             ('name', 'flight_iata')
 
             >>> wa.send_template(
-            ...     params=[body.params(**{name: my_get_value(name) for name in body.param_names})]
+            ...     params=[
+            ...         body.params(
+            ...             **{name: my_get_value(name) for name in body.param_names}
+            ...         )
+            ...     ]
             ... )
 
         Returns:
@@ -1425,10 +1437,16 @@ class HeaderText(_BaseTextComponent, BaseHeaderComponent):
 
     Example:
 
-        >>> header_text = HeaderText("Hi {{name}}! How are you? Get {{discount}}% OFF!", name="John", discount=15)
+        >>> header_text = HeaderText(
+        ...     "Hi {{name}}! How are you? Get {{discount}}% OFF!",
+        ...     name="John",
+        ...     discount=15,
+        ... )
         >>> header_text.params(name="David", discount=20)
 
-        >>> header_text = HeaderText("Hi {{1}}! How are you? Get {{2}}% OFF!", "John", 15)
+        >>> header_text = HeaderText(
+        ...     "Hi {{1}}! How are you? Get {{2}}% OFF!", "John", 15
+        ... )
         >>> header_text.params("David", 20)
 
         >>> print(header_text.preview())
@@ -1892,7 +1910,12 @@ class HeaderLocation(BaseHeaderComponent):
     Example:
 
         >>> header_location = HeaderLocation()
-        >>> header_location.params(lat=37.7749, lon=-122.4194, name="San Francisco", address="California, USA")
+        >>> header_location.params(
+        ...     lat=37.7749,
+        ...     lon=-122.4194,
+        ...     name="San Francisco",
+        ...     address="California, USA",
+        ... )
     """
 
     type: ComponentType = dataclasses.field(
@@ -2026,7 +2049,11 @@ class BodyText(_BaseTextComponent, BaseBodyComponent):
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components#body>`_.
 
     Example:
-        >>> body_text = BodyText("Hi {{name}}! How are you? Get {{discount}}% OFF!", name="John", discount=15)
+        >>> body_text = BodyText(
+        ...     "Hi {{name}}! How are you? Get {{discount}}% OFF!",
+        ...     name="John",
+        ...     discount=15,
+        ... )
         >>> body_text.params(name="David", discount=20)
 
         >>> body_text = BodyText("Hi {{1}}! How are you? Get {{2}}% OFF!", "John", 15)
@@ -2259,9 +2286,11 @@ class FlowButton(BaseButtonComponent):
         ...     flow_id="1234567890",
         ...     flow_action=FlowActionType.NAVIGATE,
         ...     navigate_screen="entry_screen_id",
-        ...     icon=FlowButtonIcon.DOCUMENT
+        ...     icon=FlowButtonIcon.DOCUMENT,
         ... )
-        >>> flow_button.params(index=0, flow_token="example_token", flow_action_data={"key": "value"})
+        >>> flow_button.params(
+        ...     index=0, flow_token="example_token", flow_action_data={"key": "value"}
+        ... )
 
     Attributes:
         text: Button label text. 25 characters maximum.
@@ -2588,7 +2617,11 @@ class URLButton(BaseButtonComponent):
 
     Example:
 
-        >>> url_button = URLButton(text="Visit Website", url="https://website.com?ref={{1}}", example="https://website.com?ref=template")
+        >>> url_button = URLButton(
+        ...     text="Visit Website",
+        ...     url="https://website.com?ref={{1}}",
+        ...     example="https://website.com?ref=template",
+        ... )
         >>> url_button.params(url_variable="example_variable", index=0)
 
     Attributes:
@@ -2836,14 +2869,14 @@ class MPMButton(BaseButtonComponent):
         ...     thumbnail_product_sku="SKU12345",
         ...     index=0,
         ...     product_sections=[
-        ...        ProductsSection(
-        ...            title="Section 1",
-        ...            skus=["SKU12345", "SKU12346"],
-        ...        ),
-        ...        ProductsSection(
-        ...            title="Section 2",
-        ...            skus=["SKU12347", "SKU12348"],
-        ...        ),
+        ...         ProductsSection(
+        ...             title="Section 1",
+        ...             skus=["SKU12345", "SKU12346"],
+        ...         ),
+        ...         ProductsSection(
+        ...             title="Section 2",
+        ...             skus=["SKU12347", "SKU12348"],
+        ...         ),
         ...     ],
         ... )
 
@@ -2954,7 +2987,9 @@ class CallPermissionRequestButton(BaseButtonComponent):
 
     Example:
 
-        >>> call_permission_button = CallPermissionRequestButton(text="Request Call Permission")
+        >>> call_permission_button = CallPermissionRequestButton(
+        ...     text="Request Call Permission"
+        ... )
     """
 
     type: ComponentType = dataclasses.field(
@@ -3014,8 +3049,7 @@ class OTPSupportedApp:
     Example:
 
         >>> supported_app = OTPSupportedApp(
-        ...     package_name="com.example.myapp",
-        ...     signature_hash="12345678901"
+        ...     package_name="com.example.myapp", signature_hash="12345678901"
         ... )
 
     Attributes:
@@ -3102,10 +3136,9 @@ class OneTapOTPButton(BaseOTPButton):
         ...     autofill_text="Autofill",
         ...     supported_apps=[
         ...         OTPSupportedApp(
-        ...             package_name="com.example.myapp",
-        ...             signature_hash="12345678901"
+        ...             package_name="com.example.myapp", signature_hash="12345678901"
         ...         )
-        ...     ]
+        ...     ],
         ... )
         >>> one_tap_button.params(otp="123456")
 
@@ -3175,10 +3208,9 @@ class ZeroTapOTPButton(BaseOTPButton):
         ...     zero_tap_terms_accepted=True,
         ...     supported_apps=[
         ...         OTPSupportedApp(
-        ...             package_name="com.example.myapp",
-        ...             signature_hash="12345678901"
+        ...             package_name="com.example.myapp", signature_hash="12345678901"
         ...         )
-        ...    ]
+        ...     ],
         ... )
         >>> zero_tap_button.params(otp="123456")
 
@@ -3295,10 +3327,11 @@ class LimitedTimeOffer(TemplateBaseComponent):
     Example:
 
         >>> limited_time_offer = LimitedTimeOffer(
-        ...     text="Limited Time Offer!",
-        ...     has_expiration=True
+        ...     text="Limited Time Offer!", has_expiration=True
         ... )
-        >>> limited_time_offer.params(expiration_time=datetime.datetime.now() + datetime.timedelta(days=7))
+        >>> limited_time_offer.params(
+        ...     expiration_time=datetime.datetime.now() + datetime.timedelta(days=7)
+        ... )
 
     Attributes:
         text: Offer details text. Maximum 16 characters.
@@ -3386,41 +3419,53 @@ class Carousel(TemplateBaseComponent):
 
     Example:
 
-        >>> carousel = Carousel(cards=[
-        ...     card1 := CarouselCard(
-        ...         components=[
-        ...             hi1 := HeaderImage(example="https://example.com/card1.jpg"),
-        ...             qr1 := QuickReplyButton(text="Unsubscribe"),
-        ...             u1 := URLButton(text="Website", url="https://website.com?ref={{1}}", example="https://website.com?ref=card1"),
-        ...         ]
-        ...     ),
-        ...     card2 := CarouselCard(
-        ...         components=[
-        ...             hi2 := HeaderImage(example="https://example.com/card2.jpg"),
-        ...             qr2 := QuickReplyButton(text="Unsubscribe"),
-        ...             u2 := URLButton(text="Website", url="https://website.com?ref={{1}}", example="https://website.com?ref=card2"),
-        ...         ]
-        ...     ),
-        ... ])
+        >>> carousel = Carousel(
+        ...     cards=[
+        ...         card1 := CarouselCard(
+        ...             components=[
+        ...                 hi1 := HeaderImage(example="https://example.com/card1.jpg"),
+        ...                 qr1 := QuickReplyButton(text="Unsubscribe"),
+        ...                 u1 := URLButton(
+        ...                     text="Website",
+        ...                     url="https://website.com?ref={{1}}",
+        ...                     example="https://website.com?ref=card1",
+        ...                 ),
+        ...             ]
+        ...         ),
+        ...         card2 := CarouselCard(
+        ...             components=[
+        ...                 hi2 := HeaderImage(example="https://example.com/card2.jpg"),
+        ...                 qr2 := QuickReplyButton(text="Unsubscribe"),
+        ...                 u2 := URLButton(
+        ...                     text="Website",
+        ...                     url="https://website.com?ref={{1}}",
+        ...                     example="https://website.com?ref=card2",
+        ...                 ),
+        ...             ]
+        ...         ),
+        ...     ]
+        ... )
 
-        >>> carousel.params(cards=[
-        ...     card1.params(
-        ...         index=0,
-        ...         params=[
-        ...             hi1.params(image="https://cdn.com/card1.jpg"),
-        ...             qr1.params(callback_data="unsubscribe_card1", index=0),
-        ...             u1.params(url_variable="card1", index=1),
-        ...         ],
-        ...     ),
-        ...     card2.params(
-        ...         index=1,
-        ...         params=[
-        ...             hi2.params(image="https://cdn.com/card2.jpg"),
-        ...             qr2.params(callback_data="unsubscribe_card2", index=0),
-        ...             u2.params(url_variable="card2", index=1),
-        ...         ],
-        ...     ),
-        ... ])
+        >>> carousel.params(
+        ...     cards=[
+        ...         card1.params(
+        ...             index=0,
+        ...             params=[
+        ...                 hi1.params(image="https://cdn.com/card1.jpg"),
+        ...                 qr1.params(callback_data="unsubscribe_card1", index=0),
+        ...                 u1.params(url_variable="card1", index=1),
+        ...             ],
+        ...         ),
+        ...         card2.params(
+        ...             index=1,
+        ...             params=[
+        ...                 hi2.params(image="https://cdn.com/card2.jpg"),
+        ...                 qr2.params(callback_data="unsubscribe_card2", index=0),
+        ...                 u2.params(url_variable="card2", index=1),
+        ...             ],
+        ...         ),
+        ...     ]
+        ... )
 
 
     Attributes:
@@ -3747,7 +3792,8 @@ class _BaseTemplateActions:
 
         >>> t = Template(...)
         >>> body = t.get_component(BodyText)
-        >>> if body: print(body.text, body.example)
+        >>> if body:
+        ...     print(body.text, body.example)
 
         Args:
             comp_type: The type of component to retrieve.
@@ -3766,7 +3812,8 @@ class _BaseTemplateActions:
 
         >>> t = Template(...)
         >>> quick_replays = t.get_components(QuickReplyButton)
-        >>> for q in quick_replays: print(q.text)
+        >>> for q in quick_replays:
+        ...     print(q.text)
 
         Args:
             comp_type: The type of components to retrieve.
@@ -3815,9 +3862,11 @@ class Template(_BaseTemplateActions):
                 Buttons(
                     buttons=[
                         QuickReplyButton(text="Get Started"),
-                        URLButton(text="Visit Website", url="https://website.com?ref={{1}}")
+                        URLButton(
+                            text="Visit Website", url="https://website.com?ref={{1}}"
+                        ),
                     ]
-                )
+                ),
             ],
             parameter_format=ParamFormat.NAMED,
         )
@@ -3837,12 +3886,12 @@ class Template(_BaseTemplateActions):
                             supported_apps=[
                                 OTPSupportedApp(
                                     package_name="com.example.myapp",
-                                    signature_hash="12345678901"
+                                    signature_hash="12345678901",
                                 )
-                            ]
+                            ],
                         ),
                     ]
-                )
+                ),
             ],
         )
 
@@ -4698,8 +4747,12 @@ class _CreatedAndUpdatedTemplateActions:
             >>> from pywa import WhatsApp, filters
             >>> wa = WhatsApp(...)
             >>> created_template = wa.create_template(...)
-            >>> status = created_template.wait_until_approved(cancelers=filters.template_status & filters.template_status_rejected)
-            >>> print(f"Template {created_template.id} is approved with status: {status.new_status}")
+            >>> status = created_template.wait_until_approved(
+            ...     cancelers=filters.template_status & filters.template_status_rejected
+            ... )
+            >>> print(
+            ...     f"Template {created_template.id} is approved with status: {status.new_status}"
+            ... )
 
         Args:
             cancel_on_rejection: Whether to cancel the waiting process if the template is rejected. Defaults to True.

@@ -1,2 +1,2 @@
-from pywa.handlers import *  # noqa MUST BE IMPORTED FIRST
-from pywa.handlers import Handler, FlowRequestCallbackWrapper, EncryptedFlowRequestType  # noqa MUST BE IMPORTED FIRST
+from pywa.handlers import *
+from pywa.handlers import EncryptedFlowRequestType, FlowRequestCallbackWrapper, Handler

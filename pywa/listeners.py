@@ -72,15 +72,19 @@ class ListenerCanceled(Exception):
             try:
                 wa.listen(
                     to=UserUpdateListenerIdentifier(
-                        sender="123456",
-                        recipient="654321"
+                        sender="123456", recipient="654321"
                     ),
                     filters=filters.message & filters.text,
-                    cancelers=filters.callback_button & filters.matches("cancel")
+                    cancelers=filters.callback_button & filters.matches("cancel"),
                 )
             except ListenerCanceled as e:
-                assert e.update.data == "cancel" # the update that caused the listener to be canceled
-                wa.send_message("123456", "You cancelled the listener by clicking the `cancel` button")
+                assert (
+                    e.update.data == "cancel"
+                )  # the update that caused the listener to be canceled
+                wa.send_message(
+                    "123456",
+                    "You cancelled the listener by clicking the `cancel` button",
+                )
 
     Attributes:
         update: The update that caused the listener to be canceled
@@ -110,7 +114,7 @@ class ListenerStopped(Exception):
             try:
                 wa.listen(...)
             except ListenerStopped as e:
-                print(e.reason) # print the reason the listener was stopped
+                print(e.reason)  # print the reason the listener was stopped
                 wa.send_message("123456", "The listener was stopped")
 
     Attributes:
@@ -226,13 +230,16 @@ class _Listeners:
                         wa.send_message(
                             to="123456",
                             text="Send me a message",
-                            buttons=[Button(title="Cancel", callback_data="cancel")]
+                            buttons=[Button(title="Cancel", callback_data="cancel")],
                         )
                         update: Message = wa.listen(
-                            to=UserUpdateListenerIdentifier(sender="123456", recipient="654321"),
+                            to=UserUpdateListenerIdentifier(
+                                sender="123456", recipient="654321"
+                            ),
                             filters=filters.message & filters.text,
-                            cancelers=filters.callback_button & filters.matches("cancel"),
-                            timeout=10
+                            cancelers=filters.callback_button
+                            & filters.matches("cancel"),
+                            timeout=10,
                         )
                         print(update)
                     except ListenerTimeout:

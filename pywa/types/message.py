@@ -275,7 +275,9 @@ class Message(BaseUserUpdate, _PinUnpinActions):
 
         >>> @wa.on_message(filters.image)
         ... def on_message(_: WhatsApp, msg: types.Message):
-        ...     msg.download_media(path=pathlib.Path('/path/to/save'), filename='my_image.jpg')
+        ...     msg.download_media(
+        ...         path=pathlib.Path("/path/to/save"), filename="my_image.jpg"
+        ...     )
 
         Args:
             filepath: The path where to save the file (if not provided, the current working directory will be used).
@@ -315,7 +317,9 @@ class Message(BaseUserUpdate, _PinUnpinActions):
         >>> @wa.on_message(filters.document)
         ... def on_message(_: WhatsApp, msg: types.Message):
         ...     with httpx.Client() as client:
-        ...        client.post('https://example.com/upload', content=msg.stream_media())
+        ...         client.post(
+        ...             "https://example.com/upload", content=msg.stream_media()
+        ...         )
 
         Args:
             chunk_size: The size (in bytes) of each chunk to read (default: ``64KB``).

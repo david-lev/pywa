@@ -119,10 +119,7 @@ class GraphAPI:
 
         Return example::
 
-            {
-                'access_token': 'xyzxyzxyz',
-                'token_type': 'bearer'
-            }
+            {"access_token": "xyzxyzxyz", "token_type": "bearer"}
 
 
         Args:
@@ -156,10 +153,7 @@ class GraphAPI:
 
         Return example::
 
-            {
-                'business_token': 'xyzxyzxyz',
-                'token_type': 'bearer'
-            }
+            {"business_token": "xyzxyzxyz", "token_type": "bearer"}
 
 
         Args:
@@ -197,9 +191,7 @@ class GraphAPI:
 
         Return example::
 
-            {
-                'success': True
-            }
+            {"success": True}
 
         Args:
             app_id: The ID of the app.
@@ -236,9 +228,7 @@ class GraphAPI:
 
         Return example::
 
-            {
-                'success': True
-            }
+            {"success": True}
 
         Args:
             waba_id: The ID of the WhatsApp Business Account.
@@ -274,17 +264,17 @@ class GraphAPI:
                         "whatsapp_business_api_data": {
                             "link": "https://www.facebook.com/games/?app_id=12345",
                             "name": "My App",
-                            "id": "12345"
+                            "id": "12345",
                         },
-                        "override_callback_uri": "https://example.com/wa_webhook"
+                        "override_callback_uri": "https://example.com/wa_webhook",
                     },
                     {
                         "whatsapp_business_api_data": {
                             "link": "https://www.facebook.com/games/?app_id=67890",
                             "name": "My second app",
-                            "id": "67890"
+                            "id": "67890",
                         }
-                    }
+                    },
                 ]
             }
 
@@ -349,9 +339,7 @@ class GraphAPI:
 
         Return example::
 
-            {
-                'success': True
-            }
+            {"success": True}
 
         Args:
             phone_id: The ID of the phone number to delete the callback URL from.
@@ -381,9 +369,7 @@ class GraphAPI:
 
         Return example::
 
-            {
-                'success': True
-            }
+            {"success": True}
 
         Args:
             phone_id: The ID of the phone number to set the public key on.
@@ -413,9 +399,7 @@ class GraphAPI:
 
         Return example::
 
-            {
-              'id':'<MEDIA_ID>'
-            }
+            {"id": "<MEDIA_ID>"}
 
         Args:
             phone_id: The ID of the phone number to upload the media to.
@@ -445,12 +429,12 @@ class GraphAPI:
         Return example::
 
             {
-                'url': 'https://lookaside.fbsbx.com/whatsapp_business/attachments/?mid=645645&ext=54353&hash=xxx-xx',
-                'mime_type': 'image/jpeg',
-                'sha256': '73298ec14751fhfonf4wfxxxf52f4fb031db3892ff5',
-                'file_size': 61901,
-                'id': '137524587935346',
-                'messaging_product': 'whatsapp'
+                "url": "https://lookaside.fbsbx.com/whatsapp_business/attachments/?mid=645645&ext=54353&hash=xxx-xx",
+                "mime_type": "image/jpeg",
+                "sha256": "73298ec14751fhfonf4wfxxxf52f4fb031db3892ff5",
+                "file_size": 61901,
+                "id": "137524587935346",
+                "messaging_product": "whatsapp",
             }
 
         Args:
@@ -497,7 +481,7 @@ class GraphAPI:
 
         Return example::
 
-            {'success': True}
+            {"success": True}
 
         Args:
             media_id: The ID of the media file.
@@ -765,9 +749,7 @@ class GraphAPI:
 
         Return example::
 
-            {
-                'success': True
-            }
+            {"success": True}
 
         Args:
             phone_id: The ID of the phone number to deregister.
@@ -789,9 +771,7 @@ class GraphAPI:
 
         Return example::
 
-            {
-                'success': True
-            }
+            {"success": True}
 
         Args:
             phone_id: The ID of the phone number that message belongs to.
@@ -901,7 +881,7 @@ class GraphAPI:
         Return example::
 
             {
-                'id': '1234567890',
+                "id": "1234567890",
             }
 
         Args:
@@ -964,17 +944,17 @@ class GraphAPI:
         Return example::
 
             {
-                'data': [
+                "data": [
                     {
-                        'verified_name': 'Test Number',
-                        'code_verification_status': 'NOT_VERIFIED',
-                        'display_phone_number': '+1 555-096-7852',
-                        'quality_rating': 'GREEN',
-                        'platform_type': 'CLOUD_API',
-                        'throughput': {'level': 'STANDARD'},
-                        'id': '277321005464405'
+                        "verified_name": "Test Number",
+                        "code_verification_status": "NOT_VERIFIED",
+                        "display_phone_number": "+1 555-096-7852",
+                        "quality_rating": "GREEN",
+                        "platform_type": "CLOUD_API",
+                        "throughput": {"level": "STANDARD"},
+                        "id": "277321005464405",
                     },
-                    ...
+                    ...,
                 ]
             }
 
@@ -1050,9 +1030,7 @@ class GraphAPI:
 
         Return example::
 
-            {
-                'success': True
-            }
+            {"success": True}
 
         Args:
             phone_id: The ID of the phone number to update.
@@ -1080,9 +1058,7 @@ class GraphAPI:
 
         Return example::
 
-            {
-                'success': True
-            }
+            {"success": True}
 
         Args:
             phone_id: The ID of the phone number to update.
@@ -1110,19 +1086,18 @@ class GraphAPI:
         Return example::
 
             {
-              "data": [{
-                "about": "ABOUT",
-                "address": "ADDRESS",
-                "description": "DESCRIPTION",
-                "email": "EMAIL",
-                "messaging_product": "whatsapp",
-                "profile_picture_url": "https://URL",
-                "websites": [
-                   "https://WEBSITE-1",
-                   "https://WEBSITE-2"
-                 ],
-                "vertical": "INDUSTRY",
-              }]
+                "data": [
+                    {
+                        "about": "ABOUT",
+                        "address": "ADDRESS",
+                        "description": "DESCRIPTION",
+                        "email": "EMAIL",
+                        "messaging_product": "whatsapp",
+                        "profile_picture_url": "https://URL",
+                        "websites": ["https://WEBSITE-1", "https://WEBSITE-2"],
+                        "vertical": "INDUSTRY",
+                    }
+                ]
             }
 
         Args:
@@ -1147,9 +1122,7 @@ class GraphAPI:
 
         Return example::
 
-            {
-                "success": True
-            }
+            {"success": True}
         """
         data.update(messaging_product="whatsapp")
         return self._request(
@@ -1167,13 +1140,13 @@ class GraphAPI:
         Return example::
 
             {
-              "data": [
-                {
-                  "is_cart_enabled": True,
-                  "is_catalog_visible": True,
-                  "id": "727705352028726"
-                }
-              ]
+                "data": [
+                    {
+                        "is_cart_enabled": True,
+                        "is_catalog_visible": True,
+                        "id": "727705352028726",
+                    }
+                ]
             }
 
         Args:
@@ -1205,9 +1178,7 @@ class GraphAPI:
 
         Return example::
 
-            {
-              "success": True
-            }
+            {"success": True}
         """
         return self._request(
             method="POST",
@@ -1231,11 +1202,7 @@ class GraphAPI:
 
         Return example::
 
-            {
-                "id": "594425479261596",
-                "status": "PENDING",
-                "category": "MARKETING"
-            }
+            {"id": "594425479261596", "status": "PENDING", "category": "MARKETING"}
         """
         return self._request(
             method="POST",
@@ -1255,9 +1222,9 @@ class GraphAPI:
         Example::
 
             {
-              "name": "seasonal_promotion_text_only",
-              "status": "APPROVED",
-              "id": "564750795574598"
+                "name": "seasonal_promotion_text_only",
+                "status": "APPROVED",
+                "id": "564750795574598",
             }
 
         Args:
@@ -1598,9 +1565,7 @@ class GraphAPI:
 
         Return example::
 
-            {
-              "success": True
-            }
+            {"success": True}
         """
         data = self._filter_none(
             name=name,
@@ -1623,18 +1588,18 @@ class GraphAPI:
         Return example::
 
             {
-              "success": true,
-              "validation_errors": [
-                {
-                  "error": "INVALID_PROPERTY",
-                  "error_type": "JSON_SCHEMA_ERROR",
-                  "message": "The property \"initial-text\" cannot be specified at \"$root/screens/0/layout/children/2/children/0\".",
-                  "line_start": 46,
-                  "line_end": 46,
-                  "column_start": 17,
-                  "column_end": 30
-                }
-              ]
+                "success": true,
+                "validation_errors": [
+                    {
+                        "error": "INVALID_PROPERTY",
+                        "error_type": "JSON_SCHEMA_ERROR",
+                        "message": 'The property "initial-text" cannot be specified at "$root/screens/0/layout/children/2/children/0".',
+                        "line_start": 46,
+                        "line_end": 46,
+                        "column_start": 17,
+                        "column_end": 30,
+                    }
+                ],
             }
         """
         return self._request(
@@ -1662,9 +1627,7 @@ class GraphAPI:
 
         Return example::
 
-            {
-              "success": true
-            }
+            {"success": true}
         """
         return self._request(method="POST", endpoint=f"/{flow_id}/publish")
 
@@ -1682,9 +1645,7 @@ class GraphAPI:
 
         Return example::
 
-            {
-              "success": true
-            }
+            {"success": true}
         """
 
         return self._request(
@@ -1706,9 +1667,7 @@ class GraphAPI:
 
         Return example::
 
-            {
-              "success": true
-            }
+            {"success": true}
         """
 
         return self._request(
@@ -1733,24 +1692,20 @@ class GraphAPI:
         Return example::
 
             {
-              "id": "<Flow-ID>",
-              "name": "<Flow-Name>",
-              "status": "DRAFT",
-              "categories": [ "LEAD_GENERATION" ],
-              "validation_errors": [],
-              "json_version": "3.0",
-              "data_api_version": "3.0",
-              "endpoint_uri": "https://example.com",
-              "preview": {
-                "preview_url": "https://business.facebook.com/wa/manage/flows/55000..../preview/?token=b9d6.....",
-                "expires_at": "2023-05-21T11:18:09+0000"
-              },
-              "whatsapp_business_account": {
-                ...
-              },
-              "application": {
-                ...
-              }
+                "id": "<Flow-ID>",
+                "name": "<Flow-Name>",
+                "status": "DRAFT",
+                "categories": ["LEAD_GENERATION"],
+                "validation_errors": [],
+                "json_version": "3.0",
+                "data_api_version": "3.0",
+                "endpoint_uri": "https://example.com",
+                "preview": {
+                    "preview_url": "https://business.facebook.com/wa/manage/flows/55000..../preview/?token=b9d6.....",
+                    "expires_at": "2023-05-21T11:18:09+0000",
+                },
+                "whatsapp_business_account": {...},
+                "application": {...},
             }
         """
         return self._request(
@@ -1778,20 +1733,20 @@ class GraphAPI:
         Return example::
 
             {
-              "data": [
-                {
-                  "id": "<Flow-ID>",
-                  "name": "<Flow-Name>",
-                  "status": "DRAFT",
-                  "categories": [ "LEAD_GENERATION" ]
-                },
-                {
-                    "id": "<Flow-ID>",
-                    "name": "<Flow-Name>",
-                    "status": "DRAFT",
-                    "categories": [ "LEAD_GENERATION" ]
-                }
-              ]
+                "data": [
+                    {
+                        "id": "<Flow-ID>",
+                        "name": "<Flow-Name>",
+                        "status": "DRAFT",
+                        "categories": ["LEAD_GENERATION"],
+                    },
+                    {
+                        "id": "<Flow-ID>",
+                        "name": "<Flow-Name>",
+                        "status": "DRAFT",
+                        "categories": ["LEAD_GENERATION"],
+                    },
+                ]
             }
         """
         return self._request(
@@ -1817,19 +1772,14 @@ class GraphAPI:
         Return example::
 
             {
-              "data": [
-                {
-                  "name": "flow.json",
-                  "asset_type": "FLOW_JSON",
-                  "download_url": "https://scontent.xx.fbcdn.net/m1/v/t0.57323-24/An_Hq0jnfJ..."
-                }
-              ],
-              "paging": {
-                "cursors": {
-                  "before": "QVFIU...",
-                  "after": "QVFIU..."
-                }
-              }
+                "data": [
+                    {
+                        "name": "flow.json",
+                        "asset_type": "FLOW_JSON",
+                        "download_url": "https://scontent.xx.fbcdn.net/m1/v/t0.57323-24/An_Hq0jnfJ...",
+                    }
+                ],
+                "paging": {"cursors": {"before": "QVFIU...", "after": "QVFIU..."}},
             }
         """
         return self._request(
@@ -1861,20 +1811,20 @@ class GraphAPI:
         Return example::
 
             {
-              "migrated_flows": [
-                {
-                  "source_name": "appointment-booking",
-                  "source_id": "1234",
-                  "migrated_id": "5678"
-                }
-              ],
-              "failed_flows": [
-                {
-                  "source_name": "lead-gen",
-                  "error_code": "4233041",
-                  "error_message": "Flows Migration Error: Flow with the same name exists in destination WABA."
-                }
-              ]
+                "migrated_flows": [
+                    {
+                        "source_name": "appointment-booking",
+                        "source_id": "1234",
+                        "migrated_id": "5678",
+                    }
+                ],
+                "failed_flows": [
+                    {
+                        "source_name": "lead-gen",
+                        "error_code": "4233041",
+                        "error_message": "Flows Migration Error: Flow with the same name exists in destination WABA.",
+                    }
+                ],
             }
 
         Args:
@@ -1910,10 +1860,10 @@ class GraphAPI:
         Return example::
 
             {
-              "code": "4O4YGZEG3RIVE1",
-              "prefilled_message": "Cyber Monday 1",
-              "deep_link_url": "https://wa.me/message/4O4YGZEG3RIVE1",
-              "qr_image_url": "https://scontent-iad3-2.xx.fbcdn.net/..."
+                "code": "4O4YGZEG3RIVE1",
+                "prefilled_message": "Cyber Monday 1",
+                "deep_link_url": "https://wa.me/message/4O4YGZEG3RIVE1",
+                "qr_image_url": "https://scontent-iad3-2.xx.fbcdn.net/...",
             }
         """
         return self._request(
@@ -1944,13 +1894,13 @@ class GraphAPI:
         Return example::
 
             {
-              "data": [
-                {
-                  "code": "4O4YGZEG3RIVE1",
-                  "prefilled_message": "Cyber Monday",
-                  "deep_link_url": "https://wa.me/message/4O4YGZEG3RIVE1"
-                }
-              ]
+                "data": [
+                    {
+                        "code": "4O4YGZEG3RIVE1",
+                        "prefilled_message": "Cyber Monday",
+                        "deep_link_url": "https://wa.me/message/4O4YGZEG3RIVE1",
+                    }
+                ]
             }
         """
         return self._request(
@@ -1973,20 +1923,15 @@ class GraphAPI:
         Return example::
 
             {
-              "data": [
-                {
-                  "code": "4O4YGZEG3RIVE1",
-                  "prefilled_message": "Cyber Monday 1",
-                  "deep_link_url": "https://wa.me/message/4O4YGZEG3RIVE1",
-                  "qr_image_url": "https://scontent-iad3-2.xx.fbcdn.net/..."
-                }
-              ],
-                "paging": {
-                    "cursors": {
-                    "before": "QVFIU...",
-                    "after": "QVFIU..."
+                "data": [
+                    {
+                        "code": "4O4YGZEG3RIVE1",
+                        "prefilled_message": "Cyber Monday 1",
+                        "deep_link_url": "https://wa.me/message/4O4YGZEG3RIVE1",
+                        "qr_image_url": "https://scontent-iad3-2.xx.fbcdn.net/...",
                     }
-                }
+                ],
+                "paging": {"cursors": {"before": "QVFIU...", "after": "QVFIU..."}},
             }
 
         Args:
@@ -2014,9 +1959,9 @@ class GraphAPI:
         Return example::
 
             {
-              "code": "4O4YGZEG3RIVE1",
-              "prefilled_message": "Cyber Tuesday",
-              "deep_link_url": "https://wa.me/message/4O4YGZEG3RIVE1"
+                "code": "4O4YGZEG3RIVE1",
+                "prefilled_message": "Cyber Tuesday",
+                "deep_link_url": "https://wa.me/message/4O4YGZEG3RIVE1",
             }
 
         Args:
@@ -2038,9 +1983,7 @@ class GraphAPI:
 
         Return example::
 
-            {
-              "success": True
-            }
+            {"success": True}
 
         Args:
             phone_id: The ID of the phone number to delete the QR code from.
@@ -2061,9 +2004,7 @@ class GraphAPI:
 
         Return example::
 
-            {
-                'success': True
-            }
+            {"success": True}
 
         Args:
             phone_id: The ID of the phone number to set the typing indicator on.
@@ -2100,12 +2041,10 @@ class GraphAPI:
         Return example::
 
             {
-                'messaging_product': 'whatsapp',
-                'block_users': {
-                    'removed_users': [
-                        {'input': '123456789', 'wa_id': '123456789'}
-                    ]
-                }
+                "messaging_product": "whatsapp",
+                "block_users": {
+                    "removed_users": [{"input": "123456789", "wa_id": "123456789"}]
+                },
             }
 
         Args:
@@ -2180,15 +2119,13 @@ class GraphAPI:
         Return example::
 
             {
-                'data': [
-                    {'messaging_product': 'whatsapp', 'wa_id': '1234567890'}
-                ],
-                'paging': {
-                    'cursors': {
-                        'before': 'eyJvZAmZAzZAXQiOjAsIn',
-                        'after': 'I6IjE3Mzc1ODA5MjUwMTk0NTIifQZDZD',
+                "data": [{"messaging_product": "whatsapp", "wa_id": "1234567890"}],
+                "paging": {
+                    "cursors": {
+                        "before": "eyJvZAmZAzZAXQiOjAsIn",
+                        "after": "I6IjE3Mzc1ODA5MjUwMTk0NTIifQZDZD",
                     }
-                }
+                },
             }
 
         Returns:
@@ -2364,10 +2301,12 @@ class GraphAPI:
         Return example::
 
             {
-              "messaging_product": "whatsapp",
-              "calls" : [{
-                 "id" : "wacid.ABGGFjFVU2AfAgo6V",
-               }]
+                "messaging_product": "whatsapp",
+                "calls": [
+                    {
+                        "id": "wacid.ABGGFjFVU2AfAgo6V",
+                    }
+                ],
             }
 
         Args:
@@ -2406,10 +2345,7 @@ class GraphAPI:
 
         Return example::
 
-            {
-                "messaging_product": "whatsapp",
-                "success": True
-            }
+            {"messaging_product": "whatsapp", "success": True}
 
         Args:
             phone_id: The ID of the phone number to pre-accept the call on.
@@ -2444,10 +2380,7 @@ class GraphAPI:
 
         Return example::
 
-            {
-                "messaging_product": "whatsapp",
-                "success": True
-            }
+            {"messaging_product": "whatsapp", "success": True}
 
         Args:
             phone_id: The ID of the phone number to accept the call on.
@@ -2478,10 +2411,7 @@ class GraphAPI:
 
         Return example::
 
-            {
-                "messaging_product": "whatsapp",
-                "success": True
-            }
+            {"messaging_product": "whatsapp", "success": True}
 
         Args:
             phone_id: The ID of the phone number to reject the call on.
@@ -2508,10 +2438,7 @@ class GraphAPI:
 
         Return example::
 
-            {
-                "messaging_product": "whatsapp",
-                "success": True
-            }
+            {"messaging_product": "whatsapp", "success": True}
 
         Args:
             phone_id: The ID of the phone number to terminate the call on.
@@ -2550,9 +2477,7 @@ class GraphAPI:
 
         Return example::
 
-            {
-              "request_id": "123456789012345"
-            }
+            {"request_id": "123456789012345"}
         """
         data = self._filter_none(
             messaging_product="whatsapp",

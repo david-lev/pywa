@@ -774,7 +774,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             ...     to="1234567890",
             ...     document="https://example.com/example_123.pdf",
             ...     filename="example.pdf",
-            ...     caption="Example PDF"
+            ...     caption="Example PDF",
             ... )
 
         Args:
@@ -839,8 +839,8 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
 
             >>> wa = WhatsApp()
             >>> await wa.send_audio(
-            ...     to='1234567890',
-            ...     audio='https://example.com/audio.mp3',
+            ...     to="1234567890",
+            ...     audio="https://example.com/audio.mp3",
             ... )
 
         Args:
@@ -901,8 +901,8 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
 
             >>> wa = WhatsApp()
             >>> await wa.send_voice(
-            ...     to='1234567890',
-            ...     voice='https://example.com/voice.ogg',
+            ...     to="1234567890",
+            ...     voice="https://example.com/voice.ogg",
             ... )
 
         Args:
@@ -963,8 +963,8 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
 
             >>> wa = WhatsApp()
             >>> await wa.send_sticker(
-            ...     to='1234567890',
-            ...     sticker='https://example.com/sticker.webp',
+            ...     to="1234567890",
+            ...     sticker="https://example.com/sticker.webp",
             ... )
 
         Args:
@@ -1010,15 +1010,13 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         >>> wa = WhatsApp()
         >>> @wa.on_message
         ... async def message_handler(_: WhatsApp, msg: Message):
-        ...     await msg.react('👍')
+        ...     await msg.react("👍")
 
         Example:
 
             >>> wa = WhatsApp()
             >>> await wa.send_reaction(
-            ...     to='1234567890',
-            ...     emoji='👍',
-            ...     message_id='wamid.XXX='
+            ...     to="1234567890", emoji="👍", message_id="wamid.XXX="
             ... )
 
         Args:
@@ -1070,16 +1068,13 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         >>> wa = WhatsApp()
         >>> @wa.on_message
         ... async def message_handler(_: WhatsApp, msg: Message):
-        ...     await msg.react('👍')
+        ...     await msg.react("👍")
         ...     await msg.unreact()
 
         Example:
 
             >>> wa = WhatsApp()
-            >>> await wa.remove_reaction(
-            ...     to='1234567890',
-            ...     message_id='wamid.XXX='
-            ... )
+            >>> await wa.remove_reaction(to="1234567890", message_id="wamid.XXX=")
 
         Args:
             to: The user phone number, WhatsApp ID, BSUID or group ID to send the message to.
@@ -1133,11 +1128,11 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
 
             >>> wa = WhatsApp()
             >>> await wa.send_location(
-            ...     to='1234567890',
+            ...     to="1234567890",
             ...     latitude=37.4847483695049,
             ...     longitude=--122.1473373086664,
-            ...     name='WhatsApp HQ',
-            ...     address='Menlo Park, 1601 Willow Rd, United States',
+            ...     name="WhatsApp HQ",
+            ...     address="Menlo Park, 1601 Willow Rd, United States",
             ... )
 
         Args:
@@ -1198,8 +1193,8 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
 
             >>> wa = WhatsApp()
             >>> wa.request_location(
-            ...     to='1234567890',
-            ...     text='Please share your location with us.',
+            ...     to="1234567890",
+            ...     text="Please share your location with us.",
             ... )
 
         Args:
@@ -1259,8 +1254,8 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
 
             >>> wa = WhatsApp()
             >>> await wa.request_contact_info(
-            ...     to='1234567890',
-            ...     text='In order to continue, please share your contact information with us.',
+            ...     to="1234567890",
+            ...     text="In order to continue, please share your contact information with us.",
             ... )
 
         Args:
@@ -1320,13 +1315,19 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             >>> from pywa_async.types import Contact
             >>> wa = WhatsApp()
             >>> await wa.send_contact(
-            ...     to='1234567890',
+            ...     to="1234567890",
             ...     contact=Contact(
-            ...         name=Contact.Name(formatted_name='David Lev', first_name='David'),
-            ...         phones=[Contact.Phone(phone='1234567890', wa_id='1234567890', type='MOBILE')],
-            ...         emails=[Contact.Email(email='test@test.com', type='WORK')],
-            ...         urls=[Contact.Url(url='https://exmaple.com', type='HOME')],
-            ...      )
+            ...         name=Contact.Name(
+            ...             formatted_name="David Lev", first_name="David"
+            ...         ),
+            ...         phones=[
+            ...             Contact.Phone(
+            ...                 phone="1234567890", wa_id="1234567890", type="MOBILE"
+            ...             )
+            ...         ],
+            ...         emails=[Contact.Email(email="test@test.com", type="WORK")],
+            ...         urls=[Contact.Url(url="https://exmaple.com", type="HOME")],
+            ...     ),
             ... )
 
         Args:
@@ -1386,10 +1387,10 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
 
             >>> wa = WhatsApp()
             >>> await wa.send_catalog(
-            ...     to='1234567890',
-            ...     body='Check out our catalog!',
-            ...     footer='Powered by PyWa',
-            ...     thumbnail_product_sku='SKU123',
+            ...     to="1234567890",
+            ...     body="Check out our catalog!",
+            ...     footer="Powered by PyWa",
+            ...     thumbnail_product_sku="SKU123",
             ... )
 
         Args:
@@ -1464,11 +1465,11 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
 
             >>> wa = WhatsApp()
             >>> await wa.send_product(
-            ...     to='1234567890',
-            ...     catalog_id='1234567890',
-            ...     sku='SKU123',
-            ...     body='Check out this product!',
-            ...     footer='Powered by PyWa',
+            ...     to="1234567890",
+            ...     catalog_id="1234567890",
+            ...     sku="SKU123",
+            ...     body="Check out this product!",
+            ...     footer="Powered by PyWa",
             ... )
 
         Args:
@@ -1540,21 +1541,21 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             >>> from pywa_async.types import ProductsSection
             >>> wa = WhatsApp()
             >>> await wa.send_products(
-            ...     to='1234567890',
-            ...     catalog_id='1234567890',
-            ...     title='Tech Products',
-            ...     body='Check out our products!',
+            ...     to="1234567890",
+            ...     catalog_id="1234567890",
+            ...     title="Tech Products",
+            ...     body="Check out our products!",
             ...     product_sections=[
             ...         ProductsSection(
-            ...             title='Smartphones',
-            ...             skus=['IPHONE12', 'GALAXYS21'],
+            ...             title="Smartphones",
+            ...             skus=["IPHONE12", "GALAXYS21"],
             ...         ),
             ...         ProductsSection(
-            ...             title='Laptops',
-            ...             skus=['MACBOOKPRO', 'SURFACEPRO'],
+            ...             title="Laptops",
+            ...             skus=["MACBOOKPRO", "SURFACEPRO"],
             ...         ),
             ...     ],
-            ...     footer='Powered by PyWa',
+            ...     footer="Powered by PyWa",
             ... )
 
         Args:
@@ -1679,7 +1680,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Example:
 
             >>> wa = WhatsApp()
-            >>> await wa.mark_message_as_read(message_id='wamid.XXX=')
+            >>> await wa.mark_message_as_read(message_id="wamid.XXX=")
 
         Args:
             message_id: The message ID to mark as read.
@@ -1716,7 +1717,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Example:
 
             >>> wa = WhatsApp()
-            >>> await wa.indicate_typing(message_id='wamid.XXX=')
+            >>> await wa.indicate_typing(message_id="wamid.XXX=")
 
         Args:
             message_id: The message ID to mark as read and display a typing indicator.
@@ -1771,18 +1772,22 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Example:
 
             >>> wa = WhatsApp()
-            >>> await wa.upload_media(media='https://example.com/image.jpg',)
+            >>> await wa.upload_media(
+            ...     media="https://example.com/image.jpg",
+            ... )
 
-            >>> await wa.upload_media(media=pathlib.Path('image.jpg'))
+            >>> await wa.upload_media(media=pathlib.Path("image.jpg"))
             >>> await wa.upload_media(media="/path/to/image.jpg")
 
             >>> await wa.upload_media(
-            ...     media=b'...binary data...',
-            ...     mime_type='image/jpeg',
-            ...     filename='image.jpg',
+            ...     media=b"...binary data...",
+            ...     mime_type="image/jpeg",
+            ...     filename="image.jpg",
             ... )
 
-            >>> async with wa.upload_media("https://my-cdn.com/sensitive-image.png") as media: # will be deleted after use
+            >>> async with wa.upload_media(
+            ...     "https://my-cdn.com/sensitive-image.png"
+            ... ) as media:  # will be deleted after use
             ...     await wa.send_image(to=..., image=media)
 
         Args:
@@ -1830,7 +1835,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Example:
 
             >>> wa = WhatsApp()
-            >>> await wa.get_media_url(media_id='wamid.XXX=')
+            >>> await wa.get_media_url(media_id="wamid.XXX=")
 
         Args:
             media_id: The media ID.
@@ -1870,9 +1875,9 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
 
             >>> wa = WhatsApp()
             >>> await wa.download_media(
-            ...     url='https://mmg-fna.whatsapp.net/d/f/Amc.../v2/1234567890',
-            ...     path=pathlib.Path('/path/to/save'),
-            ...     filename='image.jpg',
+            ...     url="https://mmg-fna.whatsapp.net/d/f/Amc.../v2/1234567890",
+            ...     path=pathlib.Path("/path/to/save"),
+            ...     filename="image.jpg",
             ... )
 
         Args:
@@ -1925,7 +1930,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
 
             >>> wa = WhatsApp()
             >>> media_bytes = await wa.get_media_bytes(
-            ...     url='https://mmg-fna.whatsapp.net/d/f/Amc.../v2/1234567890',
+            ...     url="https://mmg-fna.whatsapp.net/d/f/Amc.../v2/1234567890",
             ... )
 
         Args:
@@ -1985,7 +1990,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Example:
 
             >>> wa = WhatsApp()
-            >>> await wa.delete_media(media_id='wamid.XXX=')
+            >>> await wa.delete_media(media_id="wamid.XXX=")
 
         Args:
             media_id: The media ID to delete.
@@ -2113,7 +2118,9 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Example:
 
             >>> wa = WhatsApp()
-            >>> await wa.update_business_account_settings(disable_marketing_messages_on_cloud_api=True)
+            >>> await wa.update_business_account_settings(
+            ...     disable_marketing_messages_on_cloud_api=True
+            ... )
 
         Args:
             disable_marketing_messages_on_cloud_api: Whether to block Marketing category templates on the Cloud API ``/messages`` endpoint (in pywa it means that when you :meth:`~pywa.WhatsApp.send_template` a ``MARKETING`` template you must set ``use_mm_lite_api`` to ``True``).
@@ -2301,15 +2308,15 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             >>> from pywa_async.types import Command
             >>> wa = WhatsApp()
             >>> await wa.update_conversational_automation(
-            ...     ice_breakers=['Plan a trip', 'Create a workout plan'],
+            ...     ice_breakers=["Plan a trip", "Create a workout plan"],
             ...     commands=[
             ...         Command(
-            ...             command='start',
-            ...             description='Start a new conversation',
+            ...             command="start",
+            ...             description="Start a new conversation",
             ...         ),
             ...         Command(
-            ...             command='help',
-            ...             description='Get help with the bot',
+            ...             command="help",
+            ...             description="Get help with the bot",
             ...         ),
             ...     ],
             ... )
@@ -2470,13 +2477,13 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             >>> from pywa_async.types import Industry
             >>> wa = WhatsApp()
             >>> await wa.update_business_profile(
-            ...     about='This is a test business',
-            ...     address='Menlo Park, 1601 Willow Rd, United States',
-            ...     description='This is a test business',
-            ...     email='test@test.com',
-            ...     profile_picture='path/to/profile.jpg',
+            ...     about="This is a test business",
+            ...     address="Menlo Park, 1601 Willow Rd, United States",
+            ...     description="This is a test business",
+            ...     email="test@test.com",
+            ...     profile_picture="path/to/profile.jpg",
             ...     industry=Industry.NOT_A_BIZ,
-            ...     websites=['https://example.com', 'https://google.com'],
+            ...     websites=["https://example.com", "https://google.com"],
             ... )
 
         Args:
@@ -2716,14 +2723,20 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             >>> from pywa_async.types.templates import *
             >>> wa = WhatsApp()
             >>> templates = await wa.upsert_authentication_template(
-            ...     name='one_tap_authentication',
-            ...     languages=[TemplateLanguage.ENGLISH_US, TemplateLanguage.FRENCH, TemplateLanguage.SPANISH],
+            ...     name="one_tap_authentication",
+            ...     languages=[
+            ...         TemplateLanguage.ENGLISH_US,
+            ...         TemplateLanguage.FRENCH,
+            ...         TemplateLanguage.SPANISH,
+            ...     ],
             ...     otp_button=OneTapOTPButton(supported_apps=...),
             ...     add_security_recommendation=True,
             ...     code_expiration_minutes=5,
             ... )
             ... for template in templates:
-            ...     print(f'Template {template.id} created with status {template.status}')
+            ...     print(
+            ...         f"Template {template.id} created with status {template.status}"
+            ...     )
 
         Args:
             name: The name of the template (should be unique, maximum 512 characters).
@@ -2789,33 +2802,43 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
 
             wa = WhatsApp(...)
             await wa.send_template(
-                to='1234567890',
-                name='seasonal_promotion',
+                to="1234567890",
+                name="seasonal_promotion",
                 language=TemplateLanguage.ENGLISH_US,
                 params=[
-                    BodyText.params(season='Summer'),
-                    CopyCodeButton.params(coupon_code="25OFF", index=0)
+                    BodyText.params(season="Summer"),
+                    CopyCodeButton.params(coupon_code="25OFF", index=0),
                 ],
             )
 
             from pywa_async.types.templates import *
 
             t = Template(
-                name='seasonal_promotion',
+                name="seasonal_promotion",
                 category=TemplateCategory.MARKETING,
                 language=TemplateLanguage.ENGLISH_US,
                 parameter_format=ParamFormat.NAMED,
                 components=[
-                    header := HeaderText(text='Our {{sale_name}} is on!', sale_name='Summer Sale'),
-                    body := BodyText(
-                        text='Shop now through {{end_date}} and use code {{discount_code}} to get {{discount_amount}} off of all merchandise.',
-                        end_date='the end of August', discount_code='25OFF', discount_amount='25%'
+                    header := HeaderText(
+                        text="Our {{sale_name}} is on!", sale_name="Summer Sale"
                     ),
-                    FooterText(text='Use the buttons below to manage your marketing subscriptions'),
+                    body := BodyText(
+                        text="Shop now through {{end_date}} and use code {{discount_code}} to get {{discount_amount}} off of all merchandise.",
+                        end_date="the end of August",
+                        discount_code="25OFF",
+                        discount_amount="25%",
+                    ),
+                    FooterText(
+                        text="Use the buttons below to manage your marketing subscriptions"
+                    ),
                     Buttons(
                         buttons=[
-                            uns_from_promos := QuickReplyButton(text='Unsubscribe from Promos'),
-                            uns_from_all := QuickReplyButton(text='Unsubscribe from All'),
+                            uns_from_promos := QuickReplyButton(
+                                text="Unsubscribe from Promos"
+                            ),
+                            uns_from_all := QuickReplyButton(
+                                text="Unsubscribe from All"
+                            ),
                         ]
                     ),
                 ],
@@ -2824,17 +2847,17 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             await wa.create_template(template=t)
 
             await wa.send_template(
-                to='1234567890',
-                template=t, # provide the template object to validate parameters against
+                to="1234567890",
+                template=t,  # provide the template object to validate parameters against
                 params=[
-                    header.params(sale_name='Summer Sale'),
+                    header.params(sale_name="Summer Sale"),
                     body.params(
-                        end_date='the end of August',
-                        discount_code='25OFF',
-                        discount_amount='25%',
+                        end_date="the end of August",
+                        discount_code="25OFF",
+                        discount_amount="25%",
                     ),
-                    uns_from_promos.params(callback_data='uns_from_promos'),
-                    uns_from_all.params(callback_data='uns_from_all'),
+                    uns_from_promos.params(callback_data="uns_from_promos"),
+                    uns_from_all.params(callback_data="uns_from_all"),
                 ],
             )
 
@@ -2932,10 +2955,10 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             ...     statuses=[TemplateStatus.APPROVED],
             ...     categories=[TemplateCategory.MARKETING],
             ...     languages=[TemplateLanguage.ENGLISH_US],
-            ...     pagination=Pagination(limit=10)
+            ...     pagination=Pagination(limit=10),
             ... )
             >>> for template in templates:
-            ...     print(f'Template {template.id} - {template.name}: {template}')
+            ...     print(f"Template {template.id} - {template.name}: {template}")
 
         Args:
             statuses: The statuses of the templates to filter by (optional).
@@ -2993,7 +3016,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Example:
 
             >>> wa = WhatsApp()
-            >>> template_details = await wa.get_template(template_id='1234567890')
+            >>> template_details = await wa.get_template(template_id="1234567890")
 
         Args:
             template_id: The ID of the template to retrieve.
@@ -3033,10 +3056,10 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             >>> from pywa_async.types.templates import *
             >>> wa = WhatsApp()
             >>> updated_template = await wa.update_template(
-            ...     template_id='1234567890',
+            ...     template_id="1234567890",
             ...     new_category=TemplateCategory.MARKETING,
             ...     new_components=[...],
-            ...     new_message_send_ttl_seconds=3600
+            ...     new_message_send_ttl_seconds=3600,
             ... )
 
         Args:
@@ -3090,8 +3113,12 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Example:
 
             >>> wa = WhatsApp()
-            >>> await wa.delete_template(template_name='seasonal_promotion') # Deletes all templates with that name
-            >>> await wa.delete_template(template_name='seasonal_promotion', template_id='1234567890') # Deletes only the template with that ID
+            >>> await wa.delete_template(
+            ...     template_name="seasonal_promotion"
+            ... )  # Deletes all templates with that name
+            >>> await wa.delete_template(
+            ...     template_name="seasonal_promotion", template_id="1234567890"
+            ... )  # Deletes only the template with that ID
 
         Args:
             template_name: The name of the template to delete.
@@ -3129,7 +3156,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Example:
 
             >>> wa = WhatsApp()
-            >>> await wa.archive_templates(template_ids=['1234567890', '0987654321'])
+            >>> await wa.archive_templates(template_ids=["1234567890", "0987654321"])
 
         Args:
             template_ids: The IDs of the templates to archive.
@@ -3165,7 +3192,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Example:
 
             >>> wa = WhatsApp()
-            >>> await wa.unarchive_templates(template_ids=['1234567890', '0987654321'])
+            >>> await wa.unarchive_templates(template_ids=["1234567890", "0987654321"])
 
         Args:
             template_ids: The IDs of the templates to unarchive.
@@ -3207,8 +3234,10 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             >>> wa = WhatsApp()
             >>> now = datetime.datetime.now()
             >>> result = await wa.compare_templates(
-            ...     '1234567890', '0987654321',
-            ...     start=now - datetime.timedelta(days=30), end=now # Compare templates sent in the last 30 days
+            ...     "1234567890",
+            ...     "0987654321",
+            ...     start=now - datetime.timedelta(days=30),
+            ...     end=now,  # Compare templates sent in the last 30 days
             ... )
 
         Args:
@@ -3332,7 +3361,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             >>> from pywa_async.types.flows import *
             >>> wa = WhatsApp()
             >>> await wa.create_flow(
-            ...     name='Feedback',
+            ...     name="Feedback",
             ...     categories=[FlowCategory.SURVEY, FlowCategory.OTHER],
             ...     flow_json=FlowJSON(...),
             ...     publish=True,
@@ -3385,10 +3414,10 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             >>> from pywa_async.types.flows import FlowCategory
             >>> wa = WhatsApp()
             >>> await wa.update_flow_metadata(
-            ...     flow_id='1234567890',
-            ...     name='Feedback',
+            ...     flow_id="1234567890",
+            ...     name="Feedback",
             ...     categories=[FlowCategory.SURVEY, FlowCategory.OTHER],
-            ...     endpoint_uri='https://my-api-server/feedback_flow',
+            ...     endpoint_uri="https://my-api-server/feedback_flow",
             ...     application_id=1234567890,
             ... )
 
@@ -3430,15 +3459,14 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
 
             >>> from pywa_async.types.flows import *
             >>> await wa.update_flow_json(
-            ...     flow_id='1234567890',
-            ...     flow_json=FlowJSON(version='7.1', screens=[Screen(...)])
+            ...     flow_id="1234567890",
+            ...     flow_json=FlowJSON(version="7.1", screens=[Screen(...)]),
             ... )
 
             - From a json file path:
 
             >>> await wa.update_flow_json(
-            ...     flow_id='1234567890',
-            ...     flow_json="/home/david/feedback_flow.json"
+            ...     flow_id="1234567890", flow_json="/home/david/feedback_flow.json"
             ... )
 
             - From a json string:
@@ -3579,11 +3607,11 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             >>> wa = WhatsApp()
             >>> flows = await wa.get_flows(
             ...     invalidate_preview=True,
-            ...     phone_number_id='1234567890',
-            ...     pagination=Pagination(limit=10)
+            ...     phone_number_id="1234567890",
+            ...     pagination=Pagination(limit=10),
             ... )
             ... for flow in flows:
-            ...     print(f'Flow {flow.id} - {flow.name}: {flow}')
+            ...     print(f"Flow {flow.id} - {flow.name}: {flow}")
 
         Args:
             invalidate_preview: Whether to invalidate the preview (optional, default: True).
@@ -3718,7 +3746,9 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Example:
 
             >>> wa = WhatsApp()
-            >>> wa.register_phone_number(password='111111', data_localization_region='US')
+            >>> wa.register_phone_number(
+            ...     password="111111", data_localization_region="US"
+            ... )
 
         Args:
             pin: If your verified business phone number already has two-step verification enabled,
@@ -4213,8 +4243,9 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Example:
 
             >>> wa = WhatsApp()
-            >>> res = await wa.block_users(users=['1234567890', '0987654321'])
-            >>> if res.errors: print(res.failed_users)
+            >>> res = await wa.block_users(users=["1234567890", "0987654321"])
+            >>> if res.errors:
+            ...     print(res.failed_users)
 
         Args:
             users: The phone numbers/wa IDs of the users to block.
@@ -4246,7 +4277,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
 
         Example:
             >>> wa = WhatsApp()
-            >>> res = await wa.unblock_users(users=['1234567890', '0987654321'])
+            >>> res = await wa.unblock_users(users=["1234567890", "0987654321"])
             >>> print(res.removed_users)
 
         Args:
@@ -4281,7 +4312,8 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         Example:
 
             >>> wa = WhatsApp()
-            >>> for user in await wa.get_blocked_users(): print(user)
+            >>> for user in await wa.get_blocked_users():
+            ...     print(user)
 
         Args:
             pagination: The pagination parameters (optional).
@@ -4598,7 +4630,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             >>> wa = WhatsApp()
             >>> groups = await wa.get_groups(pagination=Pagination(limit=10))
             ... for group in groups:
-            ...     print(f'Group {group.id}: {group}')
+            ...     print(f"Group {group.id}: {group}")
 
         Args:
             phone_id: The phone ID to get the groups for (optional, if not provided, the client's phone ID will be used).
