@@ -3,13 +3,12 @@ from __future__ import annotations
 import dataclasses
 import datetime
 import pathlib
+from collections.abc import Iterable, Iterator, Sequence
 from typing import (
     TYPE_CHECKING,
     BinaryIO,
     ClassVar,
-    Iterable,
-    Iterator,
-    Sequence,
+    TypeVar,
     overload,
 )
 
@@ -21,6 +20,8 @@ from .user import BaseUser
 
 if TYPE_CHECKING:
     from pywa import WhatsApp
+
+_GroupDetailsType = TypeVar("_GroupDetailsType", bound="GroupDetails")
 
 
 class GroupJoinApprovalMode(helpers.StrEnum):
@@ -37,8 +38,7 @@ class GroupJoinApprovalMode(helpers.StrEnum):
 
     UNKNOWN = "UNKNOWN"
 
-    _check_value = str.islower
-    _modify_value = str.lower
+    _normalize = str.lower
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
@@ -68,7 +68,9 @@ class GroupDetails(helpers.APIObject):
     join_approval_mode: GroupJoinApprovalMode
 
     @classmethod
-    def from_dict(cls, data: dict, client: WhatsApp) -> GroupDetails:
+    def from_dict(
+        cls: type[_GroupDetailsType], data: dict, client: WhatsApp
+    ) -> _GroupDetailsType:
         return cls(
             _client=client,
             id=data["id"],

@@ -3,17 +3,18 @@
 from __future__ import annotations
 
 import pathlib
-from typing import TYPE_CHECKING, BinaryIO, Iterable
+from collections.abc import Iterable
+from typing import TYPE_CHECKING, BinaryIO
 
 import httpx
 
-from pywa.types.flows import *  # noqa MUST BE IMPORTED FIRST
+from pywa.types.flows import *
 from pywa.types.flows import (
     FlowCompletion as _FlowCompletion,
 )
 from pywa.types.flows import (
     FlowDetails as _FlowDetails,
-)  # noqa MUST BE IMPORTED FIRST
+)
 from pywa.types.flows import (
     FlowRequest as _FlowRequest,
 )
@@ -35,11 +36,12 @@ class FlowRequest(_FlowRequest):
 
     Attributes:
         version: The version of the ``data_api_version`` specified on the flow json.
-        flow_token: The flow token used to create the flow
+        flow_token: A Flow token generated and sent by you as part of the :class:`~pywa.types.callback.FlowButton`.
+        flow_token_signature: A Flow token signature is generated and sent by flows as part of the data exchange request payload. will only be sent with flows version >= 7.3 and data_api_version >=4.0. Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/flows/guides/implementingyourflowendpoint#enhanced-endpoint-security>`_.
         action: The action that triggered the request.
         screen: The screen that triggered the request. If action is ``FlowRequestActionType.INIT`` or ``FlowRequestActionType.BACK``, this field may be ``None``.
         data: The data sent from the screen. If action is ``FlowRequestActionType.BACK`` or ``FlowRequestActionType.INIT``, this field may be ``None``.
-        raw: The raw data of the request.
+        raw: The raw data of the request (decrypted).
         raw_encrypted: The raw-encrypted data of the request.
     """
 
@@ -55,7 +57,9 @@ class FlowRequest(_FlowRequest):
             >>> wa = WhatsApp(...)
             >>> @wa.on_flow_request("/my-flow-endpoint")
             ... async def my_flow_endpoint(_: WhatsApp, req: types.FlowRequest):
-            ...     decrypted_data = await req.decrypt_media(key="driver_license", index=0)
+            ...     decrypted_data = await req.decrypt_media(
+            ...         key="driver_license", index=0
+            ...     )
             ...     with open(decrypted_data.filename, "wb") as file:
             ...         file.write(decrypted_data.data)
             ...     return req.respond(...)
@@ -75,6 +79,8 @@ class FlowRequest(_FlowRequest):
             KeyError: If the key is not found in the data.
             IndexError: If the index is out of range.
         """
+        if not self.data:
+            raise ValueError("No data to decrypt.")
         return await utils.flow_request_media_decryptor(
             encrypted_media=self.data[key][index],
             dl_session=dl_session,
@@ -209,9 +215,9 @@ class FlowDetails(_FlowDetails):
             >>> wa = WhatsApp(waba_id='1234567890', ...)
             >>> my_flows = await wa.get_flows()
             >>> my_flows[0].update_metadata(
-            ...     name='Feedback',
+            ...     name="Feedback",
             ...     categories=[FlowCategory.SURVEY, FlowCategory.OTHER],
-            ...     endpoint_uri='https://my-api-server/feedback_flow'
+            ...     endpoint_uri="https://my-api-server/feedback_flow",
             ... )
 
         Returns:

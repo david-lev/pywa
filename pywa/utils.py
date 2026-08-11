@@ -3,28 +3,25 @@ from __future__ import annotations
 import base64
 import dataclasses
 import enum
+import functools
 import hashlib
 import hmac
 import importlib
+import importlib.util
 import json
 import logging
 import warnings
-from typing import Any, Callable, Iterable, Protocol, TypeAlias
+from collections.abc import Callable, Iterable
+from typing import TYPE_CHECKING, Any, Protocol, TypeAlias
 
 import httpx
 
 from .errors import PywaDeprecationWarning
 
-try:
-    from cryptography.hazmat.backends import default_backend
-    from cryptography.hazmat.primitives.asymmetric.padding import MGF1, OAEP, hashes
-    from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-    from cryptography.hazmat.primitives.padding import PKCS7
-    from cryptography.hazmat.primitives.serialization import load_pem_private_key
+if TYPE_CHECKING:
+    from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
 
-    is_cryptography_installed = True
-except ImportError:
-    is_cryptography_installed = False
+is_cryptography_installed = importlib.util.find_spec("cryptography") is not None
 
 _logger = logging.getLogger(__name__)
 
@@ -62,6 +59,9 @@ class Flask(Protocol):
 
 class CustomServerType(enum.Enum):
     """Enum for the supported server types."""
+
+    protocol: type
+    server: Callable
 
     FASTAPI = ("FastAPI", FastAPI, lambda: importlib.import_module("fastapi").FastAPI)
     STARLETTE = (
@@ -109,6 +109,8 @@ class Version(enum.Enum):
         FLOW_DATA_API: (MIN_VERSION: str, LATEST_VERSION: str)
         FLOW_MSG: (MIN_VERSION: str, LATEST_VERSION: str)
     """
+
+    min: str
 
     # KEY = (MIN_VERSION: str, LATEST_VERSION: str)
     GRAPH_API = ("17.0", "25.0")
@@ -183,6 +185,33 @@ Returns:
 """
 
 
+@functools.lru_cache(maxsize=8)
+def _load_flow_private_key(private_key: str, password: str | None) -> RSAPrivateKey:
+    """
+    Load and cache a flow's RSA private key.
+
+    Parsing a PEM is expensive — ``cryptography`` validates the RSA key
+    material on load — and it was being done once per flow request, which
+    made it the dominant cost of every data exchange: ~56ms against ~2.8ms
+    for the decryption it enables, with or without a password on the key.
+
+    The key does not change for the life of a process, so it is parsed
+    once per ``(private_key, password)`` pair. The cache is bounded and
+    its keys come from the developer's own configuration, never from a
+    request.
+    """
+    from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
+    from cryptography.hazmat.primitives.serialization import load_pem_private_key
+
+    rsa_key = load_pem_private_key(
+        data=private_key.encode("utf-8"),
+        password=password.encode("utf-8") if password else None,
+    )
+    if not isinstance(rsa_key, RSAPrivateKey):
+        raise TypeError("Private key is not an RSA private key")
+    return rsa_key
+
+
 def default_flow_request_decryptor(
     encrypted_flow_data_b64: str,
     encrypted_aes_key_b64: str,
@@ -212,16 +241,19 @@ def default_flow_request_decryptor(
         >>> from pywa.types.flows import FlowRequest, FlowResponse
         >>> from pywa.utils import default_flow_request_decryptor
         >>> wa = WhatsApp(...)
-        >>> @wa.on_flow_request("/sign-up-flow", request_decryptor=default_flow_request_decryptor)
-        ... def on_sign_up_request(_: WhatsApp, flow: FlowRequest) -> FlowResponse | None: ...
+        >>> @wa.on_flow_request(
+        ...     "/sign-up-flow", request_decryptor=default_flow_request_decryptor
+        ... )
+        ... def on_sign_up_request(
+        ...     _: WhatsApp, flow: FlowRequest
+        ... ) -> FlowResponse | None: ...
     """
+    from cryptography.hazmat.primitives.asymmetric.padding import MGF1, OAEP, hashes
+    from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
     flow_data = base64.b64decode(encrypted_flow_data_b64)
     iv = base64.b64decode(initial_vector_b64)
-    aes_key = load_pem_private_key(
-        data=private_key.encode("utf-8"),
-        password=password.encode("utf-8") if password else None,
-    ).decrypt(
+    aes_key = _load_flow_private_key(private_key, password).decrypt(
         base64.b64decode(encrypted_aes_key_b64),
         OAEP(
             mgf=MGF1(algorithm=hashes.SHA256()), algorithm=hashes.SHA256(), label=None
@@ -276,9 +308,14 @@ def default_flow_response_encryptor(response: dict, aes_key: bytes, iv: bytes) -
         >>> from pywa.types.flows import FlowRequest, FlowResponse
         >>> from pywa.utils import default_flow_response_encryptor
         >>> wa = WhatsApp(...)
-        >>> @wa.on_flow_request("/sign-up-flow", response_encryptor=default_flow_response_encryptor)
-        ... def on_sign_up_request(_: WhatsApp, flow: FlowRequest) -> FlowResponse | None: ...
+        >>> @wa.on_flow_request(
+        ...     "/sign-up-flow", response_encryptor=default_flow_response_encryptor
+        ... )
+        ... def on_sign_up_request(
+        ...     _: WhatsApp, flow: FlowRequest
+        ... ) -> FlowResponse | None: ...
     """
+    from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
     flipped_iv = bytearray()
     for byte in iv:
@@ -343,7 +380,9 @@ def flow_request_media_decryptor(
         >>> from pywa import WhatsApp, types
         >>> wa = WhatsApp(...)
         >>> @wa.on_flow_request("/media-upload")
-        ... def on_media_upload_request(_: WhatsApp, req: types.FlowRequest) -> types.FlowResponse | None:
+        ... def on_media_upload_request(
+        ...     _: WhatsApp, req: types.FlowRequest
+        ... ) -> types.FlowResponse | None:
         ...     dec = req.decrypt_media(key="driver_license", index=0)
         ...     with open(dec.filename, "wb") as file:
         ...         file.write(dec.data)
@@ -375,6 +414,9 @@ def _flow_request_media_decryptor(
     cdn_file: bytes, encryption_metadata: dict[str, str]
 ) -> bytes:
     """The actual implementation of the media decryption."""
+    from cryptography.hazmat.backends import default_backend
+    from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+    from cryptography.hazmat.primitives.padding import PKCS7
 
     ciphertext = cdn_file[:-10]
     sha256 = hashlib.sha256(cdn_file)
@@ -439,8 +481,8 @@ def start_ngrok_tunnel(
     >>> from pywa import WhatsApp
 
     >>> callback_url = start_ngrok_tunnel(
-    ...     auth_token="your_ngrok_auth_token", # https://dashboard.ngrok.com/get-started/your-authtoken
-    ...     domain="subdomain.ngrok-free.app", # https://dashboard.ngrok.com/domains
+    ...     auth_token="your_ngrok_auth_token",  # https://dashboard.ngrok.com/get-started/your-authtoken
+    ...     domain="subdomain.ngrok-free.app",  # https://dashboard.ngrok.com/domains
     ... )
 
     >>> wa = WhatsApp(callback_url=callback_url, ...) # when using a static domain, you can comment out the callback_url parameter after the first run to avoid unnecessary webhook re-registration every time you restart the server.

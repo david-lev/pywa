@@ -10,19 +10,19 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 
+import datetime
 import os
 import sys
-from datetime import date
 
 sys.path.insert(0, os.path.abspath("."))
 sys.path.insert(0, "../..")
 
-import pywa  # noqa: E402
+import pywa
 
 # -- Project information -----------------------------------------------------
 
 project = "pywa"
-copyright = f"{date.today().year}, David Lev"
+copyright = f"{datetime.datetime.now(tz=datetime.timezone.utc).year}, David Lev"
 author = "David Lev"
 
 version = pywa.__version__

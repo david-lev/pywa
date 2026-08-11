@@ -4,6 +4,8 @@ import os
 
 from pyrogram import Client, types
 
+logger = logging.getLogger(__name__)
+
 
 def format_release_message(tag_name: str, name: str, body: str) -> str:
     """
@@ -66,7 +68,7 @@ async def send_to_telegram():
     release_body = os.getenv("RELEASE_BODY")
 
     message = format_release_message(release_tag, release_name, release_body)
-    logging.info("Formatted message:\n%s", message)
+    logger.info("Formatted message:\n%s", message)
 
     bot = Client(name="pywa_bot", api_id=api_id, api_hash=api_hash, bot_token=bot_token)
 
@@ -84,4 +86,5 @@ async def send_to_telegram():
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     asyncio.run(send_to_telegram())

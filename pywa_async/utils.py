@@ -1,10 +1,13 @@
-from pywa.utils import *  # noqa MUST BE IMPORTED FIRST
+from typing import Any
+
 import httpx
+
+from pywa.utils import *
 from pywa.utils import _flow_request_media_decryptor
 
 
 async def flow_request_media_decryptor(
-    encrypted_media: dict[str, str | dict[str, str]],
+    encrypted_media: dict[str, Any],
     dl_session: httpx.AsyncClient | None = None,
 ) -> FlowRequestDecryptedMedia:
     """
@@ -19,7 +22,9 @@ async def flow_request_media_decryptor(
         >>> from pywa_async import WhatsApp, types
         >>> wa = WhatsApp(...)
         >>> @wa.on_flow_request("/media-upload")
-        ... async def on_media_upload_request(_: WhatsApp, req: types.FlowRequest) -> types.FlowResponse | None:
+        ... async def on_media_upload_request(
+        ...     _: WhatsApp, req: types.FlowRequest
+        ... ) -> types.FlowResponse | None:
         ...     dec = await req.decrypt_media(key="driver_license", index=0)
         ...     with open(dec.filename, "wb") as file:
         ...         file.write(dec.data)

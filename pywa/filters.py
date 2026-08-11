@@ -12,117 +12,116 @@ Usefully filters to use in your handlers.
 from __future__ import annotations
 
 __all__ = [
-    "new",
-    "true",
-    "false",
-    "private",
-    "group",
-    "update_id",
-    "waba_id",
-    "forwarded",
-    "forwarded_many_times",
-    "reply",
-    "replays_to",
-    "has_referred_product",
-    "sent_to",
-    "sent_to_me",
-    "from_users",
-    "without_wa_id",
-    "from_countries",
-    "matches",
-    "contains",
-    "startswith",
-    "endswith",
-    "regex",
-    "message",
-    "text",
-    "is_command",
-    "command",
-    "media",
-    "mimetypes",
-    "extensions",
-    "has_caption",
-    "image",
-    "video",
-    "audio",
-    "audio_only",
-    "voice",
-    "document",
-    "sticker",
-    "animated_sticker",
-    "static_sticker",
-    "reaction",
-    "reaction_added",
-    "reaction_removed",
-    "reaction_emojis",
-    "unsupported",
-    "location",
-    "current_location",
-    "location_in_radius",
-    "contacts",
-    "contact_info_shared",
-    "contacts_has_wa",
-    "order",
-    "callback_button",
-    "callback_selection",
-    "message_status",
-    "sent",
-    "delivered",
-    "read",
-    "played",
-    "failed",
-    "failed_with",
-    "with_tracker",
-    "flow_completion",
-    "template_status",
-    "template_status_approved",
-    "template_status_rejected",
-    "template_quality",
-    "template_category",
-    "template_components",
-    "call_connect",
-    "outgoing_call",
-    "incoming_call",
-    "call_status",
-    "call_answered",
-    "call_rejected",
-    "call_ringing",
-    "call_permission_update",
-    "call_permission_accepted",
-    "call_permission_rejected",
-    "call_terminate",
-    "phone_number_change",
-    "identity_change",
-    "user_marketing_preferences",
-    "user_marketing_preferences_stop",
-    "user_marketing_preferences_resume",
-    "account_update",
     "account_deleted",
+    "account_disabled",
+    "account_offboarded",
+    "account_reconnected",
     "account_restriction",
+    "account_update",
     "account_violation",
     "ad_account_linked",
+    "animated_sticker",
+    "audio",
+    "audio_only",
     "auth_intl_price_eligibility_update",
     "business_primary_location_country_update",
-    "account_disabled",
+    "call_answered",
+    "call_connect",
+    "call_permission_accepted",
+    "call_permission_rejected",
+    "call_permission_update",
+    "call_rejected",
+    "call_ringing",
+    "call_status",
+    "call_terminate",
+    "callback_button",
+    "callback_selection",
+    "command",
+    "contact_info_shared",
+    "contacts",
+    "contacts_has_wa",
+    "contains",
+    "current_location",
+    "delivered",
+    "document",
+    "endswith",
+    "extensions",
+    "failed",
+    "failed_with",
+    "false",
+    "flow_completion",
+    "forwarded",
+    "forwarded_many_times",
+    "from_countries",
+    "from_users",
+    "group",
+    "has_caption",
+    "has_referred_product",
+    "identity_change",
+    "image",
+    "incoming_call",
+    "is_command",
+    "location",
+    "location_in_radius",
+    "matches",
+    "media",
+    "message",
+    "message_status",
+    "mimetypes",
+    "new",
+    "order",
+    "outgoing_call",
     "partner_added",
     "partner_app_installed",
     "partner_app_uninstalled",
     "partner_client_certification_status_update",
     "partner_removed",
+    "phone_number_change",
+    "played",
+    "private",
+    "reaction",
+    "reaction_added",
+    "reaction_emojis",
+    "reaction_removed",
+    "read",
+    "regex",
+    "replays_to",
+    "reply",
+    "sent",
+    "sent_to",
+    "sent_to_me",
+    "startswith",
+    "static_sticker",
+    "sticker",
+    "template_category",
+    "template_components",
+    "template_quality",
+    "template_status",
+    "template_status_approved",
+    "template_status_rejected",
+    "text",
+    "true",
+    "unsupported",
+    "update_id",
+    "user_marketing_preferences",
+    "user_marketing_preferences_resume",
+    "user_marketing_preferences_stop",
+    "video",
+    "voice",
     "volume_based_pricing_tier_update",
-    "account_offboarded",
-    "account_reconnected",
+    "waba_id",
+    "with_tracker",
+    "without_wa_id",
 ]
 
 import re
+from collections.abc import Awaitable, Callable, Iterable
 from typing import (
     TYPE_CHECKING,
     Any,
-    Awaitable,
-    Callable,
     Generic,
-    Iterable,
     TypeVar,
+    cast,
     overload,
 )
 
@@ -135,42 +134,50 @@ from .types.others import ContactsOrigin
 if TYPE_CHECKING:
     from pywa.client import WhatsApp
 
-_T = TypeVar("_T", contravariant=True)
-_U = TypeVar("_U", contravariant=True)
+_T_contra = TypeVar("_T_contra", contravariant=True)
 _V = TypeVar("_V")
 
 
-class Filter(Generic[_T]):
+class Filter(Generic[_T_contra]):
     """Base filter class handling both sync and async."""
 
-    def check_sync(self, wa: WhatsApp, update: _T) -> bool:
+    def check_sync(self, wa: WhatsApp, update: _T_contra) -> bool:
         raise NotImplementedError
 
-    async def check_async(self, wa: WhatsApp, update: _T) -> bool:
+    async def check_async(self, wa: WhatsApp, update: _T_contra) -> bool:
         raise NotImplementedError
 
     def has_async(self) -> bool:
         raise NotImplementedError
 
-    def __and__(self, other: Filter[_T]) -> Filter[_T]:
+    def __and__(self, other: Filter[_T_contra]) -> Filter[_T_contra]:
         return AndFilter(self, other)
 
-    def __or__(self, other: Filter[_U]) -> Filter[_T | _U]:
+    def __rand__(self, other: Filter[_T_contra]) -> Filter[_T_contra]:
+        return AndFilter(other, self)
+
+    def __or__(self, other: Filter[_T_contra]) -> Filter[_T_contra]:
         return OrFilter(self, other)
 
-    def __invert__(self) -> Filter[_T]:
+    def __ror__(self, other: Filter[_T_contra]) -> Filter[_T_contra]:
+        return OrFilter(other, self)
+
+    def __invert__(self) -> Filter[_T_contra]:
         return NotFilter(self)
 
+    def __repr__(self) -> str:
+        return self.__class__.__name__
 
-class AndFilter(Filter[_T]):
-    def __init__(self, left: Filter[_T], right: Filter[_T]):
+
+class AndFilter(Filter[_T_contra]):
+    def __init__(self, left: Filter[_T_contra], right: Filter[_T_contra]):
         self.left = left
         self.right = right
 
-    def check_sync(self, wa: WhatsApp, update: _T) -> bool:
+    def check_sync(self, wa: WhatsApp, update: _T_contra) -> bool:
         return self.left.check_sync(wa, update) and self.right.check_sync(wa, update)
 
-    async def check_async(self, wa: WhatsApp, update: _T) -> bool:
+    async def check_async(self, wa: WhatsApp, update: _T_contra) -> bool:
         return await self.left.check_async(wa, update) and await self.right.check_async(
             wa, update
         )
@@ -178,16 +185,19 @@ class AndFilter(Filter[_T]):
     def has_async(self) -> bool:
         return self.left.has_async() or self.right.has_async()
 
+    def __repr__(self) -> str:
+        return f"({self.left!r} & {self.right!r})"
 
-class OrFilter(Filter[_T]):
-    def __init__(self, left: Filter[Any], right: Filter[Any]):
+
+class OrFilter(Filter[_T_contra]):
+    def __init__(self, left: Filter[_T_contra], right: Filter[_T_contra]):
         self.left = left
         self.right = right
 
-    def check_sync(self, wa: WhatsApp, update: _T) -> bool:
+    def check_sync(self, wa: WhatsApp, update: _T_contra) -> bool:
         return self.left.check_sync(wa, update) or self.right.check_sync(wa, update)
 
-    async def check_async(self, wa: WhatsApp, update: _T) -> bool:
+    async def check_async(self, wa: WhatsApp, update: _T_contra) -> bool:
         return await self.left.check_async(wa, update) or await self.right.check_async(
             wa, update
         )
@@ -195,19 +205,25 @@ class OrFilter(Filter[_T]):
     def has_async(self) -> bool:
         return self.left.has_async() or self.right.has_async()
 
+    def __repr__(self) -> str:
+        return f"({self.left!r} | {self.right!r})"
 
-class NotFilter(Filter[_T]):
-    def __init__(self, fil: Filter[_T]):
+
+class NotFilter(Filter[_T_contra]):
+    def __init__(self, fil: Filter[_T_contra]):
         self.filter = fil
 
-    def check_sync(self, wa: WhatsApp, update: _T) -> bool:
+    def check_sync(self, wa: WhatsApp, update: _T_contra) -> bool:
         return not self.filter.check_sync(wa, update)
 
-    async def check_async(self, wa: WhatsApp, update: _T) -> bool:
+    async def check_async(self, wa: WhatsApp, update: _T_contra) -> bool:
         return not await self.filter.check_async(wa, update)
 
     def has_async(self) -> bool:
         return self.filter.has_async()
+
+    def __repr__(self) -> str:
+        return f"~{self.filter!r}"
 
 
 @overload
@@ -250,7 +266,9 @@ def new(
 
     Or passing the function directly:
 
-    >>> @wa.on_message(filters.new(lambda _, msg: my_db.is_user_registered(msg.from_user.bsuid)))
+    >>> @wa.on_message(
+    ...     filters.new(lambda _, msg: my_db.is_user_registered(msg.from_user.bsuid))
+    ... )
     ... def only_registered_users(wa: WhatsApp, msg: types.Message):
     ...     msg.reply("Hello registered user!")"""
     if func is None or not callable(func):
@@ -261,17 +279,17 @@ def new(
             return new(f, name=name or (func if isinstance(func, str) else None))
 
         return decorator
-    if not callable(func):
-        raise Exception
     is_async = helpers.is_async_callable(func)
+    sync_func = cast("Callable[[WhatsApp, Any], bool]", func)
+    async_func = cast("Callable[[WhatsApp, Any], Awaitable[bool]]", func)
 
     def check_sync(self, wa: WhatsApp, update: Any) -> bool:
-        return func(wa, update)
+        return sync_func(wa, update)
 
     async def check_async(self, wa: WhatsApp, update: Any) -> bool:
         if is_async:
-            return await func(wa, update)
-        return func(wa, update)
+            return await async_func(wa, update)
+        return sync_func(wa, update)
 
     def has_async(self) -> bool:
         return is_async
@@ -289,10 +307,10 @@ def new(
     )()
 
 
-true: Filter[Any] = new(lambda _, __: True, name="true")
+true: Filter[Any] = new(lambda _, __: True, name="filters.true")
 """Filter that always returns True."""
 
-false: Filter[Any] = new(lambda _, __: False, name="false")
+false: Filter[Any] = new(lambda _, __: False, name="filters.false")
 """Filter that always returns False."""
 
 
@@ -303,7 +321,7 @@ def webhook_fields(*fields: str) -> Filter[types.RawUpdate]:
     >>> filters.webhook_fields("messages")
     """
     _fields = set(fields)
-    return new(lambda _, r: r.field in _fields, name="webhook_fields")
+    return new(lambda _, r: r.field in _fields, name="filters.webhook_fields")
 
 
 forwarded: Filter[types.Message] = new(
@@ -317,7 +335,7 @@ Filter for forwarded messages.
 """
 
 forwarded_many_times: Filter[types.Message] = new(
-    lambda _, m: m.forwarded_many_times, name="forwarded_many_times"
+    lambda _, m: m.forwarded_many_times, name="filters.forwarded_many_times"
 )
 """
 Filter for messages that have been forwarded many times.
@@ -326,7 +344,7 @@ Filter for messages that have been forwarded many times.
 """
 
 reply: Filter[types.Message] = new(
-    lambda _, m: m.reply_to_message is not None, name="reply"
+    lambda _, m: m.reply_to_message is not None, name="filters.reply"
 )
 """
 Filter for messages that reply to another message.
@@ -335,7 +353,7 @@ Filter for messages that reply to another message.
 """
 
 without_wa_id: Filter[types.base_update.BaseUserUpdate] = new(
-    lambda _, u: u.from_user.wa_id is None, name="without_wa_id"
+    lambda _, u: u.from_user.wa_id is None, name="filters.without_wa_id"
 )
 """
 Filter for updates that their sender doesn't have a ``wa_id`` (when the user enables username)
@@ -348,7 +366,7 @@ def update_id(id_: str) -> Filter[types.base_update.BaseUpdate]:
 
     >>> update_id("wamid.HBKHUIyNTM4NjAfiefhwojfMTNFQ0Q2MERGRjVDMUHUIGGA=")
     """
-    return new(lambda _, u: u.id == id_, name="update_id")
+    return new(lambda _, u: u.id == id_, name="filters.update_id")
 
 
 def waba_id(id_: str) -> Filter[types.base_update.BaseUpdate]:
@@ -357,12 +375,12 @@ def waba_id(id_: str) -> Filter[types.base_update.BaseUpdate]:
 
     >>> waba_id("105102735943269")
     """
-    return new(lambda _, u: getattr(u, "waba_id", u.id) == id_, name="waba_id")
+    return new(lambda _, u: getattr(u, "waba_id", u.id) == id_, name="filters.waba_id")
 
 
-def replays_to(*msg_ids: str) -> Filter[types.Message]:
+def replays_to(*msg_ids: str) -> Filter[Any]:
     """
-    Filter for messages that reply to any of the given message ids.
+    Filter for updates that reply to any of the given message ids.
 
     >>> replays_to("wamid.HBKHUIyNTM4NjAfiefhwojfMTNFQ0Q2MERGRjVDMUHUIGGA=")
     """
@@ -387,18 +405,20 @@ Filter for messages that user sends to ask about a product
 """
 
 private: Filter[types.Message] = new(
-    lambda _, m: m.chat.type == chat.ChatType.PRIVATE, name="private"
+    lambda _, m: m.chat.type == chat.ChatType.PRIVATE, name="filters.private"
 )
 """Filter for messages that are sent in private chats."""
 
 group: Filter[types.Message] = new(
-    lambda _, m: m.chat.type == chat.ChatType.GROUP, name="group"
+    lambda _, m: m.chat.type == chat.ChatType.GROUP, name="filters.group"
 )
 """Filter for messages that are sent in group chats."""
 
 
 def sent_to(
-    *, display_phone_number: str = None, phone_number_id: str = None
+    *,
+    display_phone_number: str | None = None,
+    phone_number_id: str | None = None,
 ) -> Filter[base_update.BaseUserUpdate]:
     """
     Filter for updates that are sent to the given phone number.
@@ -424,7 +444,7 @@ def sent_to(
 
 
 sent_to_me: Filter[base_update.BaseUserUpdate] = new(
-    lambda wa, m: sent_to(phone_number_id=wa.phone_id).check_sync(wa, m),
+    lambda wa, m: sent_to(phone_number_id=str(wa.phone_id)).check_sync(wa, m),
     name="sent_to_me",
 )
 """
@@ -469,7 +489,7 @@ def from_users(
             or user.username in processed_ids
         )
 
-    return new(filter_func, name="from_users")
+    return new(filter_func, name="filters.from_users")
 
 
 def from_countries(
@@ -481,7 +501,7 @@ def from_countries(
     - You can pass either country codes (e.g. "US", "IL") or phone number prefixes (e.g. "+1", "972").
     - See https://countrycode.org/ for a list of country codes.
 
-    >>> from_countries("972", "1", "+972", "US", "IL") # Israel and USA
+    >>> from_countries("972", "1", "+972", "US", "IL")  # Israel and USA
     """
     codes = tuple(str(p) for p in prefixes_or_codes)
     country_codes = {c.upper() for c in codes if c.isalpha()}
@@ -489,7 +509,7 @@ def from_countries(
     return new(
         lambda _, m: (
             m.from_user.country_code in country_codes  # country_code always exists
-            or (m.from_user.wa_id and m.from_user.wa_id.startswith(phone_prefixes))
+            or bool(m.from_user.wa_id and m.from_user.wa_id.startswith(phone_prefixes))
         ),
         name="from_countries",
     )
@@ -501,7 +521,12 @@ def from_groups(*group_ids: str) -> Filter[base_update.BaseUserUpdate]:
 
     >>> from_groups("Y2FwaV9ncm91cDoxNzA1NTU1MDEzOToxMjAzNjM0MDQ2OTQyMzM4MjAZD")
     """
-    return new(lambda _, m: m.chat.id in group_ids, name="from_groups")
+    return new(
+        lambda _, m: (
+            (chat := getattr(m, "chat", None)) is not None and chat.id in group_ids
+        ),
+        name="filters.from_groups",
+    )
 
 
 def matches(*strings: str, ignore_case: bool = False) -> Filter[Any]:
@@ -669,7 +694,7 @@ def regex(*patterns: str | re.Pattern, flags: int = 0) -> Filter[Any]:
 
 
 message: Filter[types.Message] = new(
-    lambda _, m: isinstance(m, types.Message), name="message"
+    lambda _, m: isinstance(m, types.Message), name="filters.message"
 )
 """Filter for all messages."""
 
@@ -683,7 +708,7 @@ def mimetypes(*mmtps: str) -> Filter[types.Message]:
     >>> mimetypes("application/pdf", "image/png")
     """
     return new(
-        lambda _, m: m.media.mime_type in mmtps,
+        lambda _, m: m.media is not None and m.media.mime_type in mmtps,
         name="mimetypes",
     )
 
@@ -695,16 +720,20 @@ def extensions(*exts: str) -> Filter[types.Message]:
     >>> extensions(".pdf", ".png")
     """
     return new(
-        lambda _, m: m.media.extension in exts,
+        lambda _, m: m.media is not None and m.media.extension in exts,
         name="extensions",
     )
 
 
-media: Filter[types.Message] = new(lambda _, m: m.has_media, name="media")
+media: Filter[types.Message] = new(lambda _, m: m.has_media, name="filters.media")
 """Filter for media messages (images, videos, documents, audio, stickers)."""
 
 is_command: Filter[types.Message] = new(
-    lambda _, m: m.type == types.MessageType.TEXT and m.text.startswith(("/", "!")),
+    lambda _, m: (
+        m.type == types.MessageType.TEXT
+        and m.text is not None
+        and m.text.startswith(("/", "!"))
+    ),
     name="is_command",
 )
 """
@@ -734,6 +763,7 @@ def command(
     return new(
         lambda _, m: (
             m.type == types.MessageType.TEXT
+            and m.text is not None
             and (
                 m.text[0] in prefixes
                 and (m.text[1:].lower() if ignore_case else m.text[1:]).startswith(cmds)
@@ -744,7 +774,7 @@ def command(
 
 
 text: Filter[types.Message] = new(
-    lambda _, m: m.type == types.MessageType.TEXT, name="text"
+    lambda _, m: m.type == types.MessageType.TEXT, name="filters.text"
 )
 """Filter for text messages."""
 
@@ -755,68 +785,67 @@ has_caption: Filter[types.Message] = new(
 """Filter for media messages that have a caption."""
 
 image: Filter[types.Message] = new(
-    lambda _, m: m.type == types.MessageType.IMAGE, name="image"
+    lambda _, m: m.type == types.MessageType.IMAGE, name="filters.image"
 )
 """Filter for image messages."""
 
 video: Filter[types.Message] = new(
-    lambda _, m: m.type == types.MessageType.VIDEO, name="video"
+    lambda _, m: m.type == types.MessageType.VIDEO, name="filters.video"
 )
 """Filter for video messages."""
 
 document: Filter[types.Message] = new(
-    lambda _, m: m.type == types.MessageType.DOCUMENT, name="document"
+    lambda _, m: m.type == types.MessageType.DOCUMENT, name="filters.document"
 )
 """Filter for document messages."""
 
 audio: Filter[types.Message] = new(
-    lambda _, m: m.type == types.MessageType.AUDIO, name="audio"
+    lambda _, m: m.type == types.MessageType.AUDIO, name="filters.audio"
 )
 """Filter for audio messages (both voice notes and audio files)."""
 
 audio_only: Filter[types.Message] = new(
-    lambda _, m: m.type == types.MessageType.AUDIO and not m.audio.voice,
+    lambda _, m: m.audio is not None and not m.audio.voice,
     name="audio_only",
 )
 """Filter for audio messages that are not voice notes."""
 
 voice: Filter[types.Message] = new(
-    lambda _, m: m.type == types.MessageType.AUDIO and m.audio.voice, name="voice"
+    lambda _, m: m.audio is not None and m.audio.voice,
+    name="filters.voice",
 )
 """Filter for audio messages that are voice notes."""
 
 sticker: Filter[types.Message] = new(
-    lambda _, m: m.type == types.MessageType.STICKER, name="sticker"
+    lambda _, m: m.type == types.MessageType.STICKER, name="filters.sticker"
 )
 """Filter for sticker messages (both static and animated)."""
 
 animated_sticker: Filter[types.Message] = new(
-    lambda _, m: m.type == types.MessageType.STICKER and m.sticker.animated,
+    lambda _, m: m.sticker is not None and m.sticker.animated,
     name="animated_sticker",
 )
 """Filter for animated sticker messages."""
 
 static_sticker: Filter[types.Message] = new(
-    lambda _, m: m.type == types.MessageType.STICKER and not m.sticker.animated,
+    lambda _, m: m.sticker is not None and not m.sticker.animated,
     name="static_sticker",
 )
 """Filter for static sticker messages."""
 
 location: Filter[types.Message] = new(
-    lambda _, m: m.type == types.MessageType.LOCATION, name="location"
+    lambda _, m: m.type == types.MessageType.LOCATION, name="filters.location"
 )
 """Filter for location messages."""
 
 current_location: Filter[types.Message] = new(
-    lambda _, m: m.type == types.MessageType.LOCATION and m.location.current_location,
+    lambda _, m: m.location is not None and m.location.current_location,
     name="current_location",
 )
 """Filter for location messages that are current locations."""
 
 
-def location_in_radius(
-    lat: float, lon: float, radius: float | int
-) -> Filter[types.Message]:
+def location_in_radius(lat: float, lon: float, radius: float) -> Filter[types.Message]:
     """
     Filter for location messages that are in a given radius.
 
@@ -830,7 +859,7 @@ def location_in_radius(
 
     return new(
         lambda _, m: (
-            m.type == types.MessageType.LOCATION
+            m.location is not None
             and m.location.in_radius(lat=lat, lon=lon, radius=radius)
         ),
         name="location_in_radius",
@@ -838,18 +867,18 @@ def location_in_radius(
 
 
 reaction: Filter[types.Message] = new(
-    lambda _, m: m.type == types.MessageType.REACTION, name="reaction"
+    lambda _, m: m.type == types.MessageType.REACTION, name="filters.reaction"
 )
 """Filter for reaction messages (both added and removed)."""
 
 reaction_added: Filter[types.Message] = new(
-    lambda _, m: m.type == types.MessageType.REACTION and m.reaction.emoji is not None,
+    lambda _, m: m.reaction is not None and m.reaction.emoji is not None,
     name="reaction_added",
 )
 """Filter for reaction messages that were added to a message."""
 
 reaction_removed: Filter[types.Message] = new(
-    lambda _, m: m.type == types.MessageType.REACTION and m.reaction.emoji is None,
+    lambda _, m: m.reaction is not None and m.reaction.emoji is None,
     name="reaction_removed",
 )
 """Filter for reaction messages that were removed from a message."""
@@ -859,25 +888,22 @@ def reaction_emojis(*emojis: str) -> Filter[types.Message]:
     """
     Filter for custom reaction messages. pass emojis as strings.
 
-    >>> reaction_emojis("👍","👎")
+    >>> reaction_emojis("👍", "👎")
     """
     return new(
-        lambda _, m: (
-            m.type == types.MessageType.REACTION and m.reaction.emoji in emojis
-        ),
+        lambda _, m: m.reaction is not None and m.reaction.emoji in emojis,
         name="reaction_emojis",
     )
 
 
 contacts: Filter[types.Message] = new(
-    lambda _, m: m.type == types.MessageType.CONTACTS, name="contacts"
+    lambda _, m: m.type == types.MessageType.CONTACTS, name="filters.contacts"
 )
 """Filter for contacts messages."""
 
 contact_info_shared: Filter[types.Message] = new(
     lambda _, m: (
-        m.type == types.MessageType.CONTACTS
-        and m.contacts.origin == ContactsOrigin.CONTACT_REQUEST
+        m.contacts is not None and m.contacts.origin == ContactsOrigin.CONTACT_REQUEST
     ),
     name="contact_info_shared",
 )
@@ -885,15 +911,11 @@ contact_info_shared: Filter[types.Message] = new(
 
 contacts_has_wa: Filter[types.Message] = new(
     lambda _, m: (
-        m.type == types.MessageType.CONTACTS
+        m.contacts is not None
         and (
             any(
-                (
-                    p.wa_id
-                    for p in (
-                        phone for contact in m.contacts for phone in contact.phones
-                    )
-                )
+                p.wa_id
+                for p in (phone for contact in m.contacts for phone in contact.phones)
             )
         )
     ),
@@ -902,51 +924,55 @@ contacts_has_wa: Filter[types.Message] = new(
 """Filter for contacts messages that have a WhatsApp account."""
 
 order: Filter[types.Message] = new(
-    lambda _, m: m.type == types.MessageType.ORDER, name="order"
+    lambda _, m: m.type == types.MessageType.ORDER, name="filters.order"
 )
 """Filter for order messages."""
 
 unsupported: Filter[types.Message] = new(
-    lambda _, m: m.type == types.MessageType.UNSUPPORTED, name="unsupported"
+    lambda _, m: m.type == types.MessageType.UNSUPPORTED, name="filters.unsupported"
 )
 """Filter for all unsupported messages."""
 
 callback_button: Filter[types.CallbackButton] = new(
-    lambda _, c: isinstance(c, types.CallbackButton), name="callback_button"
+    lambda _, c: isinstance(c, types.CallbackButton), name="filters.callback_button"
 )
 """Filter for callback buttons."""
 
 callback_selection: Filter[types.CallbackSelection] = new(
-    lambda _, c: isinstance(c, types.CallbackSelection), name="callback_selection"
+    lambda _, c: isinstance(c, types.CallbackSelection),
+    name="filters.callback_selection",
 )
 """Filter for callback selections."""
 
 message_status: Filter[types.MessageStatus] = new(
-    lambda _, s: isinstance(s, types.MessageStatus), name="message_status"
+    lambda _, s: isinstance(s, types.MessageStatus), name="filters.message_status"
 )
 
 sent: Filter[types.MessageStatus] = new(
-    lambda _, s: s.status == types.MessageStatusType.SENT, name="status_sent"
+    lambda _, s: s.status == types.MessageStatusType.SENT, name="filters.status_sent"
 )
 """Filter for messages that have been sent."""
 
 delivered: Filter[types.MessageStatus] = new(
-    lambda _, s: s.status == types.MessageStatusType.DELIVERED, name="status_delivered"
+    lambda _, s: s.status == types.MessageStatusType.DELIVERED,
+    name="filters.status_delivered",
 )
 """Filter for messages that have been delivered."""
 
 read: Filter[types.MessageStatus] = new(
-    lambda _, s: s.status == types.MessageStatusType.READ, name="status_read"
+    lambda _, s: s.status == types.MessageStatusType.READ, name="filters.status_read"
 )
 """Filter for messages that have been read."""
 
 failed: Filter[types.MessageStatus] = new(
-    lambda _, s: s.status == types.MessageStatusType.FAILED, name="status_failed"
+    lambda _, s: s.status == types.MessageStatusType.FAILED,
+    name="filters.status_failed",
 )
 """Filter for status updates of messages that have failed to send."""
 
 played: Filter[types.MessageStatus] = new(
-    lambda _, s: s.status == types.MessageStatusType.PLAYED, name="status_played"
+    lambda _, s: s.status == types.MessageStatusType.PLAYED,
+    name="filters.status_played",
 )
 """Filter for status updates of voice messages that have been played."""
 
@@ -965,14 +991,14 @@ def failed_with(
     """
     error_codes = tuple(c for c in errors if isinstance(c, int))
     exceptions = tuple(
-        e for e in errors if e not in error_codes and issubclass(e, WhatsAppError)
+        e for e in errors if isinstance(e, type) and issubclass(e, WhatsAppError)
     )
     return new(
         lambda _, s: (
             s.status == types.MessageStatusType.FAILED
             and (
-                any((isinstance(s.error, e) for e in exceptions))
-                or s.error.code in error_codes
+                any(isinstance(s.error, e) for e in exceptions)
+                or (s.error is not None and s.error.code in error_codes)
             )
         ),
         name="status_failed_with",
@@ -980,12 +1006,13 @@ def failed_with(
 
 
 with_tracker: Filter[types.MessageStatus] = new(
-    lambda _, s: s.tracker is not None, name="with_tracker"
+    lambda _, s: s.tracker is not None, name="filters.with_tracker"
 )
 """Filter for status updates that have a tracker."""
 
 template_status: Filter[types.TemplateStatusUpdate] = new(
-    lambda _, s: isinstance(s, types.TemplateStatusUpdate), name="template_status"
+    lambda _, s: isinstance(s, types.TemplateStatusUpdate),
+    name="filters.template_status",
 )
 """Filters for template status updates."""
 
@@ -1000,12 +1027,14 @@ template_status_rejected: Filter[types.TemplateStatusUpdate] = new(
 )
 
 template_quality: Filter[types.TemplateQualityUpdate] = new(
-    lambda _, s: isinstance(s, types.TemplateQualityUpdate), name="template_quality"
+    lambda _, s: isinstance(s, types.TemplateQualityUpdate),
+    name="filters.template_quality",
 )
 """Filters for template quality updates."""
 
 template_category: Filter[types.TemplateCategoryUpdate] = new(
-    lambda _, s: isinstance(s, types.TemplateCategoryUpdate), name="template_category"
+    lambda _, s: isinstance(s, types.TemplateCategoryUpdate),
+    name="filters.template_category",
 )
 """Filters for template category updates."""
 
@@ -1016,12 +1045,12 @@ template_components: Filter[types.TemplateComponentsUpdate] = new(
 """Filters for template components updates."""
 
 flow_completion: Filter[types.FlowCompletion] = new(
-    lambda _, f: isinstance(f, types.FlowCompletion), name="flow_completion"
+    lambda _, f: isinstance(f, types.FlowCompletion), name="filters.flow_completion"
 )
 """Filter for flow completion updates."""
 
 call_connect: Filter[types.CallConnect] = new(
-    lambda _, c: isinstance(c, types.CallConnect), name="call_connect"
+    lambda _, c: isinstance(c, types.CallConnect), name="filters.call_connect"
 )
 """Filter for call connect updates."""
 
@@ -1036,7 +1065,7 @@ incoming_call: Filter[types.CallConnect] = new(
 """Filter for incoming call updates."""
 
 call_status: Filter[types.CallStatus] = new(
-    lambda _, c: isinstance(c, types.CallStatus), name="call_status"
+    lambda _, c: isinstance(c, types.CallStatus), name="filters.call_status"
 )
 """Filter for call status updates."""
 
@@ -1045,10 +1074,12 @@ call_answered: Filter[types.CallStatus] = new(
     name="call_answered",
 )
 call_rejected: Filter[types.CallStatus] = new(
-    lambda _, c: c.status == types.calls.CallStatusType.REJECTED, name="call_rejected"
+    lambda _, c: c.status == types.calls.CallStatusType.REJECTED,
+    name="filters.call_rejected",
 )
 call_ringing: Filter[types.CallStatus] = new(
-    lambda _, c: c.status == types.calls.CallStatusType.RINGING, name="call_ringing"
+    lambda _, c: c.status == types.calls.CallStatusType.RINGING,
+    name="filters.call_ringing",
 )
 
 call_permission_update: Filter[types.CallPermissionUpdate] = new(
@@ -1067,17 +1098,18 @@ call_permission_rejected: Filter[types.CallPermissionUpdate] = new(
 )
 
 call_terminate: Filter[types.CallTerminate] = new(
-    lambda _, c: isinstance(c, types.CallTerminate), name="call_terminate"
+    lambda _, c: isinstance(c, types.CallTerminate), name="filters.call_terminate"
 )
 """Filter for call terminate updates."""
 
 phone_number_change: Filter[types.PhoneNumberChange] = new(
-    lambda _, c: isinstance(c, types.PhoneNumberChange), name="phone_number_change"
+    lambda _, c: isinstance(c, types.PhoneNumberChange),
+    name="filters.phone_number_change",
 )
 """Filter for phone number change updates."""
 
 identity_change: Filter[types.IdentityChange] = new(
-    lambda _, c: isinstance(c, types.IdentityChange), name="identity_change"
+    lambda _, c: isinstance(c, types.IdentityChange), name="filters.identity_change"
 )
 """Filter for identity change updates."""
 
@@ -1099,7 +1131,7 @@ user_marketing_preferences_resume: Filter[types.UserMarketingPreferences] = new(
 """Filter for user marketing preferences updates that indicate the user has requested to resume receiving marketing messages."""
 
 account_update: Filter[types.AccountUpdate] = new(
-    lambda _, u: isinstance(u, types.AccountUpdate), name="account_update"
+    lambda _, u: isinstance(u, types.AccountUpdate), name="filters.account_update"
 )
 """Filter for account update updates."""
 

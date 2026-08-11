@@ -5,21 +5,22 @@ import pathlib
 """This module contains the types related to messages."""
 
 __all__ = [
-    "Message",
-    "EditedMessage",
     "DeletedMessage",
-    "OutgoingMessage",
-    "OutgoingEditedMessage",
+    "EditedMessage",
+    "Message",
     "OutgoingDeletedMessage",
+    "OutgoingEditedMessage",
+    "OutgoingMessage",
 ]
 
 import dataclasses
 import datetime
-from typing import TYPE_CHECKING, ClassVar, Generator, Iterable, Type
+from collections.abc import Generator, Iterable
+from typing import TYPE_CHECKING, ClassVar, cast
 
 from .. import _helpers as helpers
 from ..errors import WhatsAppError
-from .base_update import BaseUserUpdate, RawUpdate, _PinUnpinActions  # noqa
+from .base_update import BaseUserUpdate, RawUpdate, _PinUnpinActions
 from .callback import Button, FlowButton, SectionList, URLButton, VoiceCallButton
 from .chat import Chat, ChatType
 from .media import Audio, Document, Image, Sticker, Video
@@ -117,17 +118,15 @@ class Message(BaseUserUpdate, _PinUnpinActions):
     @property
     def caption(self) -> str | None:
         """The caption of the message media (if any). Only available for image, video and document messages."""
-        try:
-            return self.media.caption
-        except AttributeError:
-            return None
+        return getattr(self.media, "caption", None)
 
     @property
     def message_id_to_reply(self) -> str:
         """The ID of the message to reply to."""
-        return (
-            self.id if self.type != MessageType.REACTION else self.reaction.message_id
-        )
+        if self.type != MessageType.REACTION:
+            return self.id
+        assert self.reaction is not None
+        return self.reaction.message_id
 
     @property
     def has_media(self) -> bool:
@@ -276,7 +275,9 @@ class Message(BaseUserUpdate, _PinUnpinActions):
 
         >>> @wa.on_message(filters.image)
         ... def on_message(_: WhatsApp, msg: types.Message):
-        ...     msg.download_media(path=pathlib.Path('/path/to/save'), filename='my_image.jpg')
+        ...     msg.download_media(
+        ...         path=pathlib.Path("/path/to/save"), filename="my_image.jpg"
+        ...     )
 
         Args:
             filepath: The path where to save the file (if not provided, the current working directory will be used).
@@ -290,15 +291,14 @@ class Message(BaseUserUpdate, _PinUnpinActions):
         Raises:
             ValueError: If the message does not contain any media.
         """
-        try:
-            return self.media.download(
-                path=filepath,
-                filename=filename,
-                chunk_size=chunk_size,
-                **httpx_kwargs,
-            )
-        except AttributeError:
-            raise ValueError("Message does not contain any media.") from None
+        if self.media is None:
+            raise ValueError("Message does not contain any media.")
+        return self.media.download(
+            path=filepath,
+            filename=filename,
+            chunk_size=chunk_size,
+            **httpx_kwargs,
+        )
 
     def stream_media(
         self, chunk_size: int | None = None, **httpx_kwargs
@@ -317,7 +317,9 @@ class Message(BaseUserUpdate, _PinUnpinActions):
         >>> @wa.on_message(filters.document)
         ... def on_message(_: WhatsApp, msg: types.Message):
         ...     with httpx.Client() as client:
-        ...        client.post('https://example.com/upload', content=msg.stream_media())
+        ...         client.post(
+        ...             "https://example.com/upload", content=msg.stream_media()
+        ...         )
 
         Args:
             chunk_size: The size (in bytes) of each chunk to read (default: ``64KB``).
@@ -329,13 +331,12 @@ class Message(BaseUserUpdate, _PinUnpinActions):
         Raises:
             ValueError: If the message does not contain any media.
         """
-        try:
-            return self.media.stream(
-                chunk_size=chunk_size,
-                **httpx_kwargs,
-            )
-        except AttributeError:
-            raise ValueError("Message does not contain any media.") from None
+        if self.media is None:
+            raise ValueError("Message does not contain any media.")
+        return self.media.stream(
+            chunk_size=chunk_size,
+            **httpx_kwargs,
+        )
 
     def get_media_bytes(self, **httpx_kwargs) -> bytes:
         """
@@ -360,10 +361,9 @@ class Message(BaseUserUpdate, _PinUnpinActions):
         Raises:
             ValueError: If the message does not contain any media.
         """
-        try:
-            return self.media.get_bytes(**httpx_kwargs)
-        except AttributeError:
-            raise ValueError("Message does not contain any media.") from None
+        if self.media is None:
+            raise ValueError("Message does not contain any media.")
+        return self.media.get_bytes(**httpx_kwargs)
 
     def copy(
         self,
@@ -380,7 +380,7 @@ class Message(BaseUserUpdate, _PinUnpinActions):
             | None
         ) = None,
         preview_url: bool = False,
-        reply_to_message_id: str = None,
+        reply_to_message_id: str | None = None,
         tracker: str | None = None,
         sender: str | int | None = None,
     ) -> SentMessage:
@@ -412,6 +412,7 @@ class Message(BaseUserUpdate, _PinUnpinActions):
         """
         match self.type:
             case MessageType.TEXT:
+                assert self.text is not None
                 return self._client.send_message(
                     sender=sender,
                     to=to,
@@ -424,44 +425,55 @@ class Message(BaseUserUpdate, _PinUnpinActions):
                     tracker=tracker,
                 )
             case MessageType.DOCUMENT:
+                assert self.document is not None
                 return self._client.send_document(
                     sender=sender,
                     to=to,
                     document=self.document.id,
                     filename=self.document.filename,
                     caption=body or self.caption,
-                    buttons=buttons,
+                    buttons=cast(
+                        "Iterable[Button] | URLButton | FlowButton | None", buttons
+                    ),
                     footer=footer,
                     reply_to_message_id=reply_to_message_id,
                     tracker=tracker,
                 )
             case MessageType.IMAGE:
+                assert self.image is not None
                 return self._client.send_image(
                     sender=sender,
                     to=to,
                     image=self.image.id,
                     caption=body or self.caption,
-                    buttons=buttons,
+                    buttons=cast(
+                        "Iterable[Button] | URLButton | FlowButton | None", buttons
+                    ),
                     footer=footer,
                     reply_to_message_id=reply_to_message_id,
                     tracker=tracker,
                 )
             case MessageType.VIDEO:
+                assert self.video is not None
                 return self._client.send_video(
                     sender=sender,
                     to=to,
                     video=self.video.id,
                     caption=body or self.caption,
-                    buttons=buttons,
+                    buttons=cast(
+                        "Iterable[Button] | URLButton | FlowButton | None", buttons
+                    ),
                     footer=footer,
                     reply_to_message_id=reply_to_message_id,
                     tracker=tracker,
                 )
             case MessageType.STICKER:
+                assert self.sticker is not None
                 return self._client.send_sticker(
                     sender=sender, to=to, sticker=self.sticker.id, tracker=tracker
                 )
             case MessageType.LOCATION:
+                assert self.location is not None
                 return self._client.send_location(
                     sender=sender,
                     to=to,
@@ -472,6 +484,7 @@ class Message(BaseUserUpdate, _PinUnpinActions):
                     tracker=tracker,
                 )
             case MessageType.AUDIO:
+                assert self.audio is not None
                 return self._client.send_audio(
                     sender=sender,
                     to=to,
@@ -480,6 +493,7 @@ class Message(BaseUserUpdate, _PinUnpinActions):
                     is_voice=self.audio.voice,
                 )
             case MessageType.CONTACTS:
+                assert self.contacts is not None
                 return self._client.send_contact(
                     sender=sender,
                     to=to,
@@ -488,6 +502,7 @@ class Message(BaseUserUpdate, _PinUnpinActions):
                     tracker=tracker,
                 )
             case MessageType.REACTION:
+                assert self.reaction is not None
                 if reply_to_message_id is None:
                     raise ValueError(
                         "You need to provide `reply_to_message_id` in order to `copy` a reaction"
@@ -499,6 +514,7 @@ class Message(BaseUserUpdate, _PinUnpinActions):
                     emoji=self.reaction.emoji or "",
                 )
             case MessageType.ORDER:
+                assert self.order is not None
                 if len(self.order.products) == 1:
                     return self._client.send_product(
                         sender=sender,
@@ -508,6 +524,11 @@ class Message(BaseUserUpdate, _PinUnpinActions):
                         body=body,
                         footer=footer,
                         reply_to_message_id=reply_to_message_id,
+                    )
+                if header is None or body is None:
+                    raise ValueError(
+                        "You need to provide both `header` and `body` in order to `copy` an order message with "
+                        "multiple products (used as the product section title and the message body)."
                     )
                 return self._client.send_products(
                     sender=sender,
@@ -544,7 +565,7 @@ class EditedMessage(BaseUserUpdate):
         message: The updated version of the message after the edit.
     """
 
-    _msg_cls: ClassVar[Type[Message]] = Message
+    _msg_cls: ClassVar[type[Message]] = Message
     type: MessageType
     chat: Chat
     original_message_id: str
@@ -696,7 +717,7 @@ class OutgoingEditedMessage(_Outgoing, EditedMessage):
         message: The updated version of the message after the edit.
     """
 
-    _msg_cls: ClassVar[Type[OutgoingMessage]] = OutgoingMessage
+    _msg_cls: ClassVar[type[OutgoingMessage]] = OutgoingMessage
     _webhook_field = "smb_message_echoes"
     _messages_field = "message_echoes"
 

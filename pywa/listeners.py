@@ -1,19 +1,20 @@
 from __future__ import annotations
 
 __all__ = [
-    "ListenerTimeout",
     "ListenerCanceled",
     "ListenerStopped",
-    "UserUpdateListenerIdentifier",
+    "ListenerTimeout",
     "TemplateStatusUpdateListenerIdentifier",
+    "UserUpdateListenerIdentifier",
 ]
 
 import dataclasses
 import threading
 import warnings
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 from . import utils
+from .errors import PywaWarning
 
 if TYPE_CHECKING:
     from .client import WhatsApp
@@ -71,15 +72,19 @@ class ListenerCanceled(Exception):
             try:
                 wa.listen(
                     to=UserUpdateListenerIdentifier(
-                        sender="123456",
-                        recipient="654321"
+                        sender="123456", recipient="654321"
                     ),
                     filters=filters.message & filters.text,
-                    cancelers=filters.callback_button & filters.matches("cancel")
+                    cancelers=filters.callback_button & filters.matches("cancel"),
                 )
             except ListenerCanceled as e:
-                assert e.update.data == "cancel" # the update that caused the listener to be canceled
-                wa.send_message("123456", "You cancelled the listener by clicking the `cancel` button")
+                assert (
+                    e.update.data == "cancel"
+                )  # the update that caused the listener to be canceled
+                wa.send_message(
+                    "123456",
+                    "You cancelled the listener by clicking the `cancel` button",
+                )
 
     Attributes:
         update: The update that caused the listener to be canceled
@@ -109,7 +114,7 @@ class ListenerStopped(Exception):
             try:
                 wa.listen(...)
             except ListenerStopped as e:
-                print(e.reason) # print the reason the listener was stopped
+                print(e.reason)  # print the reason the listener was stopped
                 wa.send_message("123456", "The listener was stopped")
 
     Attributes:
@@ -168,7 +173,7 @@ class Listener:
         return bool(self.cancelers) and self.cancelers.check_sync(wa, update)
 
 
-def _warn_anyio_thread_limit(wa: "WhatsApp") -> None:
+def _warn_anyio_thread_limit(wa: WhatsApp) -> None:
     from . import server
 
     if wa._server_type in {
@@ -191,7 +196,7 @@ def _warn_anyio_thread_limit(wa: "WhatsApp") -> None:
                 f"  1. [RECOMMENDED] Migrate to `pywa_async` for fully non-blocking asynchronous listeners.\n"
                 f"  2. Enforce strict, shorter `timeout` values on all `.wait_for_...` calls to free up threads faster.\n"
                 f"  3. {starlette_instructions if wa._server_type == utils.CustomServerType.STARLETTE else fastapi_instructions}\n",
-                RuntimeWarning,
+                PywaWarning,
                 stacklevel=3,
             )
 
@@ -225,13 +230,16 @@ class _Listeners:
                         wa.send_message(
                             to="123456",
                             text="Send me a message",
-                            buttons=[Button(title="Cancel", callback_data="cancel")]
+                            buttons=[Button(title="Cancel", callback_data="cancel")],
                         )
                         update: Message = wa.listen(
-                            to=UserUpdateListenerIdentifier(sender="123456", recipient="654321"),
+                            to=UserUpdateListenerIdentifier(
+                                sender="123456", recipient="654321"
+                            ),
                             filters=filters.message & filters.text,
-                            cancelers=filters.callback_button & filters.matches("cancel"),
-                            timeout=10
+                            cancelers=filters.callback_button
+                            & filters.matches("cancel"),
+                            timeout=10,
                         )
                         print(update)
                     except ListenerTimeout:
@@ -262,7 +270,7 @@ class _Listeners:
         if timeout is None:
             warnings.warn(
                 "Listening without a `timeout` is highly discouraged as it can lead to memory leaks if the listener is never stopped.",
-                UserWarning,
+                PywaWarning,
                 stacklevel=3,
             )
         _warn_anyio_thread_limit(self)
@@ -276,12 +284,14 @@ class _Listeners:
         self._listeners[to] = listener
         try:
             if not listener.event.wait(timeout):
+                assert timeout is not None  # `.wait(None)` never times out
                 raise ListenerTimeout(timeout) from None
 
             if listener.exception:
                 raise listener.exception
 
-            return listener.result
+            assert listener.result is not None
+            return cast("_UpdateT", listener.result)
         finally:
             self._remove_listener(identifier=to)
 

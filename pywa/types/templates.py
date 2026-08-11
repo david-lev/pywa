@@ -3,70 +3,70 @@
 from __future__ import annotations
 
 __all__ = [
-    "TemplateStatusUpdate",
-    "TemplateStatus",
-    "TemplateRejectionReason",
-    "TemplateCategoryUpdate",
-    "TemplateCategory",
-    "TemplateComponentsUpdate",
-    "TemplateQualityUpdate",
-    "QualityScore",
-    "QualityScoreType",
-    "TemplateLanguage",
-    "ParamFormat",
-    "TemplateBaseComponent",
-    "HeaderText",
-    "HeaderImage",
-    "HeaderVideo",
-    "HeaderGIF",
-    "HeaderDocument",
-    "HeaderLocation",
-    "HeaderProduct",
-    "BodyText",
-    "DateTime",
-    "Currency",
-    "AuthenticationBody",
-    "FooterText",
-    "AuthenticationFooter",
-    "Buttons",
-    "CopyCodeButton",
-    "FlowButton",
-    "FlowButtonIcon",
-    "PhoneNumberButton",
-    "VoiceCallButton",
-    "QuickReplyButton",
-    "URLButton",
     "AppDeepLink",
-    "CatalogButton",
-    "MPMButton",
-    "SPMButton",
-    "CallPermissionRequestButton",
-    "ContactInfoRequestButton",
+    "ArchiveTemplatesResult",
+    "AuthenticationBody",
+    "AuthenticationFooter",
     "BaseOTPButton",
-    "CopyCodeOTPButton",
-    "OneTapOTPButton",
-    "ZeroTapOTPButton",
-    "OTPSupportedApp",
-    "LimitedTimeOffer",
+    "BodyText",
+    "Buttons",
+    "CallPermissionRequestButton",
     "Carousel",
     "CarouselCard",
-    "Template",
+    "CatalogButton",
+    "ContactInfoRequestButton",
+    "CopyCodeButton",
+    "CopyCodeOTPButton",
     "CreatedTemplate",
-    "UpdatedTemplate",
     "CreatedTemplates",
-    "TemplateDetails",
-    "TemplatesResult",
-    "TemplatesCompareResult",
-    "TemplateUnpauseResult",
-    "ArchiveTemplatesResult",
-    "UnarchiveTemplatesResult",
+    "CreativeFeaturesSpec",
+    "Currency",
+    "DateTime",
+    "DegreesOfFreedomSpec",
+    "FlowButton",
+    "FlowButtonIcon",
+    "FooterText",
+    "HeaderDocument",
+    "HeaderGIF",
+    "HeaderImage",
+    "HeaderLocation",
+    "HeaderProduct",
+    "HeaderText",
+    "HeaderVideo",
+    "LibraryTemplate",
+    "LimitedTimeOffer",
+    "MPMButton",
     "MigrateTemplatesResult",
     "MigratedTemplate",
     "MigratedTemplateError",
-    "LibraryTemplate",
-    "DegreesOfFreedomSpec",
-    "CreativeFeaturesSpec",
+    "OTPSupportedApp",
+    "OneTapOTPButton",
+    "ParamFormat",
+    "PhoneNumberButton",
+    "QualityScore",
+    "QualityScoreType",
+    "QuickReplyButton",
+    "SPMButton",
     "TapTargetConfiguration",
+    "Template",
+    "TemplateBaseComponent",
+    "TemplateCategory",
+    "TemplateCategoryUpdate",
+    "TemplateComponentsUpdate",
+    "TemplateDetails",
+    "TemplateLanguage",
+    "TemplateQualityUpdate",
+    "TemplateRejectionReason",
+    "TemplateStatus",
+    "TemplateStatusUpdate",
+    "TemplateUnpauseResult",
+    "TemplatesCompareResult",
+    "TemplatesResult",
+    "URLButton",
+    "UnarchiveTemplatesResult",
+    "UpdatedTemplate",
+    "VoiceCallButton",
+    "ZeroTapOTPButton",
 ]
 
 import abc
@@ -78,15 +78,11 @@ import logging
 import pathlib
 import re
 import warnings
+from collections.abc import AsyncIterator, Generator, Iterator, Sequence
 from typing import (
     TYPE_CHECKING,
-    AsyncIterator,
     BinaryIO,
-    Generator,
-    Iterator,
     Literal,
-    NoReturn,
-    Sequence,
     TypeVar,
     cast,
     overload,
@@ -95,6 +91,10 @@ from typing import (
 from ..errors import PywaDeprecationWarning
 
 _T = TypeVar("_T")
+_TemplateComponentT = TypeVar("_TemplateComponentT", bound="TemplateBaseComponent")
+_TextComponentT = TypeVar("_TextComponentT", bound="_BaseTextComponent")
+_TextParamsT = TypeVar("_TextParamsT", bound="_BaseTextComponent._Params")
+_BaseParamsT = TypeVar("_BaseParamsT", bound="BaseParams")
 
 from .. import _helpers as helpers
 from .. import utils
@@ -275,7 +275,7 @@ class TemplateStatusUpdate(BaseTemplateUpdate):
     @property
     def listener_identifiers(
         self,
-    ) -> Generator[TemplateStatusUpdateListenerIdentifier, ...] | None:
+    ) -> Generator[TemplateStatusUpdateListenerIdentifier]:
         yield TemplateStatusUpdateListenerIdentifier(
             template_id=self.template_id,
         )
@@ -666,8 +666,7 @@ class ParamType(helpers.StrEnum):
     `'Parameter object' on developers.facebook.com <https://developers.facebook.com/docs/whatsapp/cloud-api/reference/messages#parameter-object>`_
     """
 
-    _check_value = str.islower
-    _modify_value = str.lower
+    _normalize = str.lower
 
     TEXT = "text"
     CURRENCY = "currency"
@@ -698,8 +697,7 @@ class TemplateLanguage(helpers.StrEnum):
     <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/supported-languages>`_
     """
 
-    _check_value = None
-    _modify_value = None
+    _normalize = None
 
     AFRIKAANS = "af"
     ALBANIAN = "sq"
@@ -834,19 +832,19 @@ class CreativeFeaturesSpec:
     """
 
     __slots__ = (
-        "image_brightness_and_contrast",
-        "image_touchups",
         "add_text_overlay",
+        "auto_promotion_tag",
+        "dynamic_cta_text",
+        "hyperlink_formatting",
         "image_animation",
         "image_background_gen",
+        "image_banner",
+        "image_brightness_and_contrast",
+        "image_touchups",
+        "product_extensions",
         "text_extraction_for_headline",
         "text_extraction_for_tap_target",
-        "product_extensions",
         "text_formatting_optimization",
-        "auto_promotion_tag",
-        "hyperlink_formatting",
-        "image_banner",
-        "dynamic_cta_text",
     )
 
     def __init__(
@@ -957,13 +955,20 @@ class TemplateBaseComponent(abc.ABC):
     type: ComponentType
 
     @classmethod
-    def from_dict(cls, data: dict) -> TemplateBaseComponent:
+    def from_dict(cls: type[_TemplateComponentT], data: dict) -> _TemplateComponentT:
         # noinspection PyArgumentList
         return cls(
             **{
                 k: v
                 for k, v in data.items()
-                if k in {f.name for f in dataclasses.fields(cls) if f.init}
+                if k
+                in {
+                    f.name
+                    for f in dataclasses.fields(
+                        cast("type[helpers.DataclassInstance]", cls)
+                    )
+                    if f.init
+                }
             }
         )
 
@@ -975,7 +980,7 @@ class TemplateBaseComponent(abc.ABC):
             dict: The dictionary representation of the component.
         """
         return dataclasses.asdict(
-            obj=self,
+            obj=cast("helpers.DataclassInstance", self),
             dict_factory=lambda d: {k: v for (k, v) in d if v is not None},
         )
 
@@ -1090,14 +1095,20 @@ class DateTime(_TextParam):
 class _BaseTextComponent:
     type: Literal[ComponentType.HEADER, ComponentType.BODY]
 
-    __slots__ = ("text", "example", "param_format", "_params_required")
+    __slots__ = ("_params_required", "example", "param_format", "text")
 
     def __init__(self, text: str, *positionals_examples, **named_examples):
         """
         Initializes a text component for a template.
 
-        >>> positionals = HeaderText("Hi {{1}}!, How are you? Get {{2}}% OFF!", "David", 15)
-        >>> named = BodyText("Hi {{name}}!, How are you? Get {{discount}}% OFF!", name="David", discount=15)
+        >>> positionals = HeaderText(
+        ...     "Hi {{1}}!, How are you? Get {{2}}% OFF!", "David", 15
+        ... )
+        >>> named = BodyText(
+        ...     "Hi {{name}}!, How are you? Get {{discount}}% OFF!",
+        ...     name="David",
+        ...     discount=15,
+        ... )
         >>> print(positionals.preview(), named.preview())
 
         Args:
@@ -1164,8 +1175,10 @@ class _BaseTextComponent:
 
     def __repr__(self):
         if self.param_format == ParamFormat.POSITIONAL:
+            assert isinstance(self.example, tuple)
             return f"{self.__class__.__name__}(text={self.text!r}, {', '.join(map(repr, self.example))})"
         elif self.param_format == ParamFormat.NAMED:
+            assert isinstance(self.example, dict)
             return f"{self.__class__.__name__}(text={self.text!r}, {', '.join(f'{k}={v!r}' for k, v in self.example.items())})"
         return f"{self.__class__.__name__}(text={self.text!r})"
 
@@ -1192,12 +1205,18 @@ class _BaseTextComponent:
             ...         )
             ...     ]
             ... )
-            >>> body = temp.get_component(BodyText) # get the body component of the template
+            >>> body = temp.get_component(
+            ...     BodyText
+            ... )  # get the body component of the template
             >>> body.param_names
             ('name', 'flight_iata')
 
             >>> wa.send_template(
-            ...     params=[body.params(**{name: my_get_value(name) for name in body.param_names})]
+            ...     params=[
+            ...         body.params(
+            ...             **{name: my_get_value(name) for name in body.param_names}
+            ...         )
+            ...     ]
             ... )
 
         Returns:
@@ -1207,6 +1226,7 @@ class _BaseTextComponent:
             ValueError: If the component does not use named parameters.
         """
         if self.param_format == ParamFormat.NAMED:
+            assert isinstance(self.example, dict)
             return tuple(self.example.keys())
         raise ValueError("This component does not use named parameters!")
 
@@ -1219,6 +1239,7 @@ class _BaseTextComponent:
             **override_named: Named arguments to override the example values (no need to provide all).
         """
         if self.param_format == ParamFormat.POSITIONAL:
+            assert isinstance(self.example, tuple)
             if override_named:
                 raise ValueError(
                     "You can't use named overrides for positional parameters!"
@@ -1240,6 +1261,7 @@ class _BaseTextComponent:
             )  # Adjust for zero-based indexing
             return txt.format(*example)
         elif self.param_format == ParamFormat.NAMED:
+            assert isinstance(self.example, dict)
             if override_positionals:
                 raise ValueError(
                     "You can't use positional overrides for named parameters!"
@@ -1255,7 +1277,7 @@ class _BaseTextComponent:
         else:
             return self.text
 
-    def validate(self, *positionals, **named) -> NoReturn | None:
+    def validate(self, *positionals, **named) -> None:
         """
         Validates the provided parameters against the component's expected parameters.
 
@@ -1274,6 +1296,7 @@ class _BaseTextComponent:
             return
 
         if self.param_format == ParamFormat.POSITIONAL:
+            assert isinstance(self.example, tuple)
             if named:
                 raise ValueError(
                     f"{self.__class__.__name__} does not accept named parameters when using positional format."
@@ -1283,6 +1306,7 @@ class _BaseTextComponent:
                     f"{self.__class__.__name__} requires {len(self.example)} positional parameters, got {len(positionals)}."
                 )
         elif self.param_format == ParamFormat.NAMED:
+            assert isinstance(self.example, dict)
             if positionals:
                 raise ValueError(
                     f"{self.__class__.__name__} does not accept positional parameters when using named format."
@@ -1301,6 +1325,7 @@ class _BaseTextComponent:
     def to_dict(self) -> dict:
         match self.param_format:
             case ParamFormat.POSITIONAL:
+                assert isinstance(self.example, tuple)
                 return {
                     "type": self.type.value,
                     "text": self.text,
@@ -1311,6 +1336,7 @@ class _BaseTextComponent:
                     },
                 }
             case ParamFormat.NAMED:
+                assert isinstance(self.example, dict)
                 return {
                     "type": self.type.value,
                     "text": self.text,
@@ -1325,7 +1351,7 @@ class _BaseTextComponent:
                 return {"type": self.type.value, "text": self.text}
 
     @classmethod
-    def from_dict(cls, data: dict) -> _BaseTextComponent:
+    def from_dict(cls: type[_TextComponentT], data: dict) -> _TextComponentT:
         if "example" in data:
             example = next(iter(data["example"].values()))
             if isinstance(example, list):
@@ -1388,9 +1414,9 @@ class _BaseTextComponent:
 
     def _params(
         *positionals,
-        _params_cls: type[_BaseTextComponent],
+        _params_cls: type[_TextParamsT],
         **named,
-    ) -> _BaseTextComponent._Params:
+    ) -> _TextParamsT:
         if positionals and isinstance(
             positionals[0], _BaseTextComponent
         ):  # BodyText(...).params("David")
@@ -1399,7 +1425,7 @@ class _BaseTextComponent:
             return _params_cls(*positionals, **named)
 
         self.validate(*positionals, **named)
-        return self._Params(*positionals, **named)
+        return cast(_TextParamsT, self._Params(*positionals, **named))
 
 
 class HeaderText(_BaseTextComponent, BaseHeaderComponent):
@@ -1411,10 +1437,16 @@ class HeaderText(_BaseTextComponent, BaseHeaderComponent):
 
     Example:
 
-        >>> header_text = HeaderText("Hi {{name}}! How are you? Get {{discount}}% OFF!", name="John", discount=15)
+        >>> header_text = HeaderText(
+        ...     "Hi {{name}}! How are you? Get {{discount}}% OFF!",
+        ...     name="John",
+        ...     discount=15,
+        ... )
         >>> header_text.params(name="David", discount=20)
 
-        >>> header_text = HeaderText("Hi {{1}}! How are you? Get {{2}}% OFF!", "John", 15)
+        >>> header_text = HeaderText(
+        ...     "Hi {{1}}! How are you? Get {{2}}% OFF!", "John", 15
+        ... )
         >>> header_text.params("David", 20)
 
         >>> print(header_text.preview())
@@ -1878,7 +1910,12 @@ class HeaderLocation(BaseHeaderComponent):
     Example:
 
         >>> header_location = HeaderLocation()
-        >>> header_location.params(lat=37.7749, lon=-122.4194, name="San Francisco", address="California, USA")
+        >>> header_location.params(
+        ...     lat=37.7749,
+        ...     lon=-122.4194,
+        ...     name="San Francisco",
+        ...     address="California, USA",
+        ... )
     """
 
     type: ComponentType = dataclasses.field(
@@ -2012,7 +2049,11 @@ class BodyText(_BaseTextComponent, BaseBodyComponent):
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components#body>`_.
 
     Example:
-        >>> body_text = BodyText("Hi {{name}}! How are you? Get {{discount}}% OFF!", name="John", discount=15)
+        >>> body_text = BodyText(
+        ...     "Hi {{name}}! How are you? Get {{discount}}% OFF!",
+        ...     name="John",
+        ...     discount=15,
+        ... )
         >>> body_text.params(name="David", discount=20)
 
         >>> body_text = BodyText("Hi {{1}}! How are you? Get {{2}}% OFF!", "John", 15)
@@ -2147,7 +2188,12 @@ class Buttons(TemplateBaseComponent):
 
     @classmethod
     def from_dict(cls, data: dict) -> Buttons:
-        return cls(buttons=[_parse_component(button) for button in data["buttons"]])
+        return cls(
+            buttons=cast(
+                "list[BaseButtonComponent | dict]",
+                [_parse_component(button) for button in data["buttons"]],
+            )
+        )
 
 
 @dataclasses.dataclass(kw_only=True, slots=True)
@@ -2240,9 +2286,11 @@ class FlowButton(BaseButtonComponent):
         ...     flow_id="1234567890",
         ...     flow_action=FlowActionType.NAVIGATE,
         ...     navigate_screen="entry_screen_id",
-        ...     icon=FlowButtonIcon.DOCUMENT
+        ...     icon=FlowButtonIcon.DOCUMENT,
         ... )
-        >>> flow_button.params(index=0, flow_token="example_token", flow_action_data={"key": "value"})
+        >>> flow_button.params(
+        ...     index=0, flow_token="example_token", flow_action_data={"key": "value"}
+        ... )
 
     Attributes:
         text: Button label text. 25 characters maximum.
@@ -2326,9 +2374,10 @@ class FlowButton(BaseButtonComponent):
             flow_id=data.get("flow_id"),
             flow_name=data.get("flow_name"),
             flow_json=data.get("flow_json"),
-            flow_action=FlowActionType(data["flow_action"])
-            if "flow_action" in data
-            else None,
+            flow_action=cast(
+                "Literal[FlowActionType.DATA_EXCHANGE, FlowActionType.NAVIGATE] | None",
+                FlowActionType(data["flow_action"]) if "flow_action" in data else None,
+            ),
             navigate_screen=data.get("navigate_screen"),
             icon=FlowButtonIcon(data["icon"]) if "icon" in data else None,
         )
@@ -2568,7 +2617,11 @@ class URLButton(BaseButtonComponent):
 
     Example:
 
-        >>> url_button = URLButton(text="Visit Website", url="https://website.com?ref={{1}}", example="https://website.com?ref=template")
+        >>> url_button = URLButton(
+        ...     text="Visit Website",
+        ...     url="https://website.com?ref={{1}}",
+        ...     example="https://website.com?ref=template",
+        ... )
         >>> url_button.params(url_variable="example_variable", index=0)
 
     Attributes:
@@ -2816,14 +2869,14 @@ class MPMButton(BaseButtonComponent):
         ...     thumbnail_product_sku="SKU12345",
         ...     index=0,
         ...     product_sections=[
-        ...        ProductsSection(
-        ...            title="Section 1",
-        ...            skus=["SKU12345", "SKU12346"],
-        ...        ),
-        ...        ProductsSection(
-        ...            title="Section 2",
-        ...            skus=["SKU12347", "SKU12348"],
-        ...        ),
+        ...         ProductsSection(
+        ...             title="Section 1",
+        ...             skus=["SKU12345", "SKU12346"],
+        ...         ),
+        ...         ProductsSection(
+        ...             title="Section 2",
+        ...             skus=["SKU12347", "SKU12348"],
+        ...         ),
         ...     ],
         ... )
 
@@ -2934,7 +2987,9 @@ class CallPermissionRequestButton(BaseButtonComponent):
 
     Example:
 
-        >>> call_permission_button = CallPermissionRequestButton(text="Request Call Permission")
+        >>> call_permission_button = CallPermissionRequestButton(
+        ...     text="Request Call Permission"
+        ... )
     """
 
     type: ComponentType = dataclasses.field(
@@ -2994,8 +3049,7 @@ class OTPSupportedApp:
     Example:
 
         >>> supported_app = OTPSupportedApp(
-        ...     package_name="com.example.myapp",
-        ...     signature_hash="12345678901"
+        ...     package_name="com.example.myapp", signature_hash="12345678901"
         ... )
 
     Attributes:
@@ -3082,10 +3136,9 @@ class OneTapOTPButton(BaseOTPButton):
         ...     autofill_text="Autofill",
         ...     supported_apps=[
         ...         OTPSupportedApp(
-        ...             package_name="com.example.myapp",
-        ...             signature_hash="12345678901"
+        ...             package_name="com.example.myapp", signature_hash="12345678901"
         ...         )
-        ...     ]
+        ...     ],
         ... )
         >>> one_tap_button.params(otp="123456")
 
@@ -3155,10 +3208,9 @@ class ZeroTapOTPButton(BaseOTPButton):
         ...     zero_tap_terms_accepted=True,
         ...     supported_apps=[
         ...         OTPSupportedApp(
-        ...             package_name="com.example.myapp",
-        ...             signature_hash="12345678901"
+        ...             package_name="com.example.myapp", signature_hash="12345678901"
         ...         )
-        ...    ]
+        ...     ],
         ... )
         >>> zero_tap_button.params(otp="123456")
 
@@ -3275,10 +3327,11 @@ class LimitedTimeOffer(TemplateBaseComponent):
     Example:
 
         >>> limited_time_offer = LimitedTimeOffer(
-        ...     text="Limited Time Offer!",
-        ...     has_expiration=True
+        ...     text="Limited Time Offer!", has_expiration=True
         ... )
-        >>> limited_time_offer.params(expiration_time=datetime.datetime.now() + datetime.timedelta(days=7))
+        >>> limited_time_offer.params(
+        ...     expiration_time=datetime.datetime.now() + datetime.timedelta(days=7)
+        ... )
 
     Attributes:
         text: Offer details text. Maximum 16 characters.
@@ -3366,41 +3419,53 @@ class Carousel(TemplateBaseComponent):
 
     Example:
 
-        >>> carousel = Carousel(cards=[
-        ...     card1 := CarouselCard(
-        ...         components=[
-        ...             hi1 := HeaderImage(example="https://example.com/card1.jpg"),
-        ...             qr1 := QuickReplyButton(text="Unsubscribe"),
-        ...             u1 := URLButton(text="Website", url="https://website.com?ref={{1}}", example="https://website.com?ref=card1"),
-        ...         ]
-        ...     ),
-        ...     card2 := CarouselCard(
-        ...         components=[
-        ...             hi2 := HeaderImage(example="https://example.com/card2.jpg"),
-        ...             qr2 := QuickReplyButton(text="Unsubscribe"),
-        ...             u2 := URLButton(text="Website", url="https://website.com?ref={{1}}", example="https://website.com?ref=card2"),
-        ...         ]
-        ...     ),
-        ... ])
+        >>> carousel = Carousel(
+        ...     cards=[
+        ...         card1 := CarouselCard(
+        ...             components=[
+        ...                 hi1 := HeaderImage(example="https://example.com/card1.jpg"),
+        ...                 qr1 := QuickReplyButton(text="Unsubscribe"),
+        ...                 u1 := URLButton(
+        ...                     text="Website",
+        ...                     url="https://website.com?ref={{1}}",
+        ...                     example="https://website.com?ref=card1",
+        ...                 ),
+        ...             ]
+        ...         ),
+        ...         card2 := CarouselCard(
+        ...             components=[
+        ...                 hi2 := HeaderImage(example="https://example.com/card2.jpg"),
+        ...                 qr2 := QuickReplyButton(text="Unsubscribe"),
+        ...                 u2 := URLButton(
+        ...                     text="Website",
+        ...                     url="https://website.com?ref={{1}}",
+        ...                     example="https://website.com?ref=card2",
+        ...                 ),
+        ...             ]
+        ...         ),
+        ...     ]
+        ... )
 
-        >>> carousel.params(cards=[
-        ...     card1.params(
-        ...         index=0,
-        ...         params=[
-        ...             hi1.params(image="https://cdn.com/card1.jpg"),
-        ...             qr1.params(callback_data="unsubscribe_card1", index=0),
-        ...             u1.params(url_variable="card1", index=1),
-        ...         ],
-        ...     ),
-        ...     card2.params(
-        ...         index=1,
-        ...         params=[
-        ...             hi2.params(image="https://cdn.com/card2.jpg"),
-        ...             qr2.params(callback_data="unsubscribe_card2", index=0),
-        ...             u2.params(url_variable="card2", index=1),
-        ...         ],
-        ...     ),
-        ... ])
+        >>> carousel.params(
+        ...     cards=[
+        ...         card1.params(
+        ...             index=0,
+        ...             params=[
+        ...                 hi1.params(image="https://cdn.com/card1.jpg"),
+        ...                 qr1.params(callback_data="unsubscribe_card1", index=0),
+        ...                 u1.params(url_variable="card1", index=1),
+        ...             ],
+        ...         ),
+        ...         card2.params(
+        ...             index=1,
+        ...             params=[
+        ...                 hi2.params(image="https://cdn.com/card2.jpg"),
+        ...                 qr2.params(callback_data="unsubscribe_card2", index=0),
+        ...                 u2.params(url_variable="card2", index=1),
+        ...             ],
+        ...         ),
+        ...     ]
+        ... )
 
 
     Attributes:
@@ -3520,8 +3585,9 @@ class CarouselCard:
             Clear the media cache for the params in the card (if you using the same params object more than 30 days, the media ID will be expired, so you need to reupload the media).
             """
             for param in self.params:
-                if hasattr(param, "clear_media_cache"):
-                    param.clear_media_cache()
+                clear_media_cache = getattr(param, "clear_media_cache", None)
+                if clear_media_cache is not None:
+                    clear_media_cache()
 
     @staticmethod
     def params(*, params: list[BaseParams], index: int) -> CarouselCard._Params:
@@ -3659,9 +3725,23 @@ class AuthenticationFooter(BaseFooterComponent):
          Minimum 1, maximum 90.
     """
 
-    code_expiration_minutes: int
+    code_expiration_minutes: int | None = None
 
 
+@overload
+def _find_comp(
+    *,
+    comp_type: type[_T],
+    cmps: list[TemplateBaseComponent | dict],
+    first_match: Literal[True],
+) -> _T | None: ...
+@overload
+def _find_comp(
+    *,
+    comp_type: type[_T],
+    cmps: list[TemplateBaseComponent | dict],
+    first_match: Literal[False],
+) -> list[_T]: ...
 def _find_comp(
     *, comp_type: type[_T], cmps: list[TemplateBaseComponent | dict], first_match: bool
 ) -> _T | list[_T] | None:
@@ -3712,7 +3792,8 @@ class _BaseTemplateActions:
 
         >>> t = Template(...)
         >>> body = t.get_component(BodyText)
-        >>> if body: print(body.text, body.example)
+        >>> if body:
+        ...     print(body.text, body.example)
 
         Args:
             comp_type: The type of component to retrieve.
@@ -3731,7 +3812,8 @@ class _BaseTemplateActions:
 
         >>> t = Template(...)
         >>> quick_replays = t.get_components(QuickReplyButton)
-        >>> for q in quick_replays: print(q.text)
+        >>> for q in quick_replays:
+        ...     print(q.text)
 
         Args:
             comp_type: The type of components to retrieve.
@@ -3744,7 +3826,7 @@ class _BaseTemplateActions:
             or []
         )
 
-    def validate_params(self, params: list[BaseParams] | None) -> NoReturn | None:
+    def validate_params(self, params: Sequence[BaseParams | dict] | None) -> None:
         """
         Validate the provided parameters against the template's components.
 
@@ -3780,9 +3862,11 @@ class Template(_BaseTemplateActions):
                 Buttons(
                     buttons=[
                         QuickReplyButton(text="Get Started"),
-                        URLButton(text="Visit Website", url="https://website.com?ref={{1}}")
+                        URLButton(
+                            text="Visit Website", url="https://website.com?ref={{1}}"
+                        ),
                     ]
-                )
+                ),
             ],
             parameter_format=ParamFormat.NAMED,
         )
@@ -3802,12 +3886,12 @@ class Template(_BaseTemplateActions):
                             supported_apps=[
                                 OTPSupportedApp(
                                     package_name="com.example.myapp",
-                                    signature_hash="12345678901"
+                                    signature_hash="12345678901",
                                 )
-                            ]
+                            ],
                         ),
                     ]
-                )
+                ),
             ],
         )
 
@@ -3882,6 +3966,8 @@ class _TemplateUpdate(Template):
         init=False,
         repr=False,
     )
+    category: TemplateCategory | None = None
+    components: Sequence[TemplateBaseComponent | dict] | None = None
 
 
 _comp_types_to_component: dict[ComponentType, type[TemplateBaseComponent]] = {
@@ -4000,7 +4086,7 @@ class _TemplateJSONEncoder(json.JSONEncoder):
         return super().default(o)
 
 
-def _template_to_json(template: Template | LibraryTemplate) -> str:
+def _template_to_json(template: helpers.DataclassInstance) -> str:
     return json.dumps(
         dataclasses.asdict(
             obj=template,
@@ -4012,18 +4098,18 @@ def _template_to_json(template: Template | LibraryTemplate) -> str:
     )
 
 
-def _is_component_required_params(comp: TemplateBaseComponent) -> bool:
+def _is_component_required_params(comp: TemplateBaseComponent | dict) -> bool:
     if isinstance(comp, Buttons):
         return any(_is_component_required_params(button) for button in comp.buttons)
     return hasattr(comp, "_Params") and getattr(comp, "_params_required", True)
 
 
 def _collect_required_components(
-    components: list[TemplateBaseComponent],
-) -> list[TemplateBaseComponent]:
+    components: list[TemplateBaseComponent | dict],
+) -> list[TemplateBaseComponent | dict]:
     required = []
 
-    def visit(comp: TemplateBaseComponent) -> None:
+    def visit(comp: TemplateBaseComponent | dict) -> None:
         if not _is_component_required_params(comp):
             return
         required.append(comp)
@@ -4039,17 +4125,18 @@ def _collect_required_components(
 
 
 def _find_param_for_component(
-    params: list[BaseParams], param_type: type[BaseParams]
-) -> BaseParams | None:
+    params: list[BaseParams], param_type: type[_BaseParamsT]
+) -> _BaseParamsT | None:
     for i, p in enumerate(params):
         if isinstance(p, param_type):
-            return params.pop(i)
+            params.pop(i)
+            return p
     return None
 
 
 def _validate_params(
-    components: list[TemplateBaseComponent | dict],
-    params: list[BaseParams] = None,
+    components: Sequence[TemplateBaseComponent | dict],
+    params: Sequence[BaseParams | dict] | None = None,
 ) -> None:
     real_params = [
         p
@@ -4069,13 +4156,18 @@ def _validate_params(
     for comp in components:
         if isinstance(comp, Buttons):
             for i, button in enumerate(comp.buttons):
-                if not _is_component_required_params(button):
+                if isinstance(button, dict) or not _is_component_required_params(
+                    button
+                ):
                     continue
+                button_params_cls = getattr(button, "_Params", None)
+                assert button_params_cls is not None
                 button_param = next(
                     (
                         p
                         for p in remaining_params
-                        if isinstance(p, button._Params) and p.index == i
+                        if isinstance(p, button_params_cls)
+                        and getattr(p, "index", None) == i
                     ),
                     None,
                 )
@@ -4108,14 +4200,18 @@ def _validate_params(
 
     missing = []
     for comp in required_comps:
-        if isinstance(comp, (Buttons, Carousel)):
+        if isinstance(comp, (Buttons, Carousel, dict)):
             continue
-        param = _find_param_for_component(remaining_params, comp._Params)
+        comp_params_cls = getattr(comp, "_Params", None)
+        assert comp_params_cls is not None
+        param = _find_param_for_component(remaining_params, comp_params_cls)
         if param is None:
             missing.append(comp)
             continue
         if isinstance(param, _BaseTextComponent._Params):
-            comp.validate(*param.positionals, **param.named)
+            comp_validate = getattr(comp, "validate", None)
+            assert comp_validate is not None
+            comp_validate(*param.positionals, **param.named)
 
     errors = []
     if missing:
@@ -4127,6 +4223,9 @@ def _validate_params(
 
     if errors:
         raise ValueError("; ".join(errors))
+
+
+_TemplateDetailsType = TypeVar("_TemplateDetailsType", bound="TemplateDetails")
 
 
 @dataclasses.dataclass(kw_only=True, slots=True, frozen=True)
@@ -4171,8 +4270,10 @@ class TemplateDetails(helpers.APIObject, _BaseTemplateActions):
     degrees_of_freedom_spec: DegreesOfFreedomSpec | None
 
     @classmethod
-    def from_dict(cls, data: dict, client: WhatsApp) -> TemplateDetails:
-        return TemplateDetails(
+    def from_dict(
+        cls: type[_TemplateDetailsType], data: dict, client: WhatsApp
+    ) -> _TemplateDetailsType:
+        return cls(
             _client=client,
             id=data["id"],
             name=data["name"],
@@ -4571,7 +4672,7 @@ class MigrateTemplatesResult:
             PywaDeprecationWarning,
             stacklevel=2,
         )
-        return self.migrated
+        return self.migrated  # ty: ignore[invalid-return-type]
 
     @property
     def failed_templates(self) -> None:
@@ -4583,7 +4684,7 @@ class MigrateTemplatesResult:
             PywaDeprecationWarning,
             stacklevel=2,
         )
-        return self.failed
+        return self.failed  # ty: ignore[invalid-return-type]
 
 
 @dataclasses.dataclass(kw_only=True, slots=True, frozen=True)
@@ -4646,8 +4747,12 @@ class _CreatedAndUpdatedTemplateActions:
             >>> from pywa import WhatsApp, filters
             >>> wa = WhatsApp(...)
             >>> created_template = wa.create_template(...)
-            >>> status = created_template.wait_until_approved(cancelers=filters.template_status & filters.template_status_rejected)
-            >>> print(f"Template {created_template.id} is approved with status: {status.new_status}")
+            >>> status = created_template.wait_until_approved(
+            ...     cancelers=filters.template_status & filters.template_status_rejected
+            ... )
+            >>> print(
+            ...     f"Template {created_template.id} is approved with status: {status.new_status}"
+            ... )
 
         Args:
             cancel_on_rejection: Whether to cancel the waiting process if the template is rejected. Defaults to True.
@@ -4663,15 +4768,15 @@ class _CreatedAndUpdatedTemplateActions:
             cancelers = (
                 cancelers or pywa_filters.false | pywa_filters.template_status_rejected
             )
-        return cast(
-            TemplateStatusUpdate,
-            self._client.listen(
-                to=TemplateStatusUpdateListenerIdentifier(template_id=self.id),
-                filters=pywa_filters.template_status_approved,
-                cancelers=cancelers,
-                timeout=timeout,
-            ),
+        return self._client.listen(
+            to=TemplateStatusUpdateListenerIdentifier(template_id=self.id),
+            filters=pywa_filters.template_status_approved,
+            cancelers=cancelers,
+            timeout=timeout,
         )
+
+
+_CreatedTemplateType = TypeVar("_CreatedTemplateType", bound="CreatedTemplate")
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
@@ -4688,7 +4793,9 @@ class CreatedTemplate(_CreatedAndUpdatedTemplateActions):
     status: TemplateStatus
 
     @classmethod
-    def from_dict(cls, data: dict, client: WhatsApp) -> CreatedTemplate:
+    def from_dict(
+        cls: type[_CreatedTemplateType], data: dict, client: WhatsApp
+    ) -> _CreatedTemplateType:
         """
         Create a CreatedTemplate instance from a dictionary.
 
@@ -4707,6 +4814,9 @@ class CreatedTemplate(_CreatedAndUpdatedTemplateActions):
         )
 
 
+_UpdatedTemplateType = TypeVar("_UpdatedTemplateType", bound="UpdatedTemplate")
+
+
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class UpdatedTemplate(_CreatedAndUpdatedTemplateActions):
     """
@@ -4723,7 +4833,9 @@ class UpdatedTemplate(_CreatedAndUpdatedTemplateActions):
     success: bool
 
     @classmethod
-    def from_dict(cls, data: dict, client: WhatsApp) -> UpdatedTemplate:
+    def from_dict(
+        cls: type[_UpdatedTemplateType], data: dict, client: WhatsApp
+    ) -> _UpdatedTemplateType:
         return cls(
             _client=client,
             success=data["success"],
@@ -4739,6 +4851,9 @@ class UpdatedTemplate(_CreatedAndUpdatedTemplateActions):
         return self.success
 
 
+_CreatedTemplatesType = TypeVar("_CreatedTemplatesType", bound="CreatedTemplates")
+
+
 @dataclasses.dataclass(frozen=True, slots=True)
 class CreatedTemplates(Sequence[CreatedTemplate]):
     """
@@ -4751,7 +4866,9 @@ class CreatedTemplates(Sequence[CreatedTemplate]):
     templates: tuple[CreatedTemplate, ...]
 
     @classmethod
-    def from_dict(cls, data: dict, client: WhatsApp) -> CreatedTemplates:
+    def from_dict(
+        cls: type[_CreatedTemplatesType], data: dict, client: WhatsApp
+    ) -> _CreatedTemplatesType:
         """
         Create a CreatedTemplates instance from a dictionary.
 
@@ -4777,7 +4894,9 @@ class CreatedTemplates(Sequence[CreatedTemplate]):
     def __getitem__(
         self, index: int | slice
     ) -> CreatedTemplate | list[CreatedTemplate]:
-        return self._data[index]
+        if isinstance(index, slice):
+            return list(self.templates[index])
+        return self.templates[index]
 
     def __len__(self) -> int:
-        return len(self._data)
+        return len(self.templates)

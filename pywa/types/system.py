@@ -2,7 +2,7 @@ from __future__ import annotations
 
 """This module contains the types related to system messages."""
 
-__all__ = ["PhoneNumberChange", "IdentityChange", "SystemType", "Identity"]
+__all__ = ["Identity", "IdentityChange", "PhoneNumberChange", "SystemType"]
 
 
 import dataclasses
@@ -10,7 +10,7 @@ import datetime
 from typing import TYPE_CHECKING
 
 from .. import _helpers as helpers
-from .base_update import BaseUserUpdate, RawUpdate  # noqa
+from .base_update import BaseUserUpdate, RawUpdate
 from .others import (
     MessageType,
     Metadata,
@@ -97,7 +97,7 @@ class SystemType(helpers.StrEnum):
     UNKNOWN = "UNKNOWN"
 
     @classmethod
-    def _missing_(cls, value: str):
+    def _missing_(cls, value: str):  # ty: ignore[invalid-method-override]
         # the documentation very confusing about the values of system types
         if (
             value == "customer_changed_number"

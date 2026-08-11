@@ -3,41 +3,39 @@ from __future__ import annotations
 """This module contains types related to WhatsApp calls, including call connection, termination, and status updates."""
 
 __all__ = [
-    "CallPermissionUpdate",
+    "BusinessPhoneNumberSettings",
+    "CallConnect",
+    "CallDirection",
+    "CallEvent",
+    "CallHours",
+    "CallIconVisibility",
+    "CallPermission",
+    "CallPermissionAction",
+    "CallPermissionActionLimit",
     "CallPermissionResponse",
     "CallPermissionResponseSource",
-    "CallConnect",
-    "SessionDescription",
-    "CallEvent",
-    "CallDirection",
-    "CallTerminate",
-    "CallTerminateStatus",
+    "CallPermissionStatus",
+    "CallPermissionUpdate",
+    "CallPermissions",
     "CallStatus",
     "CallStatusType",
-    "CallingSettingsStatus",
-    "CallIconVisibility",
+    "CallTerminate",
+    "CallTerminateStatus",
     "CallbackPermissionStatus",
-    "SIPStatus",
+    "CallingSettings",
+    "CallingSettingsStatus",
+    "Friday",
+    "HolidaySchedule",
+    "Monday",
     "SIPServer",
     "SIPSettings",
-    "Monday",
+    "SIPStatus",
+    "Saturday",
+    "SessionDescription",
+    "Sunday",
+    "Thursday",
     "Tuesday",
     "Wednesday",
-    "Thursday",
-    "Friday",
-    "Saturday",
-    "Sunday",
-    "HolidaySchedule",
-    "CallHours",
-    "CallingSettings",
-    "BusinessPhoneNumberSettings",
-    "CallPermissionStatus",
-    "CallPermissionActionLimit",
-    "CallPermissionAction",
-    "CallPermission",
-    "CallPermissionActionLimit",
-    "CallPermissionAction",
-    "CallPermissions",
 ]
 
 import dataclasses
@@ -47,7 +45,7 @@ from typing import TYPE_CHECKING, Generic
 
 from .. import _helpers as helpers
 from ..errors import PywaDeprecationWarning, WhatsAppError
-from .base_update import BaseUpdate, BaseUserUpdate, RawUpdate, _ClientShortcuts  # noqa
+from .base_update import BaseUpdate, BaseUserUpdate, RawUpdate, _ClientShortcuts
 from .callback import CallbackData, _CallbackDataT
 from .others import (
     MessageType,
@@ -240,7 +238,7 @@ class CallPermissionUpdate(BaseUserUpdate):
     """
 
     type: MessageType
-    reply_to_message: ReplyToMessage
+    reply_to_message: ReplyToMessage | None
     response: CallPermissionResponse
     response_source: CallPermissionResponseSource
     expiration_timestamp: datetime.datetime | None = None
@@ -301,8 +299,7 @@ class CallPermissionResponse(helpers.StrEnum):
         REJECT: The user rejected the call permission request.
     """
 
-    _check_value = str.islower
-    _modify_value = str.lower
+    _normalize = str.lower
 
     ACCEPT = "accept"
     REJECT = "reject"
@@ -319,8 +316,7 @@ class CallPermissionResponseSource(helpers.StrEnum):
         AUTOMATIC: An automatic permission approval due to the WhatsApp user initiating the call
     """
 
-    _check_value = str.islower
-    _modify_value = str.lower
+    _normalize = str.lower
 
     USER_ACTION = "user_action"
     AUTOMATIC = "automatic"
@@ -360,8 +356,7 @@ class CallEvent(helpers.StrEnum):
         TERMINATE: The call is terminated.
     """
 
-    _check_value = str.islower
-    _modify_value = str.lower
+    _normalize = str.lower
 
     CONNECT = "connect"
     TERMINATE = "terminate"
@@ -770,8 +765,12 @@ def _day_to_weekday(day: dict[str, str]) -> WeekDay:
     """
     # noinspection PyArgumentList
     return _day_to_weekday_map[day["day_of_week"]](
-        open_time=datetime.datetime.strptime(day["open_time"], "%H%M").time(),
-        close_time=datetime.datetime.strptime(day["close_time"], "%H%M").time(),
+        open_time=datetime.datetime.strptime(  # noqa: DTZ007 (naive time-only string, no tz to attach)
+            day["open_time"], "%H%M"
+        ).time(),
+        close_time=datetime.datetime.strptime(  # noqa: DTZ007 (naive time-only string, no tz to attach)
+            day["close_time"], "%H%M"
+        ).time(),
     )
 
 
@@ -800,9 +799,15 @@ class HolidaySchedule:
     @classmethod
     def from_dict(cls, data: dict) -> HolidaySchedule:
         return cls(
-            date=datetime.datetime.strptime(data["date"], "%Y-%m-%d").date(),
-            start_time=datetime.datetime.strptime(data["start_time"], "%H%M").time(),
-            end_time=datetime.datetime.strptime(data["end_time"], "%H%M").time(),
+            date=datetime.datetime.strptime(  # noqa: DTZ007 (naive date-only string, no tz to attach)
+                data["date"], "%Y-%m-%d"
+            ).date(),
+            start_time=datetime.datetime.strptime(  # noqa: DTZ007 (naive time-only string, no tz to attach)
+                data["start_time"], "%H%M"
+            ).time(),
+            end_time=datetime.datetime.strptime(  # noqa: DTZ007 (naive time-only string, no tz to attach)
+                data["end_time"], "%H%M"
+            ).time(),
         )
 
 
@@ -1020,8 +1025,7 @@ class CallPermissionStatus(helpers.StrEnum):
         TEMPORARY: Temporary permission granted.
     """
 
-    _check_value = str.islower
-    _modify_value = str.lower
+    _normalize = str.lower
 
     NO_PERMISSION = "no_permission"
     TEMPORARY = "temporary"

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from pywa.types.calls import *  # noqa MUST BE IMPORTED FIRST
+from pywa.types.calls import *
 from pywa.types.calls import (
     CallConnect as _CallConnect,
 )
@@ -18,7 +18,7 @@ from pywa.types.calls import (
     CallTerminate as _CallTerminate,
 )
 
-from .base_update import BaseUserUpdateAsync  # noqa
+from .base_update import BaseUserUpdateAsync
 from .callback import CallbackData
 from .others import SuccessResult
 

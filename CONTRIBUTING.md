@@ -7,6 +7,7 @@ guide will walk you through the steps and standards to follow for contributing.
 ## Prerequisites
 
 - [Python](https://www.python.org/downloads/) 3.10 or higher
+- [uv](https://docs.astral.sh/uv/) for dependency management and virtual environments
 - A [GitHub account](https://github.com)
 - Familiarity with [git](https://git-scm.com/) for version control
 
@@ -20,25 +21,23 @@ guide will walk you through the steps and standards to follow for contributing.
    ```
 
 
-2. Set up a [virtual environment](https://docs.python.org/3/library/venv.html) and install the required dependencies:
+2. Sync the virtual environment and install the required dependencies:
 
    ```bash
-   python3 -m venv .venv
-   source .venv/bin/activate
-   pip install -e ".[dev]"
-   # for docs changes: pip install -e ".[dev,docs]"
+   uv sync
+   # for docs changes: uv sync --group docs
    ```
 
 3. Activate [pre-commit](https://pre-commit.com/) to ensure code quality:
 
    ```bash
-   pre-commit install
+   uv run pre-commit install
    ```
 
 4. Run the tests to make sure everything is working:
 
    ```bash
-   pytest
+   uv run pytest
    ```
 
 Now you are ready to start contributing!
@@ -51,8 +50,8 @@ Now you are ready to start contributing!
 - Include type annotations for all function parameters and return types.
 - The project uses [Ruff](https://astral.sh/ruff) for linting and code formatting. You can run checks manually:
   ```bash
-  ruff check .
-  ruff format .
+  uv run ruff check .
+  uv run ruff format .
   ```
 
 ## Making Changes

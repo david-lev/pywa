@@ -1,4 +1,4 @@
-from pywa.types.flows import *  # noqa: F403
+from pywa.types.flows import *
 
 rich_text = FlowJSON(
     version="5.1",

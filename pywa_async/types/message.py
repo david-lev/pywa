@@ -3,29 +3,30 @@
 from __future__ import annotations
 
 __all__ = [
-    "Message",
-    "EditedMessage",
     "DeletedMessage",
-    "OutgoingMessage",
-    "OutgoingEditedMessage",
+    "EditedMessage",
+    "Message",
     "OutgoingDeletedMessage",
+    "OutgoingEditedMessage",
+    "OutgoingMessage",
 ]
 
 import pathlib
-from typing import TYPE_CHECKING, AsyncGenerator, ClassVar, Iterable
+from collections.abc import AsyncGenerator, Iterable
+from typing import TYPE_CHECKING, ClassVar, cast
 
-from pywa.types.message import *  # noqa MUST BE IMPORTED FIRST
+from pywa.types.message import *
 from pywa.types.message import (
     DeletedMessage as _DeletedMessage,
-)  # noqa MUST BE IMPORTED FIRST
+)
 from pywa.types.message import (
     EditedMessage as _EditedMessage,
-)  # noqa MUST BE IMPORTED FIRST
+)
 from pywa.types.message import (
     Message as _Message,
-)  # noqa MUST BE IMPORTED FIRST
+)
 
-from .base_update import BaseUserUpdateAsync, _PinUnpinActionsAsync  # noqa
+from .base_update import BaseUserUpdateAsync, _PinUnpinActionsAsync
 from .callback import Button, FlowButton, SectionList, URLButton, VoiceCallButton
 from .media import Audio, Document, Image, Sticker, Video
 from .others import (
@@ -81,7 +82,7 @@ class Message(BaseUserUpdateAsync, _PinUnpinActionsAsync, _Message):
     document: Document | None
     audio: Audio | None
 
-    _media_objs = {
+    _media_objs: ClassVar[dict] = {
         "image": Image,
         "video": Video,
         "sticker": Sticker,
@@ -92,7 +93,9 @@ class Message(BaseUserUpdateAsync, _PinUnpinActionsAsync, _Message):
     @property
     def voice(self) -> Audio | None:
         """Shorthand for the ``audio`` attribute, only if it's a voice note."""
-        return super().voice
+        if self.audio and self.audio.voice:
+            return self.audio
+        return None
 
     @property
     def media(
@@ -131,7 +134,9 @@ class Message(BaseUserUpdateAsync, _PinUnpinActionsAsync, _Message):
 
         >>> @wa.on_message(filters.image)
         ... async def on_message(_: WhatsApp, msg: types.Message):
-        ...     await msg.download_media(path=pathlib.Path('/path/to/save'), filename='my_image.jpg')
+        ...     await msg.download_media(
+        ...         path=pathlib.Path("/path/to/save"), filename="my_image.jpg"
+        ...     )
 
         Args:
             filepath: The path where to save the file (if not provided, the current working directory will be used).
@@ -145,15 +150,14 @@ class Message(BaseUserUpdateAsync, _PinUnpinActionsAsync, _Message):
         Raises:
             ValueError: If the message does not contain any media.
         """
-        try:
-            return await self.media.download(
-                path=filepath,
-                filename=filename,
-                chunk_size=chunk_size,
-                **httpx_kwargs,
-            )
-        except AttributeError:
-            raise ValueError("Message does not contain any media.") from None
+        if self.media is None:
+            raise ValueError("Message does not contain any media.")
+        return await self.media.download(
+            path=filepath,
+            filename=filename,
+            chunk_size=chunk_size,
+            **httpx_kwargs,
+        )
 
     async def stream_media(
         self, chunk_size: int | None = None, **httpx_kwargs
@@ -172,7 +176,9 @@ class Message(BaseUserUpdateAsync, _PinUnpinActionsAsync, _Message):
         >>> @wa.on_message(filters.document)
         ... async def on_message(_: WhatsApp, msg: types.Message):
         ...     async with httpx.AsyncClient() as client:
-        ...        await client.post('https://example.com/upload', content=await msg.stream_media())
+        ...         await client.post(
+        ...             "https://example.com/upload", content=await msg.stream_media()
+        ...         )
 
         Args:
             chunk_size: The size (in bytes) of each chunk to read (default: ``64KB``).
@@ -184,13 +190,12 @@ class Message(BaseUserUpdateAsync, _PinUnpinActionsAsync, _Message):
         Raises:
             ValueError: If the message does not contain any media.
         """
-        try:
-            return await self.media.stream(
-                chunk_size=chunk_size,
-                **httpx_kwargs,
-            )
-        except AttributeError:
-            raise ValueError("Message does not contain any media.") from None
+        if self.media is None:
+            raise ValueError("Message does not contain any media.")
+        return await self.media.stream(
+            chunk_size=chunk_size,
+            **httpx_kwargs,
+        )
 
     async def get_media_bytes(self, **httpx_kwargs) -> bytes:
         """
@@ -215,10 +220,9 @@ class Message(BaseUserUpdateAsync, _PinUnpinActionsAsync, _Message):
         Raises:
             ValueError: If the message does not contain any media.
         """
-        try:
-            return await self.media.get_bytes(**httpx_kwargs)
-        except AttributeError:
-            raise ValueError("Message does not contain any media.") from None
+        if self.media is None:
+            raise ValueError("Message does not contain any media.")
+        return await self.media.get_bytes(**httpx_kwargs)
 
     async def copy(
         self,
@@ -235,7 +239,7 @@ class Message(BaseUserUpdateAsync, _PinUnpinActionsAsync, _Message):
             | None
         ) = None,
         preview_url: bool = False,
-        reply_to_message_id: str = None,
+        reply_to_message_id: str | None = None,
         tracker: str | None = None,
         sender: str | int | None = None,
     ) -> SentMessage:
@@ -267,6 +271,7 @@ class Message(BaseUserUpdateAsync, _PinUnpinActionsAsync, _Message):
         """
         match self.type:
             case MessageType.TEXT:
+                assert self.text is not None
                 return await self._client.send_message(
                     sender=sender,
                     to=to,
@@ -279,44 +284,55 @@ class Message(BaseUserUpdateAsync, _PinUnpinActionsAsync, _Message):
                     tracker=tracker,
                 )
             case MessageType.DOCUMENT:
+                assert self.document is not None
                 return await self._client.send_document(
                     sender=sender,
                     to=to,
                     document=self.document.id,
                     filename=self.document.filename,
-                    caption=self.caption,
-                    buttons=buttons,
+                    caption=body or self.caption,
+                    buttons=cast(
+                        "Iterable[Button] | URLButton | FlowButton | None", buttons
+                    ),
                     footer=footer,
                     reply_to_message_id=reply_to_message_id,
                     tracker=tracker,
                 )
             case MessageType.IMAGE:
+                assert self.image is not None
                 return await self._client.send_image(
                     sender=sender,
                     to=to,
                     image=self.image.id,
-                    caption=self.caption,
-                    buttons=buttons,
+                    caption=body or self.caption,
+                    buttons=cast(
+                        "Iterable[Button] | URLButton | FlowButton | None", buttons
+                    ),
                     footer=footer,
                     reply_to_message_id=reply_to_message_id,
                     tracker=tracker,
                 )
             case MessageType.VIDEO:
+                assert self.video is not None
                 return await self._client.send_video(
                     sender=sender,
                     to=to,
                     video=self.video.id,
-                    caption=self.caption,
-                    buttons=buttons,
+                    caption=body or self.caption,
+                    buttons=cast(
+                        "Iterable[Button] | URLButton | FlowButton | None", buttons
+                    ),
                     footer=footer,
                     reply_to_message_id=reply_to_message_id,
                     tracker=tracker,
                 )
             case MessageType.STICKER:
+                assert self.sticker is not None
                 return await self._client.send_sticker(
                     sender=sender, to=to, sticker=self.sticker.id, tracker=tracker
                 )
             case MessageType.LOCATION:
+                assert self.location is not None
                 return await self._client.send_location(
                     sender=sender,
                     to=to,
@@ -327,6 +343,7 @@ class Message(BaseUserUpdateAsync, _PinUnpinActionsAsync, _Message):
                     tracker=tracker,
                 )
             case MessageType.AUDIO:
+                assert self.audio is not None
                 return await self._client.send_audio(
                     sender=sender,
                     to=to,
@@ -335,6 +352,7 @@ class Message(BaseUserUpdateAsync, _PinUnpinActionsAsync, _Message):
                     is_voice=self.audio.voice,
                 )
             case MessageType.CONTACTS:
+                assert self.contacts is not None
                 return await self._client.send_contact(
                     sender=sender,
                     to=to,
@@ -343,6 +361,7 @@ class Message(BaseUserUpdateAsync, _PinUnpinActionsAsync, _Message):
                     tracker=tracker,
                 )
             case MessageType.REACTION:
+                assert self.reaction is not None
                 if reply_to_message_id is None:
                     raise ValueError(
                         "You need to provide `reply_to_message_id` in order to `copy` a reaction"
@@ -354,6 +373,7 @@ class Message(BaseUserUpdateAsync, _PinUnpinActionsAsync, _Message):
                     emoji=self.reaction.emoji or "",
                 )
             case MessageType.ORDER:
+                assert self.order is not None
                 if len(self.order.products) == 1:
                     return await self._client.send_product(
                         sender=sender,
@@ -363,6 +383,11 @@ class Message(BaseUserUpdateAsync, _PinUnpinActionsAsync, _Message):
                         body=body,
                         footer=footer,
                         reply_to_message_id=reply_to_message_id,
+                    )
+                if header is None or body is None:
+                    raise ValueError(
+                        "You need to provide both `header` and `body` in order to `copy` an order message with "
+                        "multiple products (used as the product section title and the message body)."
                     )
                 return await self._client.send_products(
                     sender=sender,

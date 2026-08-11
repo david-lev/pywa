@@ -3,14 +3,15 @@
 from __future__ import annotations
 
 __all__ = [
-    "Media",
-    "Image",
-    "Video",
-    "Sticker",
-    "Document",
+    "ArrivedMedia",
     "Audio",
+    "Document",
+    "Image",
+    "Media",
     "MediaURL",
+    "Sticker",
     "UploadedBy",
+    "Video",
 ]
 
 import dataclasses
@@ -18,7 +19,8 @@ import datetime
 import enum
 import mimetypes
 import pathlib
-from typing import TYPE_CHECKING, Generator
+from collections.abc import Generator
+from typing import TYPE_CHECKING
 
 from .. import utils
 from .others import SuccessResult
@@ -57,11 +59,10 @@ class _MediaActions:
     def get_media_url(self) -> str:
         """Gets the URL of the media. (expires after 5 minutes)"""
         url: str | None = getattr(self, "url", None)
-        if url:
-            if (
-                datetime.datetime.now(datetime.timezone.utc) - self.uploaded_at
-            ) < datetime.timedelta(minutes=URL_EXPIRATION_MINUTES):
-                return url
+        if url and (
+            datetime.datetime.now(datetime.timezone.utc) - self.uploaded_at
+        ) < datetime.timedelta(minutes=URL_EXPIRATION_MINUTES):
+            return url
         return self._client.get_media_url(media_id=self.id).url
 
     def download(
@@ -83,7 +84,9 @@ class _MediaActions:
 
         >>> @wa.on_message(filters.image)
         ... def on_message(_: WhatsApp, msg: types.Message):
-        ...     msg.image.download(path=pathlib.Path('/path/to/save'), filename='my_image.jpg')
+        ...     msg.image.download(
+        ...         path=pathlib.Path("/path/to/save"), filename="my_image.jpg"
+        ...     )
 
         Args:
             path: The path where to save the file (if not provided, the current working directory will be used).
@@ -142,7 +145,9 @@ class _MediaActions:
         >>> @wa.on_message(filters.document)
         ... def on_message(_: WhatsApp, msg: types.Message):
         ...     with httpx.Client() as client:
-        ...        client.post('https://example.com/upload', content=msg.document.stream())
+        ...         client.post(
+        ...             "https://example.com/upload", content=msg.document.stream()
+        ...         )
 
         Args:
             chunk_size: The size (in bytes) of each chunk to read (default: ``64KB``).
@@ -345,7 +350,9 @@ class ArrivedMedia(Media):
             >>> wa = WhatsApp(...)
             >>> @wa.on_flow_completion
             ... def on_flow_completion(_: WhatsApp, flow: types.FlowCompletion):
-            ...     img = types.Image.from_flow_completion(client=wa, media=flow.response['media'])
+            ...     img = types.Image.from_flow_completion(
+            ...         client=wa, media=flow.response["media"]
+            ...     )
             ...     img.download()
 
         Args:

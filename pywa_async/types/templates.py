@@ -4,11 +4,10 @@ from __future__ import annotations
 
 import datetime
 import functools
-from collections.abc import Sequence
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, overload
 
 from pywa.listeners import TemplateStatusUpdateListenerIdentifier
-from pywa.types.templates import *  # noqa MUST BE IMPORTED FIRST
+from pywa.types.templates import *
 from pywa.types.templates import (
     BaseParams,
     _validate_params,
@@ -27,7 +26,7 @@ from pywa.types.templates import (
 )
 from pywa.types.templates import (
     TemplateDetails as _TemplateDetails,
-)  # noqa MUST BE IMPORTED FIRST
+)
 from pywa.types.templates import (
     TemplateQualityUpdate as _TemplateQualityUpdate,
 )
@@ -256,7 +255,9 @@ class TemplateDetails(_TemplateDetails):
         Example:
             >>> wa = WhatsApp(...)
             >>> template = await wa.get_template("123456789")
-            >>> new_template = await template.duplicate(language=TemplateLanguage.FRENCH)
+            >>> new_template = await template.duplicate(
+            ...     language=TemplateLanguage.FRENCH
+            ... )
 
         Args:
             overrides: Optional overrides for the template properties (e.g. name, language, category, components, etc.) to be applied to the new template. If not provided, the new template will have the same properties as this one.
@@ -408,6 +409,7 @@ class TemplatesResult(Result[TemplateDetails]):
 
 class _CreatedAndUpdatedTemplateActionsAsync:
     _client: WhatsAppAsync
+    id: str
 
     async def get(self) -> TemplateDetails:
         """
@@ -433,8 +435,12 @@ class _CreatedAndUpdatedTemplateActionsAsync:
             >>> from pywa import WhatsApp, filters
             >>> wa = WhatsApp(...)
             >>> created_template = wa.create_template(...)
-            >>> status = created_template.wait_until_approved(cancelers=filters.template_status & filters.template_status_rejected)
-            >>> print(f"Template {created_template.id} is approved with status: {status.new_status}")
+            >>> status = created_template.wait_until_approved(
+            ...     cancelers=filters.template_status & filters.template_status_rejected
+            ... )
+            >>> print(
+            ...     f"Template {created_template.id} is approved with status: {status.new_status}"
+            ... )
 
         Args:
             cancel_on_rejection: Whether to cancel the waiting process if the template is rejected. Defaults to True.
@@ -448,14 +454,11 @@ class _CreatedAndUpdatedTemplateActionsAsync:
             cancelers = (
                 cancelers or pywa_filters.false | pywa_filters.template_status_rejected
             )
-        return cast(
-            TemplateStatusUpdate,
-            await self._client.listen(
-                to=TemplateStatusUpdateListenerIdentifier(template_id=self.id),
-                filters=pywa_filters.template_status_approved,
-                cancelers=cancelers,
-                timeout=timeout,
-            ),
+        return await self._client.listen(
+            to=TemplateStatusUpdateListenerIdentifier(template_id=self.id),
+            filters=pywa_filters.template_status_approved,
+            cancelers=cancelers,
+            timeout=timeout,
         )
 
 
@@ -482,7 +485,7 @@ class UpdatedTemplate(_CreatedAndUpdatedTemplateActionsAsync, _UpdatedTemplate):
     """
 
 
-class CreatedTemplates(_CreatedTemplates, Sequence[CreatedTemplate]):
+class CreatedTemplates(_CreatedTemplates):
     """
     Represents a collection of created WhatsApp Templates.
 
@@ -491,3 +494,19 @@ class CreatedTemplates(_CreatedTemplates, Sequence[CreatedTemplate]):
     """
 
     templates: tuple[CreatedTemplate, ...]
+
+    @overload
+    def __getitem__(self, index: int) -> CreatedTemplate: ...
+
+    @overload
+    def __getitem__(self, index: slice) -> list[CreatedTemplate]: ...
+
+    def __getitem__(
+        self, index: int | slice
+    ) -> CreatedTemplate | list[CreatedTemplate]:
+        if isinstance(index, slice):
+            return list(self.templates[index])
+        return self.templates[index]
+
+    def __len__(self) -> int:
+        return len(self.templates)

@@ -14,12 +14,12 @@ import dataclasses
 import datetime
 import logging
 import math
+from collections.abc import Iterable
 from typing import (
     TYPE_CHECKING,
     Any,
     ClassVar,
     Generic,
-    Iterable,
     Literal,
     Protocol,
     TypeVar,
@@ -76,8 +76,7 @@ class MessageType(helpers.StrEnum):
     EDIT = "edit"
     REVOKE = "revoke"
 
-    _check_value = str.islower
-    _modify_value = str.lower
+    _normalize = str.lower
 
 
 class InteractiveType(helpers.StrEnum):
@@ -88,8 +87,7 @@ class InteractiveType(helpers.StrEnum):
 
     """
 
-    _check_value = str.islower
-    _modify_value = str.lower
+    _normalize = str.lower
 
     BUTTON = "button"
     CTA_URL = "cta_url"
@@ -156,7 +154,7 @@ class Location(helpers.FromDict):
         """Check if the shared location is the current location or manually selected."""
         return not any((self.name, self.address, self.url))
 
-    def in_radius(self, lat: float, lon: float, radius: float | int) -> bool:
+    def in_radius(self, lat: float, lon: float, radius: float) -> bool:
         """
         Check if the location is in a radius of another location.
 
@@ -200,7 +198,6 @@ class Contact:
     """
 
     name: Name | None
-    birthday: str | None
     birthday: str | None = None
     phones: Sequence[Phone] = dataclasses.field(default_factory=tuple)
     emails: Sequence[Email] = dataclasses.field(default_factory=tuple)
@@ -228,6 +225,8 @@ class Contact:
 
     def to_dict(self) -> dict[str, Any]:
         """Get the contact as a dict."""
+        if self.name is None:
+            raise ValueError("Contact must have a name")
         return {
             "name": dataclasses.asdict(self.name),
             "birthday": self.birthday,
@@ -247,7 +246,7 @@ class Contact:
             for s in (
                 "BEGIN:VCARD",
                 "VERSION:3.0",
-                f"FN;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:{self.name.formatted_name}",
+                f"FN;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:{self.name.formatted_name if self.name else 'Unknown'}",
                 f"BDAY:{self.birthday}" if self.birthday else None,
                 "\n".join(
                     f"TEL;type={phone.type}:{phone.phone}" for phone in self.phones
@@ -390,8 +389,7 @@ class ContactsOrigin(helpers.StrEnum):
 
     UNKNOWN = "UNKNOWN"
 
-    _check_value = str.islower
-    _modify_value = str.lower
+    _normalize = str.lower
 
 
 class ContactList(tuple[Contact, ...]):
@@ -771,8 +769,7 @@ class BusinessVerificationStatus(helpers.StrEnum):
 
     UNKNOWN = "UNKNOWN"
 
-    _check_value = str.islower
-    _modify_value = str.lower
+    _normalize = str.lower
 
 
 class MarketingMessagesLiteAPIStatus(helpers.StrEnum):
@@ -852,7 +849,7 @@ class WhatsAppBusinessAccount(helpers.APIObject):
     id: str
     name: str
     timezone_id: str
-    message_template_namespace: str
+    message_template_namespace: str | None
     status: str | None
     business_verification_status: BusinessVerificationStatus | None
     is_enabled_for_insights: bool | None
@@ -1010,8 +1007,8 @@ class Command:
     @classmethod
     def from_dict(cls, data: dict):
         return cls(
-            name=data.get("command_name"),
-            description=data.get("command_description"),
+            name=data["command_name"],
+            description=data["command_description"],
         )
 
     def to_dict(self):
@@ -1041,7 +1038,7 @@ class ConversationalAutomation:
     @classmethod
     def from_dict(cls, data: dict):
         return cls(
-            id=data.get("id"),
+            id=data["id"],
             ice_breakers=tuple(data.get("prompts", ())) or None,
             commands=tuple(
                 Command.from_dict(command) for command in data.get("commands", ())
@@ -1081,7 +1078,7 @@ class BusinessPhoneNumber(helpers.APIObject):
         is_official_business_account: Indicates if phone number is associated with an Official Business Account.
         is_pin_enabled: Returns True if a pin for two-step verification is enabled.
         is_preverified_number: Returns true if the phone number was pre-verified
-        messaging_limit_tier: Current messaging limit tier.
+        whatsapp_business_manager_messaging_limit: Current messaging limit tier.
         search_visibility: The availability of the phone_number in the WhatsApp Business search.
         platform_type: Platform the business phone number is registered with. Values can be CLOUD_API, ON_PREMISE, or NOT_APPLICABLE.
          If NOT_APPLICABLE, the number is not registered with Cloud API or On-Premises API.
@@ -1112,7 +1109,6 @@ class BusinessPhoneNumber(helpers.APIObject):
     is_official_business_account: bool
     is_pin_enabled: bool
     is_preverified_number: bool
-    messaging_limit_tier: str | None
     search_visibility: str | None
     platform_type: str | None
     throughput: dict[str, str] | None
@@ -1124,11 +1120,12 @@ class BusinessPhoneNumber(helpers.APIObject):
     # username: str | None
     country_code: str | None
     country_dial_code: str | None
+    whatsapp_business_manager_messaging_limit: str | None
 
     @classmethod
     def from_dict(cls, data: dict):
         return cls(
-            id=data.get("id"),
+            id=data["id"],
             verified_name=data.get("verified_name"),
             display_phone_number=data.get("display_phone_number"),
             status=data.get("status"),
@@ -1144,13 +1141,15 @@ class BusinessPhoneNumber(helpers.APIObject):
             new_name_status=data.get("new_name_status"),
             code_verification_status=data.get("code_verification_status"),
             account_mode=data.get("account_mode"),
-            is_on_biz_app=data.get("is_on_biz_app"),
+            is_on_biz_app=data.get("is_on_biz_app", False),
             is_official_business_account=data.get(
                 "is_official_business_account", False
             ),
             is_pin_enabled=data.get("is_pin_enabled", False),
             is_preverified_number=data.get("is_preverified_number", False),
-            messaging_limit_tier=data.get("messaging_limit_tier"),
+            whatsapp_business_manager_messaging_limit=data.get(
+                "whatsapp_business_manager_messaging_limit"
+            ),
             search_visibility=data.get("search_visibility"),
             platform_type=data.get("platform_type"),
             throughput=data.get("throughput"),
@@ -1177,7 +1176,17 @@ class BusinessPhoneNumber(helpers.APIObject):
             PywaDeprecationWarning,
             stacklevel=2,
         )
-        return None
+
+    @property
+    def messaging_limit_tier(self) -> None:
+        """
+        This property is deprecated and will always return None.
+        """
+        warnings.warn(
+            "BusinessPhoneNumber.messaging_limit_tier is deprecated, use BusinessPhoneNumber.whatsapp_business_manager_messaging_limit instead",
+            PywaDeprecationWarning,
+            stacklevel=2,
+        )
 
 
 class QRCodeImageType(helpers.StrEnum):
@@ -1193,6 +1202,9 @@ class QRCodeImageType(helpers.StrEnum):
     SVG = "SVG"
 
     UNKNOWN = "UNKNOWN"
+
+
+_QRCodeType = TypeVar("_QRCodeType", bound="QRCode")
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
@@ -1223,8 +1235,12 @@ class QRCode(helpers.APIObject):
 
         >>> from pywa import WhatsApp
         >>> wa = WhatsApp(...)
-        >>> qr_codes = wa.get_qr_codes() # image_type is None by default for faster retrieval
-        >>> svg_qr = qr_codes[0].fetch_image(QRCodeImageType.SVG) # Get the SVG version of the QR code
+        >>> qr_codes = (
+        ...     wa.get_qr_codes()
+        ... )  # image_type is None by default for faster retrieval
+        >>> svg_qr = qr_codes[0].fetch_image(
+        ...     QRCodeImageType.SVG
+        ... )  # Get the SVG version of the QR code
 
         Args:
             image_type: The type of the image (e.g., PNG, SVG).
@@ -1260,7 +1276,9 @@ class QRCode(helpers.APIObject):
         return self._client.delete_qr_code(code=self.code, phone_id=self._phone_id)
 
     @classmethod
-    def from_dict(cls, data: dict, client: WhatsApp, phone_id: str) -> QRCode:
+    def from_dict(
+        cls: type[_QRCodeType], data: dict, client: WhatsApp, phone_id: str
+    ) -> _QRCodeType:
         return cls(
             _client=client,
             _phone_id=phone_id,
@@ -1492,7 +1510,7 @@ class _ItemFactory(Protocol):
     def __call__(self, data: dict) -> _T: ...
 
 
-class Result(Generic[_T], Sequence[_T]):
+class Result(Sequence[_T], Generic[_T]):
     """
     This class is used to handle paginated results from the WhatsApp API. You can iterate over the results, and also access the next and previous pages of results.
 
@@ -1506,10 +1524,8 @@ class Result(Generic[_T], Sequence[_T]):
         >>> res = wa.get_blocked_users(pagination=types.Pagination(limit=100))
         >>> for user in res:
         ...     print(user.name, user.wa_id)
-        ...
         >>> if res.has_next:
         ...     next_res = res.next()
-        ...
         >>> print(res.all())
     """
 
@@ -1677,8 +1693,7 @@ class UsernameStatusType(helpers.StrEnum):
         DELETED: Indicates the username has been deleted via the WhatsApp Business app.
     """
 
-    _check_value = str.islower
-    _modify_value = str.lower
+    _normalize = str.lower
 
     APPROVED = "approved"
     RESERVED = "reserved"
@@ -1757,6 +1772,9 @@ class SignupStatus(helpers.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
+_SignupDetailsType = TypeVar("_SignupDetailsType", bound="SignupDetails")
+
+
 @dataclasses.dataclass(frozen=True, slots=True)
 class SignupDetails(helpers.APIObject, _CommonSignup):
     """
@@ -1787,7 +1805,9 @@ class SignupDetails(helpers.APIObject, _CommonSignup):
     website_url: str | None
 
     @classmethod
-    def from_dict(cls, data: dict, client: WhatsApp) -> SignupDetails:
+    def from_dict(
+        cls: type[_SignupDetailsType], data: dict, client: WhatsApp
+    ) -> _SignupDetailsType:
         return cls(
             _client=client,
             id=data["id"],

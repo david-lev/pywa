@@ -23,13 +23,20 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-python@v6
-        with:
-          python-version: "3.x"
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
 
-      - run: |
-          python -m pip install --upgrade pip
-          python -m pip install build
-          python -m build
+      - name: Install Python 3.10
+        run: uv python install 3.10
 
-      - uses: pypa/gh-action-pypi-publish@release/v1
+      - name: Build
+        run: uv build
+
+      - name: Smoke test (wheel)
+        run: uv run --isolated --no-project --with dist/*.whl tests/smoke_test.py
+
+      - name: Smoke test (source distribution)
+        run: uv run --isolated --no-project --with dist/*.tar.gz tests/smoke_test.py
+
+      - name: Publish
+        run: uv publish

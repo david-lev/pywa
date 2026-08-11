@@ -6,3 +6,6 @@ contact_links:
   - name: Telegram Channel
     url: https://t.me/py_wa
     about: Please subscribe to get the latest news.
+  - name: Security policy
+    url: https://github.com/david-lev/pywa/security
+    about: Report a security vulnerability or learn how to disclose securely

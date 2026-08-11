@@ -11,18 +11,17 @@ import logging
 import pathlib
 import re
 import warnings
-from collections.abc import Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from typing import (
     TYPE_CHECKING,
     Any,
     BinaryIO,
     Generic,
-    Iterable,
     Literal,
     NoReturn,
-    Type,
     TypeAlias,
     TypeVar,
+    cast,
     overload,
 )
 from urllib import parse as urllib_parse
@@ -32,7 +31,7 @@ import httpx
 from .. import _helpers as helpers
 from .. import utils
 from ..errors import PywaDeprecationWarning
-from .base_update import BaseUserUpdate, RawUpdate  # noqa
+from .base_update import BaseUserUpdate, RawUpdate
 from .media import ArrivedMedia
 from .others import (
     FacebookApplication,
@@ -50,85 +49,88 @@ if TYPE_CHECKING:
 _logger = logging.getLogger(__name__)
 
 __all__ = [
-    "FlowCompletion",
-    "FlowRequest",
-    "FlowResponse",
-    "FlowResponseError",
-    "FlowRequestCannotBeDecrypted",
-    "FlowRequestSignatureAuthenticationFailed",
-    "FlowTokenNoLongerValid",
-    "FlowCategory",
-    "FlowDetails",
-    "FlowMetricName",
-    "FlowMetricGranularity",
-    "FlowStatus",
-    "FlowPreview",
-    "FlowJSONUpdateResult",
-    "FlowValidationError",
-    "FlowAsset",
-    "CreatedFlow",
-    "MigratedFlow",
-    "MigratedFlowError",
-    "MigrateFlowsResponse",
-    "FlowJSON",
-    "Screen",
-    "ScreenData",
-    "ScreenDataUpdate",
-    "Layout",
-    "LayoutType",
-    "Form",
-    "ScreenDataRef",
-    "ComponentRef",
-    "FlowStr",
-    "TextHeading",
-    "TextSubheading",
-    "TextBody",
-    "TextCaption",
-    "RichText",
-    "FontWeight",
-    "TextInput",
-    "InputType",
-    "LabelVariant",
-    "TextArea",
-    "CheckboxGroup",
-    "ChipsSelector",
-    "RadioButtonsGroup",
-    "Footer",
-    "OptIn",
-    "Dropdown",
-    "EmbeddedLink",
-    "NavigationList",
-    "NavigationItem",
-    "NavigationItemStart",
-    "NavigationItemMainContent",
-    "NavigationItemEnd",
-    "DatePicker",
+    "CalendarDay",
     "CalendarPicker",
     "CalendarPickerMode",
     "CalendarRangeValues",
-    "CalendarDay",
-    "Image",
-    "ImageCarouselItem",
-    "ImageCarousel",
-    "PhotoPicker",
-    "PhotoSource",
-    "DocumentPicker",
-    "ScaleType",
-    "If",
-    "Switch",
-    "DataSource",
-    "DataExchangeAction",
-    "NavigateAction",
+    "CheckboxGroup",
+    "ChipsSelector",
     "CompleteAction",
-    "UpdateDataAction",
-    "OpenURLAction",
+    "ComponentRef",
+    "Condition",
+    "CreatedFlow",
+    "DataExchangeAction",
+    "DataSource",
+    "DatePicker",
+    "DocumentPicker",
+    "Dropdown",
+    "EmbeddedLink",
     "FlowActionType",
+    "FlowAsset",
+    "FlowCategory",
+    "FlowCompletion",
+    "FlowDetails",
+    "FlowJSON",
+    "FlowJSONUpdateResult",
+    "FlowMetricGranularity",
+    "FlowMetricName",
+    "FlowPreview",
+    "FlowRequest",
     "FlowRequestActionType",
+    "FlowRequestCannotBeDecrypted",
+    "FlowRequestSignatureAuthenticationFailed",
+    "FlowResponse",
+    "FlowResponseError",
+    "FlowStatus",
+    "FlowStr",
+    "FlowTokenNoLongerValid",
+    "FlowValidationError",
+    "FontWeight",
+    "Footer",
+    "Form",
+    "If",
+    "Image",
+    "ImageCarousel",
+    "ImageCarouselItem",
+    "InputType",
+    "LabelVariant",
+    "Layout",
+    "LayoutType",
+    "MathExpression",
+    "MigrateFlowsResponse",
+    "MigratedFlow",
+    "MigratedFlowError",
+    "NavigateAction",
+    "NavigationItem",
+    "NavigationItemEnd",
+    "NavigationItemMainContent",
+    "NavigationItemStart",
+    "NavigationList",
     "Next",
     "NextType",
+    "OpenURLAction",
+    "OptIn",
+    "PhotoPicker",
+    "PhotoSource",
+    "RadioButtonsGroup",
+    "RichText",
+    "ScaleType",
+    "Screen",
+    "ScreenData",
+    "ScreenDataRef",
+    "ScreenDataUpdate",
+    "Switch",
+    "TextArea",
+    "TextBody",
+    "TextCaption",
+    "TextHeading",
+    "TextInput",
+    "TextSubheading",
+    "UpdateDataAction",
 ]
 
 _FlowResMediaType = TypeVar("_FlowResMediaType", bound=ArrivedMedia)
+_FlowDetailsType = TypeVar("_FlowDetailsType", bound="FlowDetails")
 
 
 @dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
@@ -193,7 +195,7 @@ class FlowCompletion(BaseUserUpdate):
 
     def get_media(
         self,
-        media_cls: Type[_FlowResMediaType],
+        media_cls: type[_FlowResMediaType],
         key: str,
         index: int = 0,
     ) -> _FlowResMediaType:
@@ -205,7 +207,7 @@ class FlowCompletion(BaseUserUpdate):
             >>> wa = WhatsApp(...)
             >>> @wa.on_flow_completion
             ... def on_flow_completion(_: WhatsApp, flow: types.FlowCompletion):
-            ...     img = flow.get_media(types.Image,key="image")
+            ...     img = flow.get_media(types.Image, key="image")
             ...     img.download()
 
         Args:
@@ -221,11 +223,14 @@ class FlowCompletion(BaseUserUpdate):
             ValueError: If the response has no data.
             IndexError: If the index is out of range.
         """
-        return media_cls.from_dict(
-            client=self._client,
-            data=self.response[key][index],
-            arrived_at=self.timestamp,
-            received_to=self.metadata.phone_number_id,
+        return cast(
+            _FlowResMediaType,
+            media_cls.from_dict(
+                client=self._client,
+                data=self.response[key][index],
+                arrived_at=self.timestamp,
+                received_to=self.metadata.phone_number_id,
+            ),
         )
 
 
@@ -257,21 +262,23 @@ class FlowRequest:
 
     Attributes:
         version: The version of the ``data_api_version`` specified on the flow json.
-        flow_token: The flow token used to create the flow
+        flow_token: A Flow token generated and sent by you as part of the :class:`~pywa.types.callback.FlowButton`.
+        flow_token_signature: A Flow token signature is generated and sent by flows as part of the data exchange request payload. will only be sent with flows version >= 7.3 and data_api_version >=4.0. Read more at `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/flows/guides/implementingyourflowendpoint#enhanced-endpoint-security>`_.
         action: The action that triggered the request.
         screen: The screen that triggered the request. If action is ``FlowRequestActionType.INIT`` or ``FlowRequestActionType.BACK``, this field may be ``None``.
         data: The data sent from the screen. If action is ``FlowRequestActionType.BACK`` or ``FlowRequestActionType.INIT``, this field may be ``None``.
-        raw: The raw data of the request.
+        raw: The raw data of the request (decrypted).
         raw_encrypted: The raw-encrypted data of the request.
     """
 
     version: str
     action: FlowRequestActionType
     flow_token: str
+    flow_token_signature: str | None
     screen: str | None
     data: dict[str, Any] | None
     raw: dict[str, Any] = dataclasses.field(repr=False, hash=False, compare=False)
-    raw_encrypted: dict[str, str] = dataclasses.field(
+    raw_encrypted: Mapping[str, str] = dataclasses.field(
         repr=False, hash=False, compare=False
     )
 
@@ -338,13 +345,14 @@ class FlowRequest:
         raise FlowTokenNoLongerValid(error_message)
 
     @classmethod
-    def from_dict(cls, data: dict, raw_encrypted: dict):
+    def from_dict(cls, data: dict, raw_encrypted: Mapping):
         return cls(
             version=data["version"],
             action=FlowRequestActionType(data["action"]),
             flow_token=data.get(
                 "flow_token"
             ),  # some ios devices may not send the flow token :| # type: ignore
+            flow_token_signature=data.get("flow_token_signature"),
             screen=data.get("screen") or None,  # can be empty string
             data=data.get("data") or None,  # can be empty dict
             raw=data,
@@ -465,7 +473,7 @@ class FlowResponse:
                 )
 
     def to_dict(self) -> dict:
-        data = self.data.copy()
+        data = cast(dict[str, Any], self.data.copy())
         if not self.close_flow and self.error_message:
             data["error_message"] = self.error_message
         for key, val in data.items():
@@ -803,7 +811,9 @@ class FlowDetails(helpers.APIObject):
         return tuple(fields)
 
     @classmethod
-    def from_dict(cls, data: dict, client: WhatsApp) -> FlowDetails:
+    def from_dict(
+        cls: type[_FlowDetailsType], data: dict, client: WhatsApp
+    ) -> _FlowDetailsType:
         return cls(
             _client=client,
             id=data["id"],
@@ -919,9 +929,9 @@ class FlowDetails(helpers.APIObject):
             >>> wa = WhatsApp(waba_id='1234567890', ...)
             >>> my_flows = wa.get_flows()
             >>> my_flows[0].update_metadata(
-            ...     name='Feedback',
+            ...     name="Feedback",
             ...     categories=[FlowCategory.SURVEY, FlowCategory.OTHER],
-            ...     endpoint_uri='https://my-api-server/feedback_flow'
+            ...     endpoint_uri="https://my-api-server/feedback_flow",
             ... )
 
         Returns:
@@ -1126,112 +1136,113 @@ _UNDERSCORE_FIELDS = {
 
 _PY_TO_JSON_TYPES = {
     str: "string",
-    bool: "boolean",  # MUST BE BEFORE int!!
+    bool: "boolean",  # MUST BE BEFORE int (bool is a subclass of int)
     int: "number",
     float: "number",
 }
 
-_DATA_SOURCE_SKIP_FIELDS = {
-    "on_select_action",
-    "on-select-action",
-    "on_unselect_action",
-    "on-unselect-action",
-}
-
-_NAVIGATION_ITEM_SKIP_FIELDS = {
-    "start",
-    "end",
-    "badge",
-    "tags",
-    "on-click-action",
-}
+# Omitted from ScreenData schema ``properties`` (still present in ``__example__``).
+_DATA_SOURCE_SKIP_FIELDS = frozenset(
+    {
+        "on_select_action",
+        "on-select-action",
+        "on_unselect_action",
+        "on-unselect-action",
+    }
+)
+_NAVIGATION_ITEM_SKIP_FIELDS = frozenset(
+    {
+        "start",
+        "end",
+        "badge",
+        "tags",
+        "on-click-action",
+    }
+)
 
 
 class _FlowJSONEncoder(json.JSONEncoder):
-    def default(self, o):
-        if isinstance(o, _Expr):
-            return o.to_str()
-        elif isinstance(o, _ScreenDatasContainer):
-            data = {}
-            for item in o:
-                if isinstance(item, ScreenDataUpdate):
-                    data[item.key] = item.new_value
-                    continue
+    def default(self, o: Any) -> str | dict:
+        match o:
+            case _FlowExpr():
+                return o.to_str()
+            case _ScreenDatasContainer():
+                return self._encode_screen_datas(o)
+            case DataSource() | NavigationItem():
+                return o.to_dict()
+            case datetime.date():
+                return o.strftime("%Y-%m-%d")
+            case re.Pattern():
+                return o.pattern
+            case _:
+                return super().default(o)
 
-                try:
-                    data[item.key] = dict(
-                        **self._get_json_type(item.example), __example__=item.example
-                    )
-                except KeyError as e:
-                    raise ValueError(
-                        f"ScreenData: Invalid example type {type(item.example)!r} for {item.key!r}."
-                    ) from e
-            return data
-        elif isinstance(o, (DataSource, NavigationItem)):
-            return o.to_dict()
-        elif isinstance(o, datetime.date):
-            return o.strftime("%Y-%m-%d")
-        elif isinstance(o, re.Pattern):
-            return o.pattern
-        return super().default(o)
+    def _encode_screen_datas(self, container: _ScreenDatasContainer) -> dict[str, Any]:
+        data: dict[str, Any] = {}
+        for item in container:
+            if isinstance(item, ScreenDataUpdate):
+                data[item.key] = item.new_value
+                continue
+            try:
+                schema = self._get_json_type(item.example)
+            except (TypeError, ValueError) as e:
+                raise ValueError(
+                    f"ScreenData: Invalid example type {type(item.example)!r} for {item.key!r}."
+                ) from e
+            data[item.key] = {**schema, "__example__": item.example}
+        return data
 
-    def _get_json_type(
-        self,
-        example: str
-        | int
-        | float
-        | bool
-        | DataSource
-        | Iterable[str | int | float | bool | DataSource | NavigationItem],
-    ) -> dict:
-        for (
-            py_type,
-            json_type,
-        ) in _PY_TO_JSON_TYPES.items():  # check for subtypes - e.g. enum
+    def _get_json_type(self, example: Any) -> dict[str, Any]:
+        """Infer a Flow JSON schema fragment from a Python example value."""
+        for py_type, json_type in _PY_TO_JSON_TYPES.items():
             if isinstance(example, py_type):
                 return {"type": json_type}
 
         if isinstance(example, (dict, DataSource)):
             return {"type": "object", "properties": self._get_obj_props(example)}
-        elif isinstance(example, Iterable):
-            try:
-                first = next(iter(example))
-            except StopIteration:
-                raise ValueError(
-                    "At least one example is required when using Iterable"
-                ) from None
-            if isinstance(first, (str, int, float, bool)):
-                return {
-                    "type": "array",
-                    "items": self._get_json_type(first),
-                }
-            elif isinstance(first, (dict, DataSource, NavigationItem)):
-                return {
-                    "type": "array",
-                    "items": {
-                        "type": "object",
-                        "properties": self._get_obj_props(first),
-                    },
-                }
-            else:
-                raise ValueError(f"Invalid example type {type(first)!r} for {first!r}.")
-        else:
-            raise KeyError(f"Invalid example type {type(example)!r} for {example!r}.")
 
-    def _get_obj_props(self, item: dict | DataSource | NavigationItem):
-        _skip_fields = (
-            _DATA_SOURCE_SKIP_FIELDS
-            if isinstance(item, DataSource)
-            else _NAVIGATION_ITEM_SKIP_FIELDS
-            if isinstance(item, NavigationItem)
-            else ()
-        )
+        if isinstance(example, Iterable) and not isinstance(example, (str, bytes)):
+            return self._get_array_type(example)
+
+        raise TypeError(f"Invalid example type {type(example)!r} for {example!r}.")
+
+    def _get_array_type(self, example: Iterable[Any]) -> dict[str, Any]:
+        try:
+            first = next(iter(example))
+        except StopIteration:
+            raise ValueError(
+                "At least one example is required when using Iterable"
+            ) from None
+
+        if isinstance(first, tuple(_PY_TO_JSON_TYPES.keys())):
+            return {"type": "array", "items": self._get_json_type(first)}
+
+        if isinstance(first, (dict, DataSource, NavigationItem)):
+            return {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": self._get_obj_props(first),
+                },
+            }
+
+        raise ValueError(f"Invalid example type {type(first)!r} for {first!r}.")
+
+    def _get_obj_props(
+        self, item: dict[str, Any] | DataSource | NavigationItem
+    ) -> dict[str, Any]:
+        if isinstance(item, DataSource):
+            skip = _DATA_SOURCE_SKIP_FIELDS
+        elif isinstance(item, NavigationItem):
+            skip = _NAVIGATION_ITEM_SKIP_FIELDS
+        else:
+            skip = frozenset()
+
+        entries = item.items() if isinstance(item, dict) else item.to_dict().items()
         return {
-            k: self._get_json_type(v)
-            for k, v in (
-                item.items() if isinstance(item, dict) else item.to_dict().items()
-            )
-            if v is not None and k not in _skip_fields
+            key: self._get_json_type(value)
+            for key, value in entries
+            if value is not None and key not in skip
         }
 
 
@@ -1294,8 +1305,8 @@ class DataSource:
 
     Example:
 
-        >>> option_1 = DataSource(id='1', title='Option 1')
-        >>> option_2 = DataSource(id='2', title='Option 2')
+        >>> option_1 = DataSource(id="1", title="Option 1")
+        >>> option_2 = DataSource(id="2", title="Option 2")
         >>> checkbox_group = CheckboxGroup(data_source=[option_1, option_2], ...)
 
     Attributes:
@@ -1358,7 +1369,7 @@ class ScreenData(Generic[_ScreenDataValTypeVar]):
         ... )
     """
 
-    __slots__ = "key", "example"
+    __slots__ = "example", "key"
 
     def __init__(
         self,
@@ -1482,7 +1493,9 @@ class ScreenDataUpdate(Generic[_ScreenDataValTypeVar]):
                             payload=[is_txt_visible.update(True)]  # a much cleaner way
                         ),
                         on_unselect_action=UpdateDataAction(
-                            payload=[ScreenDataUpdate(key="is_txt_visible", new_value=False)]  # only when you don't have access to the `ScreenData` object
+                            payload=[
+                                ScreenDataUpdate(key="is_txt_visible", new_value=False)
+                            ]  # only when you don't have access to the `ScreenData` object
                         ),
                     ),
                     TextBody(
@@ -1490,7 +1503,7 @@ class ScreenDataUpdate(Generic[_ScreenDataValTypeVar]):
                         visible=is_txt_visible.ref,
                     ),
                 ]
-            )
+            ),
         )
     """
 
@@ -1539,7 +1552,7 @@ class _ScreenDatasContainer(Sequence[ScreenData | ScreenDataUpdate]):
         return len(self._datas)
 
     def __repr__(self):
-        return f"ScreenDatasContainer({self._datas})"
+        return repr(self._datas)
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -1553,12 +1566,12 @@ class Screen:
     Example:
 
         >>> Screen(
-        ...     id='START',
-        ...     title='Welcome',
-        ...     data=[ScreenData(key='welcome', example='Welcome to my store!')],
+        ...     id="START",
+        ...     title="Welcome",
+        ...     data=[ScreenData(key="welcome", example="Welcome to my store!")],
         ...     terminal=True,
         ...     layout=Layout(children=[Form(children=[...])]),
-        ...     refresh_on_back=True
+        ...     refresh_on_back=True,
         ... )
 
     Attributes:
@@ -1579,7 +1592,7 @@ class Screen:
 
     id: str
     title: str | None = None
-    data: list[ScreenData] | dict[str, dict] | None = None
+    data: list[ScreenData] | dict[str, dict] | _ScreenDatasContainer | None = None
     terminal: bool | None = None
     success: bool | None = None
     refresh_on_back: bool | None = None
@@ -1590,7 +1603,9 @@ class Screen:
         # preventing `data` from being converted to a Iterable[dict] by `dataclasses.asdict()`
         # this is because we need to extract the key attr from the ScreenData and use it as the key in the json data obj
         self.data = (
-            _ScreenDatasContainer(self.data)  # type: ignore
+            _ScreenDatasContainer(
+                cast("list[ScreenData | ScreenDataUpdate]", self.data)
+            )
             if isinstance(self.data, Iterable) and not isinstance(self.data, dict)
             else self.data
         )
@@ -1609,8 +1624,7 @@ class LayoutType(helpers.StrEnum):
         SINGLE_COLUMN: A vertical flexbox container that stacks the components in a single column.
     """
 
-    _check_value = None
-    _modify_value = None
+    _normalize = lambda s: s.replace("_", " ").title().replace(" ", "")
 
     SINGLE_COLUMN = "SingleColumnLayout"
 
@@ -1649,8 +1663,7 @@ class Component(abc.ABC):
 class FlowComponentType(helpers.StrEnum):
     """Internal component types"""
 
-    _check_value = None
-    _modify_value = None
+    _normalize = lambda s: s.replace("_", " ").title().replace(" ", "")
 
     FORM = "Form"
     TEXT_HEADING = "TextHeading"
@@ -1680,136 +1693,158 @@ class FlowComponentType(helpers.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
-class _Expr(abc.ABC):
-    """Base for refs, conditions, and expressions"""
+_Literal: TypeAlias = bool | int | float | str
+_CompareOperator: TypeAlias = Literal["==", "!=", ">", ">=", "<", "<="]
+_LogicalOperator: TypeAlias = Literal["&&", "||", "!"]
+_ArithmeticOperator: TypeAlias = Literal["+", "-", "*", "/", "%"]
+
+
+class _FlowExpr(abc.ABC):
+    """Base for flow dynamic expressions rendered to Flow JSON strings."""
 
     @abc.abstractmethod
     def to_str(self) -> str: ...
 
+    def _fragment(self) -> str:
+        """Raw fragment for embedding in larger expressions (no backticks)."""
+        return self.to_str()
+
     def __str__(self) -> str:
         return self.to_str()
 
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({self.to_str()})"
+    @staticmethod
+    def _format_literal(val: _Literal) -> str:
+        match val:
+            case str():
+                return f"'{val}'"
+            case bool():
+                return str(val).lower()
+            case int() | float():
+                return str(val)
+            case _:
+                raise TypeError(f"Unsupported literal type: {type(val)!r}")
 
     @staticmethod
-    def _format_value(val: _Expr | bool | int | float | str) -> str:
-        if isinstance(val, _Expr):
-            return val.to_str()
-        elif isinstance(val, str):
-            return f"'{val}'"
-        elif isinstance(val, bool):
-            return str(val).lower()
-        return str(val)
+    def _format_operand(val: _ConditionOperand) -> str:
+        if isinstance(val, _FlowExpr):
+            return val._fragment()
+        return _FlowExpr._format_literal(val)
 
 
-class _Math(_Expr, abc.ABC):
-    """Base for math expressions"""
+class _ArithmeticOpsMixin(_FlowExpr, abc.ABC):
+    """Mixin that adds arithmetic operators and builds :class:`MathExpression` nodes."""
 
-    def _to_math(self, left: _MathT, operator: str, right: _MathT) -> MathExpression:
-        return MathExpression(
-            f"({self._format_value(left)} {operator} {self._format_value(right)})"
-        )
+    def _binop(
+        self,
+        operator: _ArithmeticOperator,
+        other: _ArithmeticOperand,
+        *,
+        reverse: bool = False,
+    ) -> MathExpression:
+        left, right = (other, self) if reverse else (self, other)
+        return MathExpression(left, operator, right)
 
-    def __add__(self, other: _MathT) -> MathExpression:
-        return self._to_math(self, "+", other)
+    def __add__(self, other: _ArithmeticOperand) -> MathExpression:
+        return self._binop("+", other)
 
-    def __radd__(self, other: _MathT) -> MathExpression:
-        return self._to_math(other, "+", self)
+    def __radd__(self, other: _ArithmeticOperand) -> MathExpression:
+        return self._binop("+", other, reverse=True)
 
-    def __sub__(self, other: _MathT) -> MathExpression:
-        return self._to_math(self, "-", other)
+    def __sub__(self, other: _ArithmeticOperand) -> MathExpression:
+        return self._binop("-", other)
 
-    def __rsub__(self, other: _MathT) -> MathExpression:
-        return self._to_math(other, "-", self)
+    def __rsub__(self, other: _ArithmeticOperand) -> MathExpression:
+        return self._binop("-", other, reverse=True)
 
-    def __mul__(self, other: _MathT) -> MathExpression:
-        return self._to_math(self, "*", other)
+    def __mul__(self, other: _ArithmeticOperand) -> MathExpression:
+        return self._binop("*", other)
 
-    def __rmul__(self, other: _MathT) -> MathExpression:
-        return self._to_math(other, "*", self)
+    def __rmul__(self, other: _ArithmeticOperand) -> MathExpression:
+        return self._binop("*", other, reverse=True)
 
-    def __truediv__(self, other: _MathT) -> MathExpression:
-        return self._to_math(self, "/", other)
+    def __truediv__(self, other: _ArithmeticOperand) -> MathExpression:
+        return self._binop("/", other)
 
-    def __rtruediv__(self, other: _MathT) -> MathExpression:
-        return self._to_math(other, "/", self)
+    def __rtruediv__(self, other: _ArithmeticOperand) -> MathExpression:
+        return self._binop("/", other, reverse=True)
 
-    def __mod__(self, other: _MathT) -> MathExpression:
-        return self._to_math(self, "%", other)
+    def __mod__(self, other: _ArithmeticOperand) -> MathExpression:
+        return self._binop("%", other)
 
-    def __rmod__(self, other: _MathT) -> MathExpression:
-        return self._to_math(other, "%", self)
+    def __rmod__(self, other: _ArithmeticOperand) -> MathExpression:
+        return self._binop("%", other, reverse=True)
 
 
-class _Combine(_Expr, abc.ABC):
-    """ "Base for combining refs and conditions"""
+_ArithmeticOperand: TypeAlias = _ArithmeticOpsMixin | int | float
 
-    def _get_left_right(self, right: Ref | Condition) -> tuple[str, str]:
-        return self.to_str() if isinstance(
-            self, Ref
-        ) else self._expression, right.to_str() if isinstance(
-            right, Ref
-        ) else right._expression
 
-    def __and__(self, other: Ref | Condition) -> Condition:
-        left, right = self._get_left_right(other)
-        return Condition(f"({left} && {right})")
+class _LogicalOpsMixin(_FlowExpr, abc.ABC):
+    """Mixin that adds logical operators and builds :class:`Condition` nodes."""
 
-    def __or__(self, other: Ref | Condition) -> Condition:
-        left, right = self._get_left_right(other)
-        return Condition(f"({left} || {right})")
+    def _combine(self, other: _LogicalOperand, operator: _LogicalOperator) -> Condition:
+        if operator == "!":
+            raise ValueError("Use __invert__ for unary logical not")
+        return Condition(self, operator, other)
+
+    def __and__(self, other: _LogicalOperand) -> Condition:
+        return self._combine(other, "&&")
+
+    def __or__(self, other: _LogicalOperand) -> Condition:
+        return self._combine(other, "||")
 
     def __invert__(self) -> Condition:
-        return Condition(
-            f"!{self.to_str() if isinstance(self, Ref) else self._expression}"
-        )
+        return Condition(self, "!")
 
 
-class Ref(_Math, _Combine, Generic[_ScreenDataValTypeVar]):
+class _ComparableOpsMixin(_FlowExpr, abc.ABC):
+    """Mixin that adds comparison operators and builds :class:`Condition` nodes."""
+
+    def _to_condition(
+        self, right: _CompareOperand, operator: _CompareOperator
+    ) -> Condition:
+        return Condition(self, operator, right)
+
+    def __eq__(self, other: _CompareOperand) -> Condition:  # ty: ignore[invalid-method-override]
+        return self._to_condition(other, "==")
+
+    def __ne__(self, other: _CompareOperand) -> Condition:  # ty: ignore[invalid-method-override]
+        return self._to_condition(other, "!=")
+
+    def __gt__(self, other: _OrderCompareOperand) -> Condition:
+        return self._to_condition(other, ">")
+
+    def __ge__(self, other: _OrderCompareOperand) -> Condition:
+        return self._to_condition(other, ">=")
+
+    def __lt__(self, other: _OrderCompareOperand) -> Condition:
+        return self._to_condition(other, "<")
+
+    def __le__(self, other: _OrderCompareOperand) -> Condition:
+        return self._to_condition(other, "<=")
+
+
+class Ref(_ArithmeticOpsMixin, _LogicalOpsMixin, _ComparableOpsMixin):
     """Base class for all references"""
+
+    __slots__ = ("_field", "_prefix", "_screen_id")
 
     def __init__(self, prefix: str, field: str, screen: Screen | str | None = None):
         self._prefix = prefix
         self._field = field
-        self._screen = (
-            f"screen.{screen.id if isinstance(screen, Screen) else screen}."
-            if screen
-            else ""
-        )
+        self._screen_id = screen.id if isinstance(screen, Screen) else screen
 
     def to_str(self) -> str:
-        return "${%s%s.%s}" % (
-            self._screen,
-            self._prefix,
-            self._field,
+        screen_prefix = f"screen.{self._screen_id}." if self._screen_id else ""
+        return f"${{{screen_prefix}{self._prefix}.{self._field}}}"
+
+    def __repr__(self) -> str:
+        return (
+            f"{self.__class__.__name__}("
+            f"prefix={self._prefix!r}, field={self._field!r}, screen={self._screen_id!r})"
         )
 
-    def _to_condition(
-        self, right: Ref | bool | int | float | str, operator: str
-    ) -> Condition:
-        return Condition(f"({self.to_str()} {operator} {self._format_value(right)})")
 
-    def __eq__(self, other: Ref | bool | int | float | str) -> Condition:
-        return self._to_condition(other, "==")
-
-    def __ne__(self, other: Ref | bool | int | float | str) -> Condition:
-        return self._to_condition(other, "!=")
-
-    def __gt__(self, other: Ref | int | float) -> Condition:
-        return self._to_condition(other, ">")
-
-    def __ge__(self, other: Ref | int | float) -> Condition:
-        return self._to_condition(other, ">=")
-
-    def __lt__(self, other: Ref | int | float) -> Condition:
-        return self._to_condition(other, "<")
-
-    def __le__(self, other: Ref | int | float) -> Condition:
-        return self._to_condition(other, "<=")
-
-
-class MathExpression(_Math):
+class MathExpression(_ArithmeticOpsMixin):
     """
     This class automatically created when using the arithmetic operators on :class:`Ref` objects.
 
@@ -1861,22 +1896,40 @@ class MathExpression(_Math):
           - :python:`age.ref % 20`
     """
 
-    def __init__(self, expression: str):
-        self._expression = expression
+    __slots__ = ("left", "operator", "right")
 
-    def __repr__(self) -> str:
-        return f"MathExpression({self._expression})"
+    def __init__(
+        self,
+        left: _ArithmeticOperand,
+        operator: _ArithmeticOperator,
+        right: _ArithmeticOperand,
+    ):
+        self.left = left
+        self.operator = operator
+        self.right = right
 
     def to_str(self) -> str:
-        return self._expression
+        return (
+            f"({self._format_operand(self.left)} {self.operator} "
+            f"{self._format_operand(self.right)})"
+        )
+
+    def __repr__(self) -> str:
+        return (
+            f"{self.__class__.__name__}("
+            f"left={self.left!r}, operator={self.operator!r}, right={self.right!r})"
+        )
 
 
-_MathT: TypeAlias = _Math | MathExpression | Ref | int | float
+_CompareOperand: TypeAlias = Ref | _Literal
+_OrderCompareOperand: TypeAlias = Ref | int | float
+_ConditionOperand: TypeAlias = _FlowExpr | _Literal
+_FlowStrValue: TypeAlias = Ref | MathExpression
 
 _RefT = TypeVar("_RefT", bound=Ref)
 
 
-class Condition(_Combine):
+class Condition(_LogicalOpsMixin):
     """
     This class automatically created when using the comparison operators on :class:`Ref` objects.
 
@@ -1939,19 +1992,44 @@ class Condition(_Combine):
           - :python:`~opt_in.ref`
     """
 
-    def __init__(self, expression: str):
-        self._expression = expression
-        self.wrap_with_backticks = True
+    __slots__ = ("left", "operator", "right", "wrap_with_backticks")
 
-    def __repr__(self) -> str:
-        return f"Condition({self._expression})"
+    def __init__(
+        self,
+        left: _ConditionOperand,
+        operator: _CompareOperator | _LogicalOperator,
+        right: _ConditionOperand | None = None,
+        *,
+        wrap_with_backticks: bool = True,
+    ) -> None:
+        self.left = left
+        self.operator = operator
+        self.right = right
+        self.wrap_with_backticks = wrap_with_backticks
+
+    def _fragment(self) -> str:
+        if self.operator == "!":
+            return f"!{self._format_operand(self.left)}"
+        if self.right is None:
+            raise ValueError("Binary condition requires a right operand")
+        return (
+            f"({self._format_operand(self.left)} {self.operator} "
+            f"{self._format_operand(self.right)})"
+        )
 
     def to_str(self) -> str:
+        expression = self._fragment()
+        return expression if not self.wrap_with_backticks else f"`{expression}`"
+
+    def __repr__(self) -> str:
         return (
-            self._expression
-            if not self.wrap_with_backticks
-            else f"`{self._expression}`"
+            f"{self.__class__.__name__}("
+            f"left={self.left!r}, operator={self.operator!r}, right={self.right!r}, "
+            f"wrap_with_backticks={self.wrap_with_backticks!r})"
         )
+
+
+_LogicalOperand: TypeAlias = Ref | Condition
 
 
 class ScreenDataRef(Ref, Generic[_ScreenDataValTypeVar]):
@@ -1988,6 +2066,11 @@ class ScreenDataRef(Ref, Generic[_ScreenDataValTypeVar]):
 
     def __init__(self, key: str, screen: Screen | str | None = None):
         super().__init__(prefix="data", field=key, screen=screen)
+
+    def __repr__(self) -> str:
+        if self._screen_id:
+            return f"{self.__class__.__name__}({self._field!r}, screen={self._screen_id!r})"
+        return f"{self.__class__.__name__}({self._field!r})"
 
 
 class ComponentRef(Ref, Generic[_ScreenDataValTypeVar]):
@@ -2026,8 +2109,13 @@ class ComponentRef(Ref, Generic[_ScreenDataValTypeVar]):
     def __init__(self, component_name: str, screen: Screen | str | None = None):
         super().__init__(prefix="form", field=component_name, screen=screen)
 
+    def __repr__(self) -> str:
+        if self._screen_id:
+            return f"{self.__class__.__name__}({self._field!r}, screen={self._screen_id!r})"
+        return f"{self.__class__.__name__}({self._field!r})"
 
-class FlowStr(_Expr):
+
+class FlowStr(_FlowExpr):
     """
     Dynamic string that uses variables and math expressions. This is a helper class to avoid all the
     escaping and wrapping with quotes when using string concatenation.
@@ -2064,7 +2152,9 @@ class FlowStr(_Expr):
 
     """
 
-    def __init__(self, string: str, **variables: Ref | MathExpression):
+    __slots__ = ("string", "variables")
+
+    def __init__(self, string: str, **variables: _FlowStrValue):
         """
         Initialize the dynamic string.
 
@@ -2076,9 +2166,16 @@ class FlowStr(_Expr):
         self.variables = variables
 
     def to_str(self) -> str:
+        rendered = {
+            key: value.to_str() if isinstance(value, _FlowExpr) else value
+            for key, value in self.variables.items()
+        }
         escaped = re.sub(r"(?<!\\)([`'])", r"\\\\\1", self.string)
-        wrapped = re.sub(r"([^{}]+)(?=\{|$)", r" '\1' ", escaped)
-        return f"`{wrapped.format(**self.variables)}`"
+        wrapped = re.sub(r"([^{}]+)(?={|$)", r" '\1' ", escaped)
+        return f"`{wrapped.format(**rendered)}`"
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}(string={self.string!r}, {', '.join(f'{k}={v!r}' for k, v in self.variables.items())})"
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -2115,33 +2212,40 @@ class Form(Component):
         # Extract init-value's from children
         init_values = self.init_values or {}
         for child in self.children:
-            if getattr(child, "init_value", None) is not None:
+            if not isinstance(child, FormComponent):
+                continue
+            if child.init_value is not None:
                 if isinstance(self.init_values, Ref | str):
                     raise ValueError(
                         f"No need to set init value for {child.name!r} if form init values is a dynamic ScreenDataRef"
                     )
+                assert isinstance(init_values, dict)
                 if child.name in init_values:
                     raise ValueError(
                         f"Duplicate init value for {child.name!r} in form {self.name!r}"
                     )
                 init_values[child.name] = child.init_value
-                child.init_value = None
+                setattr(child, "init_value", None)  # noqa: B010
         self.init_values = init_values or None
 
         # Extract error-message's from children
         error_messages = self.error_messages or {}
         for child in self.children:
-            if getattr(child, "error_message", None) is not None:
+            if not isinstance(child, FormComponent):
+                continue
+            child_error_message = getattr(child, "error_message", None)
+            if child_error_message is not None:
                 if isinstance(self.error_messages, Ref | str):
                     raise ValueError(
                         f"No need to set error msg for {child.name!r} if form error messages is a dynamic ScreenDataRef"
                     )
+                assert isinstance(error_messages, dict)
                 if child.name in error_messages:
                     raise ValueError(
                         f"Duplicate error msg for {child.name!r} in form {self.name!r}"
                     )
-                error_messages[child.name] = child.error_message
-                child.error_message = None
+                error_messages[child.name] = child_error_message
+                setattr(child, "error_message", None)  # noqa: B010
         self.error_messages = error_messages or None
 
 
@@ -2256,8 +2360,7 @@ class FontWeight(helpers.StrEnum):
         NORMAL: Normal text
     """
 
-    _check_value = str.islower
-    _modify_value = str.lower
+    _normalize = str.lower
 
     BOLD = "bold"
     ITALIC = "italic"
@@ -2276,7 +2379,7 @@ class TextHeading(TextComponent):
 
     Example:
 
-        >>> TextHeading(text='Heading', visible=True)
+        >>> TextHeading(text="Heading", visible=True)
 
     Attributes:
         text: The text of the heading. Limited to 80 characters.
@@ -2299,7 +2402,7 @@ class TextSubheading(TextComponent):
 
     Example:
 
-        >>> TextSubheading(text='Subheading', visible=True)
+        >>> TextSubheading(text="Subheading", visible=True)
 
     Attributes:
         text: The text of the subheading. Limited to 80 characters.
@@ -2323,10 +2426,10 @@ class TextBody(TextComponent):
     Example:
 
         >>> TextBody(
-        ...     text='Body',
+        ...     text="Body",
         ...     font_weight=FontWeight.BOLD,
         ...     strikethrough=True,
-        ...     visible=True
+        ...     visible=True,
         ... )
 
     Attributes:
@@ -2366,7 +2469,7 @@ class TextCaption(TextComponent):
     Example:
 
         >>> TextCaption(
-        ...     text='Caption',
+        ...     text="Caption",
         ...     font_weight=FontWeight.ITALIC,
         ...     strikethrough=True,
         ... )
@@ -2484,8 +2587,7 @@ class InputType(helpers.StrEnum):
         PHONE: A phone number (keyboard layout is numeric, with a special character for the + symbol).
     """
 
-    _check_value = str.islower
-    _modify_value = str.lower
+    _normalize = str.lower
 
     TEXT = "text"
     NUMBER = "number"
@@ -2505,8 +2607,7 @@ class LabelVariant(helpers.StrEnum):
         LARGE: Label will have a more prominent style and will be displayed across multiple lines if needed.
     """
 
-    _check_value = str.islower
-    _modify_value = str.lower
+    _normalize = str.lower
 
     LARGE = "large"
 
@@ -2524,13 +2625,13 @@ class TextInput(TextEntryComponent):
     Example:
 
         >>> TextInput(
-        ...     name='email',
-        ...     label='Email',
+        ...     name="email",
+        ...     label="Email",
         ...     input_type=InputType.EMAIL,
         ...     required=True,
         ...     min_chars=5,
         ...     max_chars=50,
-        ...     helper_text='Enter your email address',
+        ...     helper_text="Enter your email address",
         ... )
 
     Attributes:
@@ -2580,11 +2681,11 @@ class TextArea(TextEntryComponent):
     Example:
 
         >>> TextArea(
-        ...     name='description',
-        ...     label='Description',
+        ...     name="description",
+        ...     label="Description",
         ...     required=True,
         ...     max_length=100,
-        ...     helper_text='Enter your description',
+        ...     helper_text="Enter your description",
         ... )
 
     Attributes:
@@ -2626,8 +2727,7 @@ class MediaSize(helpers.StrEnum):
         LARGE: Large size
     """
 
-    _check_value = str.islower
-    _modify_value = str.lower
+    _normalize = str.lower
 
     REGULAR = "regular"
     LARGE = "large"
@@ -2646,17 +2746,17 @@ class CheckboxGroup(FormComponent[list[str]]):
     Example:
 
         >>> CheckboxGroup(
-        ...     name='options',
+        ...     name="options",
         ...     data_source=[
-        ...         DataSource(id='1', title='Option 1'),
-        ...         DataSource(id='2', title='Option 2'),
-        ...         DataSource(id='3', title='Option 3'),
+        ...         DataSource(id="1", title="Option 1"),
+        ...         DataSource(id="2", title="Option 2"),
+        ...         DataSource(id="3", title="Option 3"),
         ...     ],
-        ...     label='Options',
+        ...     label="Options",
         ...     min_selected_items=1,
         ...     max_selected_items=2,
         ...     required=True,
-        ...     init_value=['1', '2']
+        ...     init_value=["1", "2"],
         ... )
 
     Attributes:
@@ -2704,15 +2804,15 @@ class RadioButtonsGroup(FormComponent[str]):
     Example:
 
         >>> RadioButtonsGroup(
-        ...     name='options',
+        ...     name="options",
         ...     data_source=[
-        ...         DataSource(id='1', title='Option 1'),
-        ...         DataSource(id='2', title='Option 2'),
-        ...         DataSource(id='3', title='Option 3'),
+        ...         DataSource(id="1", title="Option 1"),
+        ...         DataSource(id="2", title="Option 2"),
+        ...         DataSource(id="3", title="Option 3"),
         ...     ],
-        ...     label='Options',
+        ...     label="Options",
         ...     required=True,
-        ...     init_value='1'
+        ...     init_value="1",
         ... )
 
     Attributes:
@@ -2756,15 +2856,15 @@ class Dropdown(FormComponent[str]):
     Example:
 
         >>> Dropdown(
-        ...     name='options',
+        ...     name="options",
         ...     data_source=[
-        ...         DataSource(id='1', title='Option 1'),
-        ...         DataSource(id='2', title='Option 2'),
-        ...         DataSource(id='3', title='Option 3'),
+        ...         DataSource(id="1", title="Option 1"),
+        ...         DataSource(id="2", title="Option 2"),
+        ...         DataSource(id="3", title="Option 3"),
         ...     ],
-        ...     label='Options',
+        ...     label="Options",
         ...     required=True,
-        ...     init_value='1'
+        ...     init_value="1",
         ... )
 
     Attributes:
@@ -2804,17 +2904,17 @@ class ChipsSelector(FormComponent[list[str]]):
     Example:
 
         >>> ChipsSelector(
-        ...     name='options',
+        ...     name="options",
         ...     data_source=[
-        ...         DataSource(id='1', title='Option 1'),
-        ...         DataSource(id='2', title='Option 2'),
-        ...         DataSource(id='3', title='Option 3'),
+        ...         DataSource(id="1", title="Option 1"),
+        ...         DataSource(id="2", title="Option 2"),
+        ...         DataSource(id="3", title="Option 3"),
         ...     ],
-        ...     label='Options',
+        ...     label="Options",
         ...     min_selected_items=1,
         ...     max_selected_items=2,
         ...     required=True,
-        ...     init_value=['1', '2']
+        ...     init_value=["1", "2"],
         ... )
 
     Attributes:
@@ -2889,10 +2989,10 @@ class OptIn(FormComponent[bool]):
     Example:
 
         >>> OptIn(
-        ...     name='opt_in',
-        ...     label='I agree to the terms and conditions',
+        ...     name="opt_in",
+        ...     label="I agree to the terms and conditions",
         ...     required=True,
-        ...     init_value=True
+        ...     init_value=True,
         ... )
 
     Attributes:
@@ -2930,11 +3030,10 @@ class EmbeddedLink(Component):
     Example:
 
         >>> EmbeddedLink(
-        ...     text='Sign up',
+        ...     text="Sign up",
         ...     on_click_action=NavigateAction(
-        ...         next=Next(name='SIGNUP_SCREEN'),
-        ...         payload={'data': 'value'}
-        ...     )
+        ...         next=Next(name="SIGNUP_SCREEN"), payload={"data": "value"}
+        ...     ),
         ... )
 
     Attributes:
@@ -2968,17 +3067,19 @@ class NavigationList(Component):
     Example:
 
         >>> NavigationList(
-        ...     name='navigation_list',
+        ...     name="navigation_list",
         ...     list_items=[
         ...         NavigationItem(
-        ...             id='1',
-        ...             main_content=NavigationItemMainContent(title='Title 1', description='Description 1'),
-        ...             start=NavigationItemStart(image='base64image...'),
+        ...             id="1",
+        ...             main_content=NavigationItemMainContent(
+        ...                 title="Title 1", description="Description 1"
+        ...             ),
+        ...             start=NavigationItemStart(image="base64image..."),
         ...             end=NavigationItemEnd(title="$100", description="/ month"),
-        ...             badge='New',
-        ...             on_click_action=NavigateAction(next=Next(name='SCREEN_1'))
+        ...             badge="New",
+        ...             on_click_action=NavigateAction(next=Next(name="SCREEN_1")),
         ...         ),
-        ...         ...
+        ...         ...,
         ...     ],
         ... )
 
@@ -3101,16 +3202,16 @@ class DatePicker(FormComponent[str]):
     Example:
 
         >>> DatePicker(
-        ...     name='date',
-        ...     label='Appointment Date',
+        ...     name="date",
+        ...     label="Appointment Date",
         ...     min_date=datetime.date(2024, 7, 21),
         ...     max_date=datetime.date(2024, 10, 21),
         ...     unavailable_dates=[
         ...         datetime.date(2024, 7, 25),
         ...         datetime.date(2024, 7, 26),
         ...     ],
-        ...     helper_text='Select a date',
-        ...     required=True
+        ...     helper_text="Select a date",
+        ...     required=True,
         ... )
 
 
@@ -3182,8 +3283,7 @@ class CalendarPickerMode(helpers.StrEnum):
         RANGE: Allows to select start and end dates.
     """
 
-    _check_value = str.islower
-    _modify_value = str.lower
+    _normalize = str.lower
 
     SINGLE = "single"
     RANGE = "range"
@@ -3205,8 +3305,7 @@ class CalendarDay(helpers.StrEnum):
         SUN: Sunday
     """
 
-    _check_value = str.istitle
-    _modify_value = str.title
+    _normalize = str.title
 
     MON = "Mon"
     TUE = "Tue"
@@ -3219,7 +3318,9 @@ class CalendarDay(helpers.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
-_StartEndTypeVar = TypeVar("_StartEndTypeVar", bound=datetime.date | str | bool)
+_StartEndTypeVar = TypeVar(
+    "_StartEndTypeVar", bound="datetime.date | str | bool | DataExchangeAction"
+)
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
@@ -3247,8 +3348,8 @@ class CalendarPicker(FormComponent[str]):
     Example:
 
         >>> CalendarPicker(
-        ...     name='date',
-        ...     label='Appointment Date',
+        ...     name="date",
+        ...     label="Appointment Date",
         ...     mode=CalendarPickerMode.SINGLE,
         ...     min_date=datetime.date(2024, 7, 21),
         ...     max_date=datetime.date(2024, 10, 21),
@@ -3256,8 +3357,8 @@ class CalendarPicker(FormComponent[str]):
         ...         datetime.date(2024, 7, 25),
         ...         datetime.date(2024, 7, 26),
         ...     ],
-        ...     helper_text='Select a date',
-        ...     required=True
+        ...     helper_text="Select a date",
+        ...     required=True,
         ... )
 
 
@@ -3371,8 +3472,7 @@ class ScaleType(helpers.StrEnum):
         CONTAIN: Image is contained within the image container with the original aspect ratio.
     """
 
-    _check_value = str.islower
-    _modify_value = str.lower
+    _normalize = str.lower
 
     COVER = "cover"
     CONTAIN = "contain"
@@ -3393,12 +3493,12 @@ class Image(Component):
     Example:
 
         >>> Image(
-        ...     src='iVBORw0KGgoAAAANSUhEUgAAAlgAAAM...',
+        ...     src="iVBORw0KGgoAAAANSUhEUgAAAlgAAAM...",
         ...     width=100,
         ...     height=100,
         ...     scale_type=ScaleType.CONTAIN,
         ...     aspect_ratio=1,
-        ...     alt_text='Image of a cat'
+        ...     alt_text="Image of a cat",
         ... )
 
     Attributes:
@@ -3434,8 +3534,7 @@ class ImageCarouselItem:
     Example:
 
         >>> ImageCarouselItem(
-        ...     src='iVBORw0KGgoAAAANSUhEUgAAAlgAAAM...',
-        ...     alt_text='Image of a cat'
+        ...     src="iVBORw0KGgoAAAANSUhEUgAAAlgAAAM...", alt_text="Image of a cat"
         ... )
 
     Attributes:
@@ -3461,11 +3560,15 @@ class ImageCarousel(Component):
     Example:
         >>> ImageCarousel(
         ...     images=[
-        ...         ImageCarouselItem(src='iVBORw0KGgoAAAANSUhEUgAAAlgAAAM...', alt_text='Image 1'),
-        ...         ImageCarouselItem(src='iVBORw0KGgoAAAANSUhEUgAAAlgAAAN...', alt_text='Image 2'),
+        ...         ImageCarouselItem(
+        ...             src="iVBORw0KGgoAAAANSUhEUgAAAlgAAAM...", alt_text="Image 1"
+        ...         ),
+        ...         ImageCarouselItem(
+        ...             src="iVBORw0KGgoAAAANSUhEUgAAAlgAAAN...", alt_text="Image 2"
+        ...         ),
         ...     ],
-        ...     aspect_ratio='4:3',
-        ...     scale_type=ScaleType.CONTAIN
+        ...     aspect_ratio="4:3",
+        ...     scale_type=ScaleType.CONTAIN,
         ... )
 
     Attributes:
@@ -3494,8 +3597,7 @@ class PhotoSource(helpers.StrEnum):
         GALLERY: User can only take a photo
     """
 
-    _check_value = str.islower
-    _modify_value = str.lower
+    _normalize = str.lower
 
     CAMERA_GALLERY = "camera_gallery"
     CAMERA = "camera"
@@ -3518,9 +3620,9 @@ class PhotoPicker(FormComponent):
     Example:
 
         >>> PhotoPicker(
-        ...     name='photo',
-        ...     label='Take a photo',
-        ...     description='We need your photo for verification',
+        ...     name="photo",
+        ...     label="Take a photo",
+        ...     description="We need your photo for verification",
         ...     photo_source=PhotoSource.CAMERA,
         ...     max_file_size_kb=10_000,  # 10MB
         ...     min_uploaded_photos=1,
@@ -3574,13 +3676,13 @@ class DocumentPicker(FormComponent):
     Example:
 
         >>> DocumentPicker(
-        ...     name='document',
-        ...     label='Upload your Driving License',
-        ...     description='We need your document for verification',
+        ...     name="document",
+        ...     label="Upload your Driving License",
+        ...     description="We need your document for verification",
         ...     max_file_size_kb=5_000,  # 5MB
         ...     min_uploaded_documents=1,
         ...     max_uploaded_documents=1,
-        ...     allowed_mime_types=['application/pdf', 'image/jpeg', 'image/png'],
+        ...     allowed_mime_types=["application/pdf", "image/jpeg", "image/png"],
         ... )
 
     Attributes:
@@ -3677,7 +3779,7 @@ class Switch(Component):
 
     Example:
 
-            >>> age = TextInput(name='age', label='Age')
+            >>> age = TextInput(name="age", label="Age")
             >>> switch = Switch(
             ...     value=age.ref,
             ...     cases={
@@ -3719,8 +3821,7 @@ class FlowActionType(helpers.StrEnum):
          (Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#update-data-action>`_).
     """
 
-    _check_value = str.islower
-    _modify_value = str.lower
+    _normalize = str.lower
 
     COMPLETE = "complete"
     DATA_EXCHANGE = "data_exchange"
@@ -3740,8 +3841,7 @@ class NextType(helpers.StrEnum):
         PLUGIN: Trigger a plugin
     """
 
-    _check_value = str.islower
-    _modify_value = str.lower
+    _normalize = str.lower
 
     SCREEN = "screen"
     PLUGIN = "plugin"
@@ -3796,9 +3896,7 @@ class DataExchangeAction(BaseAction):
 
     Example:
 
-        >>> DataExchangeAction(
-        ...     payload={'data': 'value'}
-        ... )
+        >>> DataExchangeAction(payload={"data": "value"})
 
     Attributes:
         payload: The payload of the action (Pass data to the WhatsApp Flows Data Endpoint).
@@ -3822,10 +3920,7 @@ class NavigateAction(BaseAction):
 
     Example:
 
-        >>> NavigateAction(
-        ...     next=Next(name='NEXT_SCREEN'),
-        ...     payload={'data': 'value'}
-        ... )
+        >>> NavigateAction(next=Next(name="NEXT_SCREEN"), payload={"data": "value"})
 
     Attributes:
         next: The next action to perform
@@ -3851,9 +3946,7 @@ class OpenURLAction(BaseAction):
 
     Example:
 
-        >>> OpenURLAction(
-        ...     url='https://pywa.readthedocs.io'
-        ... )
+        >>> OpenURLAction(url="https://pywa.readthedocs.io")
 
     Attributes:
         url: The URL to open
@@ -3875,12 +3968,8 @@ class UpdateDataAction(BaseAction, Generic[_ScreenDataValTypeVar]):
 
     Example:
 
-        >>> is_visible = ScreenData(key='is_visible', example=True)
-        >>> UpdateDataAction(
-        ...     payload=[
-        ...         is_visible.update(value=False)
-        ...     ]
-        ... )
+        >>> is_visible = ScreenData(key="is_visible", example=True)
+        >>> UpdateDataAction(payload=[is_visible.update(value=False)])
 
     Attributes:
         payload: The data to update for the current screen.
@@ -3907,9 +3996,7 @@ class CompleteAction(BaseAction):
 
     Example:
 
-        >>> CompleteAction(
-        ...     payload={'data': 'value'}
-        ... )
+        >>> CompleteAction(payload={"data": "value"})
 
     Attributes:
         payload: The payload to include in the :class:`FlowCompletion` `.response` attribute.

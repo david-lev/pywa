@@ -1,4 +1,8 @@
 import inspect
+import json
+import logging
+import pathlib
+import re
 
 import pytest
 
@@ -475,6 +479,8 @@ def test_same_signature(overrides):
             (FlowRequestSync.decrypt_media, ("dl_session",)),
             (WhatsAppSync.webhook_update_handler, ("self",)),
             (WhatsAppSync.webhook_challenge_handler, ("self",)),
+            (WhatsAppSync._send_media_with_buttons, ("media",)),
+            (WhatsAppSync._send_media, ("media",)),
             (WhatsAppSync.send_image, ("image",)),
             (MessageSync.reply_image, ("image",)),
             (WhatsAppSync.send_video, ("video",)),
@@ -491,6 +497,7 @@ def test_same_signature(overrides):
             (WhatsAppSync.update_business_profile, ("profile_picture",)),
             (WhatsAppSync.update_group_settings, ("profile_picture",)),
             (GraphAPISync.upload_file, ("file",)),
+            (GraphAPISync.update_group_info, ("profile_picture_file",)),
             (GroupDetailsSync.update, ("profile_picture",)),
         )
     }
@@ -546,18 +553,24 @@ def test_same_docstring(overrides):
     skip_methods = [
         "wait_for_completion",
         "upload_media",
+        "stream_media",
+        "stream",
+        "decrypt_media",
         "_api_cls",
         "_usr_cls",
         "_httpx_client",
         "_flow_req_cls",
     ]
+    # class docstrings that intentionally call out the async variant (e.g. "(async)")
+    skip_class_docs = {MediaSync, GraphAPISync}
     for sync_obj, async_obj in overrides:
-        _check_docs(
-            sync_doc=sync_obj.__doc__,
-            async_doc=async_obj.__doc__,
-            async_obj=async_obj,
-            method_name=None,
-        )
+        if sync_obj not in skip_class_docs:
+            _check_docs(
+                sync_doc=sync_obj.__doc__,
+                async_doc=async_obj.__doc__,
+                async_obj=async_obj,
+                method_name=None,
+            )
         for method_name in get_obj_methods_names(sync_obj):
             if method_name in skip_methods:
                 continue
@@ -573,6 +586,30 @@ def test_same_docstring(overrides):
             )
 
 
+_DOCTEST_PROMPT_RE = re.compile(r"(?m)^[ \t]*(?:>>>|\.\.\.)[ \t]?")
+
+
+_WRAP_PUNCTUATION_RE = re.compile(r"[(),]")
+
+
+def _normalize_doc(doc: str) -> str:
+    # ruff's `docstring-code-format` reflows doctest code blocks, so e.g. an `await
+    # wa.foo(...)` example (or a `from pywa_async... import (...)` that's longer
+    # than the `pywa` one) can wrap onto extra lines - with `...` continuation
+    # prompts, parens, and trailing commas - where the sync version fits on one.
+    # Strip the doctest prompts, async-only keywords/import path, and the
+    # parens/commas that wrapping adds or removes, then drop all whitespace, so
+    # such reflows compare equal.
+    doc = _DOCTEST_PROMPT_RE.sub("", doc)
+    doc = (
+        doc.replace("async def ", "def ")
+        .replace("await ", "")
+        .replace("pywa_async", "pywa")
+    )
+    doc = _WRAP_PUNCTUATION_RE.sub("", doc)
+    return "".join(doc.split())
+
+
 def _check_docs(
     *, sync_doc: str, async_doc: str, async_obj: type, method_name: str | None
 ):
@@ -582,24 +619,43 @@ def _check_docs(
                 f"Method {method_name} missing docstrings in {async_obj}"
             )
         raise AssertionError(f"Missing docstrings in {async_obj}")
-    try:
-        assert sync_doc == async_doc, (
-            f"Method {method_name} has different docstrings in {async_obj}"
-            if method_name
-            else f"Docstrings are different in {async_obj}"
-        )
-    except AssertionError:
-        try:
-            for doc, adoc in zip(
-                sync_doc.splitlines(), async_doc.splitlines(), strict=True
-            ):
-                if doc != adoc:
-                    if (
-                        "async" in adoc.lower() or "await" in adoc.lower()
-                    ):  # async examples
-                        continue
-                    raise
-        except ValueError:  # different number of lines
-            raise AssertionError(
-                f"Method {method_name} has different docstrings in {async_obj}"
-            ) from None
+    if sync_doc == async_doc:
+        return
+    assert _normalize_doc(sync_doc) == _normalize_doc(async_doc), (
+        f"Method {method_name} has different docstrings in {async_obj}"
+        if method_name
+        else f"Docstrings are different in {async_obj}"
+    )
+
+
+def test_import_pywa_async_succeeds():
+    import pywa_async
+
+    assert pywa_async.WhatsApp is WhatsAppAsync
+
+
+_ASYNC_MESSAGE_UPDATE = json.loads(
+    pathlib.Path("tests/data/updates/message.json").read_text()
+)["text"]
+_ASYNC_PHONE_NUMBER = "972987654321"
+_ASYNC_MESSAGE_TEXT = "Body Text"
+
+
+@pytest.mark.asyncio
+async def test_pii_absent_at_info_async(caplog):
+    wa = WhatsAppAsync(phone_id="1122334455667", token="xyz", filter_updates=False)
+    caplog.set_level(logging.INFO, logger="pywa")
+    await wa.webhook_update_handler(json.dumps(_ASYNC_MESSAGE_UPDATE).encode())
+    combined = "\n".join(r.getMessage() for r in caplog.records)
+    assert _ASYNC_PHONE_NUMBER not in combined
+    assert _ASYNC_MESSAGE_TEXT not in combined
+
+
+@pytest.mark.asyncio
+async def test_pii_present_at_debug_async(caplog):
+    wa = WhatsAppAsync(phone_id="1122334455667", token="xyz", filter_updates=False)
+    caplog.set_level(logging.DEBUG, logger="pywa")
+    await wa.webhook_update_handler(json.dumps(_ASYNC_MESSAGE_UPDATE).encode())
+    combined = "\n".join(r.getMessage() for r in caplog.records)
+    assert _ASYNC_PHONE_NUMBER in combined
+    assert _ASYNC_MESSAGE_TEXT in combined

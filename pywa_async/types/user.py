@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from pywa.types.user import *  # noqa MUST BE IMPORTED FIRST
+from pywa.types.user import *
 from pywa.types.user import User as _User
 
 if TYPE_CHECKING:
@@ -29,7 +29,9 @@ class BaseUserAsync:
         res = await self._client.block_users((self.preferred_id,))
         added = self.preferred_id in {u.preferred_id for u in res.added_users}
         if not added:
-            raise res.errors
+            if res.errors is not None:
+                raise res.errors
+            raise ValueError("Failed to block user")
         return added
 
     async def unblock(self) -> bool:

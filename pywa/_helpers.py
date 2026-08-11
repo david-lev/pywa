@@ -3,7 +3,7 @@ import dataclasses
 import datetime
 import enum
 import functools
-import importlib
+import importlib.util
 import inspect
 import io
 import itertools
@@ -14,20 +14,27 @@ import os
 import pathlib
 import re
 import threading
+import types
 import warnings
+from collections.abc import (
+    AsyncIterable,
+    AsyncIterator,
+    Callable,
+    Iterable,
+    Iterator,
+    Sequence,
+)
 from concurrent import futures
 from typing import (
     TYPE_CHECKING,
     Any,
-    AsyncIterable,
-    AsyncIterator,
     BinaryIO,
-    Callable,
     ClassVar,
-    Iterable,
-    Iterator,
     Literal,
     NamedTuple,
+    Protocol,
+    TypedDict,
+    cast,
 )
 
 import httpx
@@ -38,54 +45,61 @@ if TYPE_CHECKING:
     from pywa import WhatsApp
 
 
-_logger = logging.getLogger(__name__)
+logger = logging.getLogger("pywa.helpers")
 
 DOWNLOAD_CHUNK_SIZE = 64 * 1024
+USE_FAKE_GEN_STREAM = True
+
+
+class DataclassInstance(Protocol):
+    __dataclass_fields__: ClassVar[dict[str, dataclasses.Field[Any]]]
 
 
 class StrEnum(str, enum.Enum):
-    """A string-based enum that allows for custom handling of missing values."""
+    """A string-based enum with forward compatibility for unknown API values."""
 
-    _check_value: ClassVar[Callable[[str], bool] | None] = str.isupper
-    """Check if the value needs to be modified or not."""
-    _modify_value: ClassVar[Callable[[str], str] | None] = str.upper
-    """Modify the value if needed."""
+    _normalize: ClassVar[Callable[[str], str] | None] = str.upper
+    """
+    Normalizes incoming values before attempting a lookup.
 
-    def __str__(self):
-        """Return the string representation of the enum member."""
+    Set to ``None`` to disable normalization.
+    """
+
+    def __str__(self) -> str:
         return self.value
 
-    def __repr__(self):
-        return f"{self.__class__.__name__}.{self.name}"
-
-    def __init_subclass__(cls, *args, **kwargs):
-        """Ensure that the enum has an 'UNKNOWN' member to handle missing values."""
-        if list(cls) and not hasattr(
-            cls, "UNKNOWN"
-        ):  # in python3.10 __init_subclass__ does not have access to enum members
-            raise TypeError(
-                f"Enum {cls.__name__} must have an 'UNKNOWN' member to handle missing values."
-            )
-        return super().__init_subclass__(*args, **kwargs)
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}.{self.name}"
 
     @classmethod
-    def _missing_(cls, value: str):
-        """Handle missing values in the enum."""
-        if callable(cls._check_value) and not cls._check_value(value):
-            return cls(cls._modify_value(value))
+    def _missing_(cls, value: object):
+        if not isinstance(value, str):
+            return super()._missing_(value)
+        if cls._normalize is not None:
+            member = cls._value2member_map_.get(cls._normalize(value))
+            if member is not None:
+                return member
 
         warnings.warn(
             message=(
-                f"Unknown value '{value}' for enum '{cls.__name__}'. Defaulting to '{cls.__name__}.UNKNOWN'.\n"
-                "This usually means the WhatsApp API introduced a new value that your current version of pywa doesn't recognize.\n"
+                f"Unknown {cls.__name__} value: '{value}'"
+                f"Defaulting to {cls.__name__}.UNKNOWN.\n"
+                "This usually means the WhatsApp API introduced a new value "
+                "that your current version of pywa doesn't recognize.\n"
                 "Please upgrade to the latest version (`pip install -U pywa`).\n"
-                "If you are already on the latest version, please report this on https://github.com/david-lev/pywa/issues."
+                "If you are already on the latest version, please report this at:\n"
+                "https://github.com/david-lev/pywa/issues"
             ),
             category=PywaUnknownEnumMemberWarning,
             stacklevel=4,
         )
-        # noinspection PyUnresolvedReferences
-        return cls.UNKNOWN
+
+        try:
+            return cls.UNKNOWN  # ty: ignore[unresolved-attribute]
+        except AttributeError:
+            raise TypeError(
+                f"{cls.__name__} must define an UNKNOWN enum member."
+            ) from None
 
 
 class FromDict:
@@ -94,7 +108,9 @@ class FromDict:
     # noinspection PyArgumentList
     @classmethod
     def from_dict(cls, data: dict):
-        fields = {f.name for f in dataclasses.fields(cls)}
+        fields = {
+            f.name for f in dataclasses.fields(cast("type[DataclassInstance]", cls))
+        }
         return cls(**{k: v for k, v in data.items() if k in fields})
 
 
@@ -109,7 +125,7 @@ class APIObject:
     def _api_fields(cls, *args, **kwargs) -> tuple[str, ...]:
         return tuple(
             cls._override_api_fields.get(f.name, f.name)
-            for f in dataclasses.fields(cls)
+            for f in dataclasses.fields(cast("type[DataclassInstance]", cls))
             if not f.name.startswith("_")
         )
 
@@ -121,17 +137,17 @@ def is_async_callable(obj: Any) -> bool:
     )
 
 
-from . import utils  # noqa: E402
-from .types.callback import (  # noqa: E402
+from . import utils
+from .types.callback import (
     BaseButton,
     Button,
     CallbackData,
 )
-from .types.flows import FlowJSON, FlowMetricGranularity, FlowMetricName  # noqa: E402
-from .types.media import Media  # noqa: E402
-from .types.others import InteractiveType  # noqa: E402
-from .types.sent_update import RecipientType  # noqa: E402
-from .types.templates import (  # noqa: E402
+from .types.flows import FlowJSON, FlowMetricGranularity, FlowMetricName
+from .types.media import Media
+from .types.others import InteractiveType
+from .types.sent_update import RecipientType
+from .types.templates import (
     BaseParams,
     Carousel,
     HeaderFormatType,
@@ -161,7 +177,7 @@ def resolve_buttons_param(
             ) from None
         for b in buttons:
             if not isinstance(b, Button):
-                raise ValueError(
+                raise TypeError(
                     f"All items in `buttons` iterable must be Button objects. got {type(b)}"
                 ) from None
         return InteractiveType.BUTTON, {"buttons": tuple(b.to_dict() for b in buttons)}
@@ -233,76 +249,93 @@ WA_MEDIA_PATTERN = re.compile(
 
 
 def detect_media_source(
-    media: str | int | Media | pathlib.Path | bytes | BinaryIO | Iterator[bytes],
+    media: str
+    | int
+    | Media
+    | pathlib.Path
+    | bytes
+    | BinaryIO
+    | Iterator[bytes]
+    | AsyncIterator[bytes],
 ) -> MediaSource:
+    source: MediaSource
     if isinstance(media, (str, pathlib.Path, int)):
-        media = str(media)
-        if media.startswith(("https://", "http://")):
-            if re.match(
-                WA_MEDIA_PATTERN,
-                media,
-            ):
-                _logger.debug("Detected media source as WhatsApp media URL")
-                return MediaSource.MEDIA_URL
-            _logger.debug("Detected media source as external URL")
-            return MediaSource.EXTERNAL_URL
-        elif media.isdigit():
-            _logger.debug("Detected media source as WhatsApp media ID")
-            return MediaSource.MEDIA_ID
-        elif pathlib.Path(media).is_file():
-            _logger.debug("Detected media source as file path")
-            return MediaSource.PATH
-        elif re.match(FILE_HANDLE_PATTERN, media):
-            _logger.debug("Detected media source as file handle")
-            return MediaSource.FILE_HANDLE
-        elif re.match(BASE64_DATA_URI_PATTERN, media):
-            _logger.debug("Detected media source as base64 data URI")
-            return MediaSource.BASE64_DATA_URI
-        elif len(media) % 4 == 0 and re.match(BASE64_PATTERN, media):
-            _logger.debug("Detected media source as base64 string")
-            return MediaSource.BASE64
+        media_str = str(media)
+        if media_str.startswith(("https://", "http://")):
+            if re.match(WA_MEDIA_PATTERN, media_str):
+                source = MediaSource.MEDIA_URL
+            else:
+                source = MediaSource.EXTERNAL_URL
+        elif media_str.isdigit():
+            source = MediaSource.MEDIA_ID
+        elif pathlib.Path(media_str).is_file():
+            source = MediaSource.PATH
+        elif re.match(FILE_HANDLE_PATTERN, media_str):
+            source = MediaSource.FILE_HANDLE
+        elif re.match(BASE64_DATA_URI_PATTERN, media_str):
+            source = MediaSource.BASE64_DATA_URI
+        elif len(media_str) % 4 == 0 and re.match(BASE64_PATTERN, media_str):
+            source = MediaSource.BASE64
         else:
             raise ValueError(
-                f"String media must be a valid URL, existing file path, WhatsApp media ID, file handle, or base64 string. not: {media[:30]}{'...' if len(media) > 30 else ''}"
+                f"String media must be a valid URL, existing file path, WhatsApp media ID, file handle, or base64 string. not: {media_str[:30]}{'...' if len(media_str) > 30 else ''}"
             )
     elif isinstance(media, Media):
-        _logger.debug("Detected media source as WhatsApp Media object")
-        return MediaSource.MEDIA_OBJ
+        source = MediaSource.MEDIA_OBJ
     elif isinstance(media, bytes):
-        _logger.debug("Detected media source as bytes")
-        return MediaSource.BYTES
+        source = MediaSource.BYTES
     elif isinstance(media, io.IOBase):
-        _logger.debug("Detected media source as file like object")
-        return MediaSource.FILE_OBJ
+        source = MediaSource.FILE_OBJ
     elif isinstance(media, Iterable):
-        _logger.debug("Detected media source as bytes generator")
-        return MediaSource.BYTES_GEN
+        source = MediaSource.BYTES_GEN
     elif isinstance(media, AsyncIterable):
-        _logger.debug("Detected media source as async bytes generator")
-        return MediaSource.ASYNC_BYTES_GEN
+        source = MediaSource.ASYNC_BYTES_GEN
     else:
         raise TypeError(f"Invalid media type: {type(media)}")
+
+    logger.debug(
+        "Detected media source for %s: %s",
+        media
+        if source
+        not in {
+            MediaSource.BYTES,
+            MediaSource.FILE_OBJ,
+            MediaSource.BYTES_GEN,
+            MediaSource.ASYNC_BYTES_GEN,
+        }
+        else type(media),
+        source.name,
+    )
+    return source
 
 
 def resolve_media_param(
     *,
     wa: "WhatsApp",
-    media: str | int | Media | pathlib.Path | bytes | BinaryIO | Iterator[bytes],
+    media: str
+    | int
+    | Media
+    | pathlib.Path
+    | bytes
+    | BinaryIO
+    | Iterator[bytes]
+    | AsyncIterator[bytes],
     mime_type: str | None,
     filename: str | None,
     media_type: Literal["image", "video", "audio", "sticker", "document", "gif"] | None,
     phone_id: str,
-) -> tuple[bool, bool, str | Media, str]:
+) -> tuple[bool, bool, str | Media, str | None]:
     """
     Internal method to resolve the ``media`` parameter. Returns a tuple of (``is_url``, ``uploaded``, ``media/id/url``, ``filename``).
     """
     source = detect_media_source(media)
     match source:
         case MediaSource.EXTERNAL_URL:
-            return True, False, str(media), filename or pathlib.Path(media).name
+            return True, False, str(media), filename or pathlib.Path(str(media)).name
         case MediaSource.MEDIA_ID:
             return False, False, str(media), filename
         case MediaSource.MEDIA_OBJ:
+            assert isinstance(media, Media)
             return False, False, media, filename or media.filename
     uploaded_media = internal_upload_media(
         media=media,
@@ -371,7 +404,9 @@ class GeneratorStreamer(Iterable):
 
 
 class MediaInfo(NamedTuple):
-    content: bytes | BinaryIO | GeneratorStreamer | AsyncIterator[bytes]
+    content: (
+        bytes | BinaryIO | GeneratorStreamer | Iterator[bytes] | AsyncIterator[bytes]
+    )
     filename: str | None
     mime_type: str | None
     length: int | None
@@ -391,7 +426,13 @@ def get_media_from_url(
         length: int | None = int(res.headers.get("Content-Length", 0)) or None
         gen = res.iter_bytes(chunk_size=download_chunk_size)
         return MediaInfo(
-            content=gen if stream else GeneratorStreamer(generator=gen, length=length),
+            content=gen
+            if stream
+            else (
+                GeneratorStreamer(generator=gen, length=length)
+                if USE_FAKE_GEN_STREAM
+                else b"".join(gen)
+            ),
             filename=get_filename_from_httpx_response_headers(res.headers)
             or pathlib.Path(url).name,
             mime_type=res.headers.get("Content-Type") or mimetypes.guess_type(url)[0],
@@ -484,16 +525,19 @@ def get_media_from_media_id_or_obj_or_url(
             url_res = wa.get_media_url(media_id=str(media))
             url, mime_type = url_res.url, url_res.mime_type
         case MediaSource.MEDIA_OBJ:
+            assert isinstance(media, Media)
             url, mime_type = (
                 media.get_media_url(),
                 getattr(media, "mime_type", None),
             )
         case MediaSource.MEDIA_URL:
+            assert isinstance(media, str)
             url, mime_type = media, None
         case _:
             raise ValueError(
                 "media must be MediaSource.MEDIA_ID, MEDIA_OBJ or MEDIA_URL"
             )
+    assert url is not None
 
     res = (cm := wa.api.stream_media_bytes(media_url=url)).__enter__()
     try:
@@ -504,7 +548,13 @@ def get_media_from_media_id_or_obj_or_url(
     length: int | None = int(res.headers.get("Content-Length", 0)) or None
     gen = res.iter_bytes(chunk_size=download_chunk_size)
     return MediaInfo(
-        content=gen if stream else GeneratorStreamer(generator=gen, length=length),
+        content=gen
+        if stream
+        else (
+            GeneratorStreamer(generator=gen, length=length)
+            if USE_FAKE_GEN_STREAM
+            else b"".join(gen)
+        ),
         filename=filename or get_filename_from_httpx_response_headers(res.headers),
         mime_type=mime_type or res.headers.get("Content-Type"),
         length=length,
@@ -514,7 +564,14 @@ def get_media_from_media_id_or_obj_or_url(
 
 def internal_upload_media(
     *,
-    media: str | int | Media | pathlib.Path | bytes | BinaryIO | Iterator[bytes],
+    media: str
+    | int
+    | Media
+    | pathlib.Path
+    | bytes
+    | BinaryIO
+    | Iterator[bytes]
+    | AsyncIterator[bytes],
     media_source: MediaSource,
     media_type: str | None,
     mime_type: str | None,
@@ -537,20 +594,23 @@ def internal_upload_media(
                 (dl_session, False) if dl_session else (httpx.Client(), True)
             )
             media_info = get_media_from_url(
-                url=media,
+                url=str(media),
                 dl_session=client,
                 download_chunk_size=download_chunk_size or DOWNLOAD_CHUNK_SIZE,
                 stream=False,
             )
         case MediaSource.PATH:
+            assert isinstance(media, (str, pathlib.Path))
             media_info = get_media_from_path(path=media)
         case MediaSource.BYTES:
+            assert isinstance(media, bytes)
             media_info = MediaInfo(
                 content=media, filename=None, mime_type=None, length=len(media)
             )
         case MediaSource.FILE_OBJ:
-            media_info = get_media_from_file_like_obj(file_obj=media)
+            media_info = get_media_from_file_like_obj(file_obj=cast(BinaryIO, media))
         case MediaSource.MEDIA_ID | MediaSource.MEDIA_OBJ | MediaSource.MEDIA_URL:
+            assert isinstance(media, (str, Media))
             media_info = get_media_from_media_id_or_obj_or_url(
                 wa=wa,
                 media=media,
@@ -559,13 +619,19 @@ def internal_upload_media(
                 stream=False,
             )
         case MediaSource.BYTES_GEN:
+            media = cast(Iterator[bytes], media)
             media_info = MediaInfo(
-                content=GeneratorStreamer(media),
+                content=(
+                    GeneratorStreamer(generator=media)
+                    if USE_FAKE_GEN_STREAM
+                    else b"".join(media)
+                ),
                 filename=None,
                 mime_type=None,
                 length=None,
             )
-        case MediaSource.BASE64_DATA_URI, MediaSource.BASE64:
+        case MediaSource.BASE64_DATA_URI | MediaSource.BASE64:
+            assert isinstance(media, str)
             media_info = get_media_from_base64(base64_str=media)
         case _:
             raise ValueError(
@@ -578,15 +644,27 @@ def internal_upload_media(
         or media_info.filename
         or media_types_default_filenames.get(media_type, "file.txt")
     )
+    final_mimetype = (
+        mime_type
+        or media_info.mime_type
+        or media_types_default_mime_types.get(media_type, "text/plain")
+    )
     try:
+        logger.debug(
+            "Uploading media to WhatsApp servers: filename=%s, mime_type=%s, length=%s",
+            final_filename,
+            final_mimetype,
+            media_info.length,
+        )
         return Media(
             _client=wa,
             _id=wa.api.upload_media(
                 phone_id=phone_id,
-                media=media_info.content,
-                mime_type=mime_type
-                or media_info.mime_type
-                or media_types_default_mime_types.get(media_type, "text/plain"),
+                media=cast(
+                    "bytes | str | BinaryIO | Iterator[bytes] | GeneratorStreamer",
+                    media_info.content,
+                ),
+                mime_type=final_mimetype,
                 filename=final_filename,
                 ttl_minutes=ttl_minutes,
             )["id"],
@@ -597,16 +675,16 @@ def internal_upload_media(
 
     finally:
         try:
-            if close_client:
+            if close_client and client is not None:
                 client.close()
             if media_source == MediaSource.PATH:
-                media_info.content.close()
-        except Exception:
-            pass
+                media_info.content.close()  # ty: ignore[unresolved-attribute]
+        except Exception:  # best-effort cleanup, never mask the real error
+            logger.debug("Failed to close media resource during cleanup", exc_info=True)
 
 
 def filter_not_uploaded_comps(
-    components: list[TemplateBaseComponent | dict],
+    components: Sequence[TemplateBaseComponent | dict],
 ) -> list[_BaseMediaHeaderComponent]:
     not_uploaded = []
     for comp in components:
@@ -624,7 +702,7 @@ def upload_template_media_components(
     *,
     wa: "WhatsApp",
     app_id: int | str | None,
-    components: list[TemplateBaseComponent | dict],
+    components: Sequence[TemplateBaseComponent | dict],
 ) -> None:
     """
     Internal method to upload media components examples in a template.
@@ -659,8 +737,15 @@ def upload_template_media_components(
 def internal_upload_file(
     *,
     wa: "WhatsApp",
-    file: str | int | Media | pathlib.Path | bytes | BinaryIO | Iterator[bytes],
-    app_id: int | str,
+    file: str
+    | int
+    | Media
+    | pathlib.Path
+    | bytes
+    | BinaryIO
+    | Iterator[bytes]
+    | AsyncIterator[bytes],
+    app_id: int | str | None,
     mime_type: str | None,
     fallback_mime_type: str,
     fallback_filename: str | None,
@@ -674,14 +759,16 @@ def internal_upload_file(
         case MediaSource.EXTERNAL_URL:
             client = httpx.Client()
             media_info = get_media_from_url(
-                url=file,
+                url=str(file),
                 dl_session=client,
                 download_chunk_size=DOWNLOAD_CHUNK_SIZE,
                 stream=True,
             )
         case MediaSource.PATH:
+            assert isinstance(file, (str, pathlib.Path))
             media_info = get_media_from_path(path=file)
         case MediaSource.MEDIA_ID | MediaSource.MEDIA_OBJ | MediaSource.MEDIA_URL:
+            assert isinstance(file, (str, Media))
             media_info = get_media_from_media_id_or_obj_or_url(
                 wa=wa,
                 media=file,
@@ -690,13 +777,14 @@ def internal_upload_file(
                 stream=True,
             )
         case MediaSource.BYTES:
+            assert isinstance(file, bytes)
             media_info = MediaInfo(
                 content=file, filename=None, mime_type=None, length=len(file)
             )
         case MediaSource.FILE_OBJ:
-            media_info = get_media_from_file_like_obj(file)
+            media_info = get_media_from_file_like_obj(cast(BinaryIO, file))
         case MediaSource.BYTES_GEN:
-            all_bytes = b"".join(file)
+            all_bytes = b"".join(cast("Iterator[bytes]", file))
             media_info = MediaInfo(
                 content=all_bytes,
                 filename=None,
@@ -704,9 +792,10 @@ def internal_upload_file(
                 length=len(all_bytes),
             )
         case MediaSource.BASE64_DATA_URI | MediaSource.BASE64:
+            assert isinstance(file, str)
             media_info = get_media_from_base64(base64_str=file)
         case MediaSource.FILE_HANDLE:
-            return file, source
+            return str(file), source
 
     try:
         if not media_info:
@@ -716,6 +805,16 @@ def internal_upload_file(
             )
         if media_info.length is None:
             raise ValueError("Media must have a known length.")
+        final_filename = media_info.filename or fallback_filename
+        if final_filename is None:
+            raise ValueError("Could not determine a filename for the file upload.")
+        final_mimetype = mime_type or media_info.mime_type or fallback_mime_type
+        logger.debug(
+            "Uploading file to Resumable Upload API: filename=%s, mime_type=%s, length=%s",
+            final_filename,
+            final_mimetype,
+            media_info.length,
+        )
         return wa.api.upload_file(
             upload_session_id=wa.api.create_upload_session(
                 app_id=resolve_arg(
@@ -724,11 +823,14 @@ def internal_upload_file(
                     method_arg="app_id",
                     client_arg="app_id",
                 ),
-                file_name=media_info.filename or fallback_filename,
+                file_name=final_filename,
                 file_length=media_info.length,
-                file_type=mime_type or media_info.mime_type or fallback_mime_type,
+                file_type=final_mimetype,
             )["id"],
-            file=media_info.content,
+            file=cast(
+                "bytes | Iterator[bytes] | BinaryIO | GeneratorStreamer",
+                media_info.content,
+            ),
             file_offset=0,
             content_length=media_info.length,
         )["h"], source
@@ -743,15 +845,22 @@ def internal_upload_file(
             if client:
                 client.close()
             if source == MediaSource.PATH:
-                media_info.content.close()
-        except Exception:
-            pass
+                media_info.content.close()  # ty: ignore[unresolved-attribute]
+        except Exception:  # best-effort cleanup, never mask the real error
+            logger.debug("Failed to close media resource during cleanup", exc_info=True)
 
 
 def upload_comps_example(
     *,
     wa: "WhatsApp",
-    example: str | int | Media | pathlib.Path | bytes | BinaryIO | Iterator[bytes],
+    example: str
+    | int
+    | Media
+    | pathlib.Path
+    | bytes
+    | BinaryIO
+    | Iterator[bytes]
+    | AsyncIterator[bytes],
     comps: list[_BaseMediaHeaderComponent],
     app_id: int | str | None,
     stop_event: threading.Event,
@@ -778,14 +887,13 @@ def upload_comps_example(
         for comp in comps:
             comp._handle = handle
             if is_media_obj:
-                comp._example = (
-                    comp._example.id
-                )  # prevent keeping Media obj in _example
+                comp._example = cast(Media, comp._example).id
+                # prevent keeping Media obj in _example
             if is_open_file:
                 try:
-                    comp._example = (
-                        comp._example.name
-                    )  # prevent keeping file obj in _example
+                    comp._example = cast(
+                        BinaryIO, comp._example
+                    ).name  # prevent keeping file obj in _example
                 except AttributeError:
                     pass
 
@@ -797,7 +905,7 @@ def upload_comps_example(
 
 
 def filter_not_uploaded_params(
-    params: list[BaseParams | dict],
+    params: Sequence[BaseParams | dict],
 ) -> list[_BaseMediaParams]:
     not_uploaded = []
     for param in params:
@@ -815,7 +923,7 @@ def upload_template_media_params(
     *,
     wa: "WhatsApp",
     sender: str,
-    params: list[BaseParams | dict],
+    params: Sequence[BaseParams | dict],
 ) -> None:
     """
     Internal method to upload media parameters when sending a template message.
@@ -845,7 +953,14 @@ def upload_params_media(
     *,
     wa: "WhatsApp",
     sender: str,
-    media: str | int | Media | pathlib.Path | bytes | BinaryIO | Iterator[bytes],
+    media: str
+    | int
+    | Media
+    | pathlib.Path
+    | bytes
+    | BinaryIO
+    | Iterator[bytes]
+    | AsyncIterator[bytes],
     params: list[_BaseMediaParams],
 ) -> None:
     first_param = params[0]
@@ -860,7 +975,11 @@ def upload_params_media(
         )
         for p in params:
             p._is_url = is_url
-            p._resolved_media = uploaded_media.id if uploaded else uploaded_media
+            p._resolved_media = (
+                cast(Media, uploaded_media).id
+                if uploaded
+                else cast(str, uploaded_media)
+            )
             p._fallback_filename = fallback_filename
     except Exception as e:
         raise ValueError(
@@ -877,11 +996,22 @@ BSUID_RE = re.compile(r"^[A-Z]{2}\.\d+$")
 WA_ID_RE = re.compile(r"^\d+$")
 
 
-def resolve_recipient(to: str | int) -> tuple[dict[str, str | None], RecipientType]:
+class _RecipientDict(TypedDict):
+    to: str | None
+    recipient: str | None
+    recipient_type: str
+
+
+class _CalleeDict(TypedDict):
+    to: str | None
+    recipient: str | None
+
+
+def resolve_recipient(to: str | int) -> tuple[_RecipientDict, RecipientType]:
     if not to:
         raise ValueError(f"Recipient cannot be empty. got: {to!r}")
     recipient_type = RecipientType.from_recipient(to)
-    _logger.debug(f"Resolved recipient {to} to type {recipient_type}")
+    logger.debug(f"Resolved recipient {to} to type {recipient_type}")
     to = str(to)
     match recipient_type:
         case RecipientType.WA_ID | RecipientType.PHONE_NUMBER:
@@ -910,10 +1040,9 @@ def clean_phone_number(phone_number: str | int) -> str:
     return re.sub(r"\D", "", str(phone_number))
 
 
-def resolve_callee(to: str | int) -> tuple[dict[str, str], RecipientType]:
+def resolve_callee(to: str | int) -> tuple[_CalleeDict, RecipientType]:
     recipient, recipient_type = resolve_recipient(to)
-    recipient.pop("recipient_type", None)
-    return recipient, recipient_type
+    return {"to": recipient["to"], "recipient": recipient["recipient"]}, recipient_type
 
 
 def resolve_call_permission_request_user(user_id: int | str) -> dict[str, str]:
@@ -926,18 +1055,24 @@ def resolve_call_permission_request_user(user_id: int | str) -> dict[str, str]:
     raise ValueError(f"Invalid recipient type: {recipient_type}")
 
 
-def resolve_users(users: Iterable[str | int]) -> dict[str, list[str]]:
-    resolved = {"users": [], "user_ids": []}
+class _UsersDict(TypedDict):
+    users: tuple[str, ...]
+    user_ids: tuple[str, ...]
+
+
+def resolve_users(users: Iterable[str | int]) -> _UsersDict:
+    resolved_users: list[str] = []
+    resolved_user_ids: list[str] = []
     for user_id in users:
         _, recipient_type = resolve_recipient(user_id)
         match recipient_type:
             case RecipientType.WA_ID | RecipientType.PHONE_NUMBER:
-                resolved["users"].append(str(user_id))
+                resolved_users.append(str(user_id))
             case RecipientType.BSUID | RecipientType.PARENT_BSUID:
-                resolved["user_ids"].append(str(user_id))
+                resolved_user_ids.append(str(user_id))
             case _:
                 raise ValueError(f"Invalid recipient type: {recipient_type}")
-    return resolved
+    return {"users": tuple(resolved_users), "user_ids": tuple(resolved_user_ids)}
 
 
 def resolve_arg(
@@ -960,7 +1095,8 @@ def resolve_flow_json_param(
     flow_json: FlowJSON | dict | str | pathlib.Path | bytes | BinaryIO,
 ) -> str:
     """Internal method to solve the `flow_json` parameter"""
-    json_str, to_dump = None, None
+    json_str: str | None = None
+    to_dump = None
     if isinstance(flow_json, (str, pathlib.Path)):  # json str or path to json file
         as_path = pathlib.Path(flow_json)
         try:
@@ -968,15 +1104,17 @@ def resolve_flow_json_param(
                 with open(as_path, "r", encoding="utf-8") as f:
                     json_str = f.read()
             else:
-                json_str = flow_json
+                json_str = str(flow_json)
         except OSError:
-            json_str = flow_json
+            json_str = str(flow_json)
     elif isinstance(flow_json, bytes):
         json_str = flow_json.decode()
     elif isinstance(flow_json, FlowJSON):
         json_str = flow_json.to_json()
     elif isinstance(flow_json, dict):
         to_dump = flow_json
+    elif isinstance(flow_json, io.IOBase):
+        json_str = flow_json.read().decode()
     else:
         raise TypeError(
             f"`flow_json` must be a FlowJSON object, dict, json string, json file path or json bytes. not {type(flow_json)}"
@@ -985,6 +1123,7 @@ def resolve_flow_json_param(
     if to_dump is not None:
         json_str = json.dumps(to_dump, indent=4, ensure_ascii=False)
 
+    assert json_str is not None
     return json_str
 
 
@@ -1057,17 +1196,13 @@ def resolve_callback_data(data: str | CallbackData) -> str:
 
 def is_installed(lib: str) -> bool:
     """Check if the library is installed."""
-    try:
-        importlib.import_module(lib)
-        return True
-    except ImportError:
-        return False
+    return importlib.util.find_spec(lib) is not None
 
 
 def rename_func(extended_with: str) -> Callable:
     """Rename function to avoid conflicts when registering the same function multiple times."""
 
-    def inner(func: Callable):
+    def inner(func: types.FunctionType):
         func.__name__ = f"{func.__name__}{extended_with}"
         return func
 
@@ -1084,7 +1219,7 @@ def register_routes_starlette(wa: "WhatsApp"):
     from starlette.requests import Request as StarletteRequest
     from starlette.responses import Response as StarletteResponse
 
-    server: StarletteApp = wa._server  # type: ignore
+    server = cast(StarletteApp, wa._server)
 
     async def _webhook_challenge_handler(
         req: StarletteRequest,
@@ -1093,7 +1228,7 @@ def register_routes_starlette(wa: "WhatsApp"):
         vt, ch = params.get(utils.HUB_VT), params.get(utils.HUB_CH)
         content, status = (
             (
-                await wa.webhook_challenge_handler(
+                await wa.webhook_challenge_handler(  # ty: ignore[invalid-await]
                     vt=vt,
                     ch=ch,
                 )
@@ -1114,7 +1249,7 @@ def register_routes_starlette(wa: "WhatsApp"):
         body = await req.body()
         if error := (
             (
-                await wa.webhook_update_validator(
+                await wa.webhook_update_validator(  # ty: ignore[invalid-await]
                     update=body, hmac_header=req.headers.get(utils.HUB_SIG)
                 )
             )
@@ -1163,7 +1298,7 @@ def register_routes_fastapi(
 ):
     import fastapi
 
-    server: fastapi.FastAPI = wa._server  # type: ignore
+    server = cast(fastapi.FastAPI, wa._server)
 
     @server.get(wa._webhook_endpoint, include_in_schema=False)
     async def pywa_challenge(
@@ -1173,7 +1308,7 @@ def register_routes_fastapi(
         """Automatically generated by pywa to handle the verification challenge."""
         content, status = (
             (
-                await wa.webhook_challenge_handler(
+                await wa.webhook_challenge_handler(  # ty: ignore[invalid-await]
                     vt=vt,
                     ch=ch,
                 )
@@ -1199,7 +1334,11 @@ def register_routes_fastapi(
         """Automatically generated by pywa to handle incoming updates."""
         update: bytes = await req.body()
         if error := (
-            (await wa.webhook_update_validator(update=update, hmac_header=hmac_header))
+            (
+                await wa.webhook_update_validator(  # ty: ignore[invalid-await]
+                    update=update, hmac_header=hmac_header
+                )
+            )
             if wa._async_allowed
             else wa.webhook_update_validator(update=update, hmac_header=hmac_header)
         ):
@@ -1230,7 +1369,7 @@ def register_routes_flask(
 ):
     import flask
 
-    server: flask.Flask = wa._server  # type: ignore
+    server = cast(flask.Flask, wa._server)
 
     if wa._async_allowed:
         if not is_installed("asgiref"):  # flask[async]
@@ -1243,7 +1382,7 @@ def register_routes_flask(
         @rename_func(f"('{wa._webhook_endpoint}')")
         async def pywa_challenge() -> flask.Response:
             """Automatically generated by pywa to handle the verification challenge."""
-            ch, code = await wa.webhook_challenge_handler(
+            ch, code = await wa.webhook_challenge_handler(  # ty: ignore[invalid-await]
                 vt=flask.request.args.get(utils.HUB_VT),
                 ch=flask.request.args.get(utils.HUB_CH),
             )
@@ -1261,7 +1400,7 @@ def register_routes_flask(
         async def pywa_webhook() -> flask.Response:
             """Automatically generated by pywa to handle incoming updates."""
             update = flask.request.data
-            if error := await wa.webhook_update_validator(
+            if error := await wa.webhook_update_validator(  # ty: ignore[invalid-await]
                 update=update,
                 hmac_header=flask.request.headers.get(utils.HUB_SIG),
             ):
@@ -1273,7 +1412,7 @@ def register_routes_flask(
                         "X-Content-Type-Options": "nosniff",
                     },
                 )
-            res, status = await wa.webhook_update_handler(
+            res, status = await wa.webhook_update_handler(  # ty: ignore[invalid-await]
                 update=update,
             )
             return flask.Response(
@@ -1334,19 +1473,19 @@ def register_routes_flask(
             )
 
 
-from .handlers import FlowRequestCallbackWrapper  # noqa: E402
+from .handlers import FlowRequestCallbackWrapper
 
 
 def register_flow_endpoint_starlette(
     wa: "WhatsApp",
     callback_wrapper: FlowRequestCallbackWrapper,
 ) -> None:
-    import anyio.to_thread
+    import anyio.from_thread
     from starlette.applications import Starlette as StarletteApp
     from starlette.requests import Request as StarletteRequest
     from starlette.responses import Response as StarletteResponse
 
-    server: StarletteApp = wa._server  # type: ignore
+    server = cast(StarletteApp, wa._server)
 
     if wa._async_allowed:
 
@@ -1372,7 +1511,7 @@ def register_flow_endpoint_starlette(
         ) -> StarletteResponse:
             """Automatically generated by pywa to handle incoming flow requests."""
             response, status_code = callback_wrapper.handle(
-                anyio.from_thread.run_sync(req.json)
+                anyio.from_thread.run(req.json)
             )
             return StarletteResponse(
                 content=response,
@@ -1397,7 +1536,7 @@ def register_flow_endpoint_fastapi(
 ) -> None:
     import fastapi
 
-    server: fastapi.FastAPI = wa._server  # type: ignore
+    server = cast(fastapi.FastAPI, wa._server)
 
     async def _process_request(request: fastapi.Request) -> tuple[str, int]:
         req_dict = await request.json()
@@ -1425,7 +1564,7 @@ def register_flow_endpoint_flask(
 ) -> FlowRequestCallbackWrapper:
     import flask
 
-    server: flask.Flask = wa._server
+    server = cast(flask.Flask, wa._server)
 
     if wa._async_allowed:
         if not is_installed("asgiref"):  # flask[async]

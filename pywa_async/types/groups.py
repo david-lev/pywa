@@ -1,24 +1,32 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, AsyncIterator
+import pathlib
+from collections.abc import AsyncIterator, Iterable
+from typing import (
+    TYPE_CHECKING,
+    BinaryIO,
+    ClassVar,
+    overload,
+)
 
-from pywa.types.groups import *  # noqa MUST BE IMPORTED FIRST
 from pywa.types.groups import (
     GroupDetails as _GroupDetails,
 )
 from pywa.types.groups import (
     GroupInviteLink as _GroupInviteLink,
 )
+from pywa.types.groups import GroupJoinApprovalMode as GroupJoinApprovalMode
 from pywa.types.groups import (
     GroupJoinRequest as _GroupJoinRequest,
 )
 from pywa.types.groups import GroupMessageStatuses as _GroupMessageStatuses
+from pywa.types.groups import GroupOperation as GroupOperation
 from pywa.types.groups import (
     GroupParticipant as _GroupParticipant,
 )
 
 from .message_status import MessageStatus as MessageStatusAsync
-from .others import Result
+from .others import Pagination, Result
 from .user import BaseUserAsync
 
 if TYPE_CHECKING:
@@ -169,7 +177,7 @@ class GroupInviteLink(_GroupInviteLink):
     Represents an invite link for a WhatsApp group.
     """
 
-    _client: WhatsAppAsync = dataclasses.field(repr=False, hash=False, compare=False)
+    _client: WhatsAppAsync
 
     async def reset(self) -> GroupInviteLink:
         """
@@ -220,8 +228,8 @@ class GroupJoinRequestsResult(Result[GroupJoinRequest]):
         super().__init__(
             wa=wa,
             response=response,
-            item_factory=functools.partial(
-                GroupJoinRequest.from_dict, client=wa, group_id=group_id
+            item_factory=lambda data: GroupJoinRequest.from_dict(
+                group_id=group_id, data=data, client=wa
             ),
         )
         self._group_id = group_id
@@ -259,7 +267,7 @@ class GroupJoinRequestsResult(Result[GroupJoinRequest]):
         )
 
 
-class GroupMessageStatuses(_GroupMessageStatuses, Sequence[MessageStatusAsync]):
+class GroupMessageStatuses(_GroupMessageStatuses):
     """
     Represents an update for message statuses in a WhatsApp group.
 
@@ -271,3 +279,14 @@ class GroupMessageStatuses(_GroupMessageStatuses, Sequence[MessageStatusAsync]):
     _msg_status_cls: ClassVar[type[MessageStatusAsync]] = MessageStatusAsync
 
     statuses: tuple[MessageStatusAsync, ...]
+
+    @overload
+    def __getitem__(self, index: int) -> MessageStatusAsync: ...
+
+    @overload
+    def __getitem__(self, index: slice) -> tuple[MessageStatusAsync, ...]: ...
+
+    def __getitem__(
+        self, index: int | slice
+    ) -> MessageStatusAsync | tuple[MessageStatusAsync, ...]:
+        return self.statuses[index]

@@ -1,4 +1,3 @@
-# ruff: noqa: T201
 """
 Pywa CLI
 
@@ -18,20 +17,17 @@ import sys
 import time
 from typing import TypedDict
 
+import httpx
+
 from . import __version__ as pywa_version
+from ._logging import ENV_LOG_LEVEL, format_banner, setup_console_logging
 from .client import WhatsApp
 
+GITHUB_REPO = "david-lev/pywa"
+GITHUB_API_BASE = "https://api.github.com/repos"
+GITHUB_RAW_BASE = "https://raw.githubusercontent.com"
 
-def _configure_pywa_logger() -> None:
-    logger = logging.getLogger("pywa")
-    logger.setLevel(logging.INFO)
-    if not any(
-        getattr(handler, "_pywa_cli_handler", False) for handler in logger.handlers
-    ):
-        handler = logging.StreamHandler()
-        handler.setFormatter(logging.Formatter("%(levelname)s:%(name)s: %(message)s"))
-        handler._pywa_cli_handler = True
-        logger.addHandler(handler)
+_logger = logging.getLogger(__name__)
 
 
 class PywaCLIException(Exception):
@@ -187,8 +183,9 @@ def serve_application(
         sys.path.insert(0, str(sys_path))
         app_name, client = discover_app_instance(module_str, app)
         if client._server is not None:
+            assert client._server_type is not None
             raise PywaCLIException(
-                f"The WhatsApp instance assigned to '{app_name}' in '{module_str}.py' is already configured with a {client._server_type.name} server."  # ty:ignore[unresolved-attribute]
+                f"The WhatsApp instance assigned to '{app_name}' in '{module_str}.py' is already configured with a {client._server_type.name} server."
             )
         client._uvicorn_workers = workers or 1
 
@@ -199,25 +196,32 @@ def serve_application(
 
     host = uvicorn_kwargs.get("host", "127.0.0.1")
     port = uvicorn_kwargs.get("port", 8000)
+    default_log_level = "debug" if command == "dev" else "info"
+    log_level = uvicorn_kwargs.pop("log_level", None) or default_log_level
+
+    # `--reload`/multi-worker runs spawn a subprocess that re-imports the app fresh, so
+    # the env var is what actually reaches the worker; this direct call only styles the
+    # parent/reloader process's own logs (e.g. its "watching for changes" messages).
+    os.environ[ENV_LOG_LEVEL] = log_level
+    setup_console_logging(log_level)
 
     mode = "development" if command == "dev" else "production"
-    print(f"\n🚀  Starting Pywa in {mode} mode")
-    print("-" * 40)
-    print(f"📦  Module Path:  {sys_path}")
-    print(f"🔍  App Instance: {base_import_string}")
-    print(f"🌐  Server URL:   http://{host}:{port}")
+    banner_lines = [
+        f"🚀  Starting Pywa in {mode} mode",
+        f"📦  Module Path:  {sys_path}",
+        f"🔍  App Instance: {base_import_string}",
+        f"🌐  Server URL:   http://{host}:{port}",
+        f"📝  Log Level:    {log_level}",
+    ]
     if command == "dev":
-        print("⚠️  Auto-reload:  Enabled (Use 'pywa run' for production)")
-    print("-" * 40 + "\n")
+        banner_lines.append("⚠️  Auto-reload:  Enabled (Use 'pywa run' for production)")
+    _logger.info(format_banner(banner_lines))
 
     clean_kwargs = {k: v for k, v in uvicorn_kwargs.items() if v is not None}
 
     clean_kwargs["app"] = uvicorn_app_string
     clean_kwargs["factory"] = True
     clean_kwargs["log_config"] = None
-    clean_kwargs["access_log"] = False
-
-    _configure_pywa_logger()
 
     uvicorn.run(**clean_kwargs)
 
@@ -229,12 +233,16 @@ def send_messages(
     reply_to_message_id: str | None,
     token: str,
     phone_id: str,
+    verbose: bool = False,
     **kwargs,
 ):
     if not token or not phone_id:
         raise PywaCLIException(
             "WhatsApp API token and phone ID are required. Provide them via --token, --phone-id or set PYWA_TOKEN and PYWA_PHONE_ID environment variables."
         )
+
+    if verbose:
+        setup_console_logging("debug")
 
     wa = WhatsApp(phone_id=phone_id, token=token)
     uploaded_media = None
@@ -281,7 +289,8 @@ def send_messages(
                 f"✅ [{index + 1}/{len(to)}] Sent {send_type} to {recipient} (Msg ID: {sent.id})"
             )
 
-        except Exception as e:
+        # one recipient's failure shouldn't abort the batch
+        except Exception as e:  # noqa: BLE001
             print(
                 f"❌ [{index + 1}/{len(to)}] Failed to send {send_type} to {recipient}: {e}"
             )
@@ -312,7 +321,10 @@ def async_code_to_sync(code: str) -> str:
     return (
         code.replace("pywa_async", "pywa")
         .replace("async def", "def")
+        .replace("async with ", "with ")
+        .replace("async for ", "for ")
         .replace("await ", "")
+        .replace("asyncio.run(main())", "main()")
     )
 
 
@@ -327,6 +339,96 @@ def generate_code(target: str | None, is_async: bool, out_path: pathlib.Path) ->
             return
         out_file.write_text(code)
         print(f"✅ Created new Pywa project at {out_file.resolve()}")
+
+
+def _fetch_examples_manifest(ref: str) -> list[dict]:
+    """Fetch the `examples/examples.json` manifest from GitHub at the given ref (branch/tag)."""
+    url = f"{GITHUB_RAW_BASE}/{GITHUB_REPO}/{ref}/examples/examples.json"
+    try:
+        response = httpx.get(url, timeout=15, follow_redirects=True)
+        response.raise_for_status()
+    except httpx.HTTPError as e:
+        raise PywaCLIException(
+            f"Failed to fetch the examples list from GitHub (ref={ref!r}): {e}"
+        ) from e
+    return response.json()
+
+
+def list_examples(ref: str) -> None:
+    """Print all available example bots, fetched from the examples.json manifest on GitHub."""
+    examples = _fetch_examples_manifest(ref)
+    print(f"\n📚 Available pywa examples ({ref}):")
+    print("-" * 40)
+    for example in examples:
+        print(f"{example['emoji']}  {example['slug']} — {example['title']}")
+        print(f"    feature: {example['feature']}")
+        print(f"    {example['description']}")
+        print()
+    print("Download one with: pywa new examples <slug> [--async] [-o ./path]")
+
+
+def download_example(
+    name: str, is_async: bool, out_path: pathlib.Path, ref: str
+) -> None:
+    """
+    Download a single example bot's files from GitHub into `out_path/<name>`.
+
+    Every example ships written with `pywa_async`. When `is_async` is False (the default), each
+    downloaded `.py` file is converted to synchronous `pywa` code with `async_code_to_sync`.
+    """
+    examples = _fetch_examples_manifest(ref)
+    if name not in {example["slug"] for example in examples}:
+        raise PywaCLIException(
+            f"Unknown example {name!r}. Run `pywa new examples` to see the available examples."
+        )
+
+    tree_url = f"{GITHUB_API_BASE}/{GITHUB_REPO}/git/trees/{ref}?recursive=1"
+    try:
+        tree_response = httpx.get(tree_url, timeout=30, follow_redirects=True)
+        tree_response.raise_for_status()
+    except httpx.HTTPError as e:
+        raise PywaCLIException(
+            f"Failed to fetch the repository file tree from GitHub: {e}"
+        ) from e
+
+    prefix = f"examples/{name}/"
+    paths = [
+        item["path"]
+        for item in tree_response.json().get("tree", [])
+        if item["type"] == "blob" and item["path"].startswith(prefix)
+    ]
+    if not paths:
+        raise PywaCLIException(f"No files found for example {name!r} at ref {ref!r}.")
+
+    dest_dir = out_path / name
+    if dest_dir.exists() and any(dest_dir.iterdir()):
+        raise PywaCLIException(
+            f"Directory '{dest_dir}' already exists and is not empty. "
+            "Use --out to choose a different location."
+        )
+    dest_dir.mkdir(parents=True, exist_ok=True)
+
+    for path in paths:
+        raw_url = f"{GITHUB_RAW_BASE}/{GITHUB_REPO}/{ref}/{path}"
+        try:
+            file_response = httpx.get(raw_url, timeout=30, follow_redirects=True)
+            file_response.raise_for_status()
+        except httpx.HTTPError as e:
+            raise PywaCLIException(f"Failed to download '{path}': {e}") from e
+
+        dest_file = dest_dir / path[len(prefix) :]
+        dest_file.parent.mkdir(parents=True, exist_ok=True)
+        if path.endswith(".py") and not is_async:
+            dest_file.write_text(async_code_to_sync(file_response.text))
+        else:
+            dest_file.write_bytes(file_response.content)
+
+    print(
+        f"✅ Downloaded example {name!r} ({'async' if is_async else 'sync'}) to {dest_dir.resolve()}"
+    )
+    print(
+        f"   cd {dest_dir} && pip install -r requirements.txt && cp .env.example .env"
+    )
 
 
 def main() -> None:
@@ -387,7 +489,7 @@ def main() -> None:
         "--log-level",
         type=str,
         choices=["critical", "error", "warning", "info", "debug", "trace"],
-        help="Log level.",
+        help="Log level. Default: info for `run`, debug for `dev`.",
     )
     serve_parser.add_argument("--ssl-keyfile", type=str, help="SSL key file.")
     serve_parser.add_argument(
@@ -431,6 +533,12 @@ def main() -> None:
         type=int,
         help="Close Keep-Alive connections if no new data is received within this timeout (in seconds).",
     )
+    run_parser.add_argument(
+        "--access-log",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="Enable/Disable HTTP access log. Default: False (off) for production runs.",
+    )
 
     # --- DEV PARSER ---
     dev_parser = subparsers.add_parser(
@@ -464,6 +572,12 @@ def main() -> None:
         type=float,
         help="Delay between previous and next check if application needs to be reloaded.",
     )
+    dev_parser.add_argument(
+        "--access-log",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Enable/Disable HTTP access log. Default: True (on) for development runs.",
+    )
 
     # ==========================================
     # SEND PARSER
@@ -489,6 +603,11 @@ def main() -> None:
     )
     send_common_parser.add_argument(
         "--phone-id", default=os.environ.get("PYWA_PHONE_ID"), help="WhatsApp Phone ID"
+    )
+    send_common_parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Display debug logs from Pywa",
     )
 
     send_parser = subparsers.add_parser(
@@ -607,6 +726,8 @@ def main() -> None:
             "  pywa new                            # Create a sync project in the current directory\n"
             "  pywa new --async                    # Create an async project in the current directory\n"
             "  pywa new project -o ./my_bot        # Create a sync project in a specific directory\n"
+            "  pywa new examples                   # List the official example bots\n"
+            "  pywa new examples 01-message-router # Download an example bot\n"
         ),
         formatter_class=argparse.RawTextHelpFormatter,
     )
@@ -615,6 +736,33 @@ def main() -> None:
         "project",
         parents=[new_common_parser],
         help="Create a new Pywa project (default)",
+    )
+    examples_parser = new_subparsers.add_parser(
+        "examples",
+        parents=[new_common_parser],
+        help="Browse and download the official pywa example bots from GitHub",
+        description=(
+            "List the official pywa example bots, or download one into a local directory. "
+            "Every example is fetched from https://github.com/david-lev/pywa/tree/master/examples."
+        ),
+        epilog=(
+            "Examples:\n"
+            "  pywa new examples                                # List all available examples\n"
+            "  pywa new examples 01-message-router               # Download it (sync) into ./01-message-router\n"
+            "  pywa new examples 01-message-router --async       # Download the async version\n"
+            "  pywa new examples 01-message-router -o ./my-bot   # Download into a specific directory\n"
+        ),
+        formatter_class=argparse.RawTextHelpFormatter,
+    )
+    examples_parser.add_argument(
+        "name",
+        nargs="?",
+        help="The example slug to download (omit to list all available examples).",
+    )
+    examples_parser.add_argument(
+        "--ref",
+        default="master",
+        help="Git branch/tag to fetch the example from (default: master).",
     )
     # --- EXECUTION ---
     args = parser.parse_args()
@@ -648,8 +796,22 @@ def main() -> None:
             send_messages(**vars(args))
 
         elif args.command == "new":
-            generate_code(target=args.target, is_async=args.is_async, out_path=args.out)
-    except Exception as e:
+            if args.target == "examples":
+                if args.name:
+                    download_example(
+                        name=args.name,
+                        is_async=args.is_async,
+                        out_path=args.out,
+                        ref=args.ref,
+                    )
+                else:
+                    list_examples(ref=args.ref)
+            else:
+                generate_code(
+                    target=args.target, is_async=args.is_async, out_path=args.out
+                )
+    # top-level CLI error boundary: report and exit, don't crash
+    except Exception as e:  # noqa: BLE001
         print(f"❌ Error: {e}")
         sys.exit(1)
 

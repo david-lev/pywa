@@ -3,18 +3,24 @@ from __future__ import annotations
 """
 This module contains the errors that can be raised by the WhatsApp Cloud API or incoming error from the webhook.
 """
+import builtins
 import dataclasses
 import functools
-from typing import ClassVar, Iterable, Type
+from collections.abc import Iterable
+from typing import ClassVar
 
 import httpx
 
 
-class PywaDeprecationWarning(UserWarning):
+class PywaWarning(UserWarning):
+    """Base warning for all warnings raised by pywa."""
+
+
+class PywaDeprecationWarning(PywaWarning):
     """Warning for deprecated features in pywa."""
 
 
-class PywaUnknownEnumMemberWarning(UserWarning):
+class PywaUnknownEnumMemberWarning(PywaWarning):
     """Warning for unknown enum members in pywa."""
 
 
@@ -91,7 +97,7 @@ class WhatsAppError(Exception):
         return self.raw_response.status_code if self.raw_response is not None else None
 
     @classmethod
-    def _get_exception(cls, code: int) -> Type[WhatsAppError]:
+    def _get_exception(cls, code: int) -> builtins.type[WhatsAppError]:
         """Get the exception class from the error code."""
         return _all_exceptions().get(code, WhatsAppError)
 

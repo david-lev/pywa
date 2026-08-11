@@ -5,14 +5,14 @@ from __future__ import annotations
 from .callback import _CallbackDataT
 
 __all__ = [
-    "MessageStatus",
-    "MessageStatusType",
     "Conversation",
     "ConversationCategory",
+    "MessageStatus",
+    "MessageStatusType",
     "Pricing",
+    "PricingCategory",
     "PricingModel",
     "PricingType",
-    "PricingCategory",
 ]
 
 import dataclasses
@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING, Generic
 
 from .. import _helpers as helpers
 from ..errors import WhatsAppError
-from .base_update import BaseUserUpdate, RawUpdate  # noqa
+from .base_update import BaseUserUpdate, RawUpdate
 from .others import Metadata
 
 if TYPE_CHECKING:
@@ -43,8 +43,7 @@ class MessageStatusType(helpers.StrEnum):
         FAILED: failed — Indicates failure to send or deliver the message to the WhatsApp user's device (WhatsApp UI equivalent: Red error triangle).
     """
 
-    _check_value = str.islower
-    _modify_value = str.lower
+    _normalize = str.lower
 
     SENT = "sent"
     DELIVERED = "delivered"
@@ -72,8 +71,7 @@ class ConversationCategory(helpers.StrEnum):
         UNKNOWN: The conversation category is unknown.
     """
 
-    _check_value = str.islower
-    _modify_value = str.lower
+    _normalize = str.lower
 
     AUTHENTICATION = "authentication"
     AUTHENTICATION_INTERNATIONAL = "authentication_international"
@@ -99,9 +97,9 @@ class MessageStatus(BaseUserUpdate, Generic[_CallbackDataT]):
     Here is an example:
 
         >>> from pywa.types import CallbackData
-        >>> from dataclasses import dataclass
-        >>> @dataclass(frozen=True, slots=True)
-        >>> class UserData(CallbackData): # Subclass CallbackData
+        >>> import dataclasses  # Use dataclass to get free ordered __init__
+        >>> @dataclasses.dataclass(frozen=True, slots=True) # Do not use kw_only=True
+        >>> class UserData(CallbackData):  # Subclass CallbackData
         ...     id: int
         ...     name: str
         ...     admin: bool
@@ -110,14 +108,19 @@ class MessageStatus(BaseUserUpdate, Generic[_CallbackDataT]):
         >>> from pywa.types import Button, CallbackButton
         >>> wa = WhatsApp(...)
         >>> wa.send_message(
-        ...     to='972987654321',
-        ...     text='Hi user',
-        ...     tracker=UserData(id=123, name='david', admin=True) # Here ^^^ we use the UserData class as the tracker
-        ... )           # Here ^^^ we use the UserData class as the tracker data
+        ...     to="972987654321",
+        ...     text="Hi user",
+        ...     tracker=UserData(
+        ...         id=123, name="david", admin=True
+        ...     ),  # Here ^^^ we use the UserData class as the tracker
+        ... )  # Here ^^^ we use the UserData class as the tracker data
 
-        >>> @wa.on_message_status(factory=UserData) # Use the factory parameter to convert the tracker data
-        ... def on_status(_: WhatsApp, s: MessageStatus[UserData]): # For autocomplete
-        ...    if s.tracker.admin: print(s.tracker.id) # Access the tracker data
+        >>> @wa.on_message_status(
+        ...     factory=UserData
+        ... )  # Use the factory parameter to convert the tracker data
+        ... def on_status(_: WhatsApp, s: MessageStatus[UserData]):  # For autocomplete
+        ...     if s.tracker.admin:
+        ...         print(s.tracker.id)  # Access the tracker data
 
 
 
@@ -232,8 +235,7 @@ class PricingType(helpers.StrEnum):
         FREE_ENTRY_POINT: Indicates the message is free because it is part of a `free-entry point conversation <https://developers.facebook.com/docs/whatsapp/pricing#free-entry-point-conversations>`_.
     """
 
-    _check_value = str.islower
-    _modify_value = str.lower
+    _normalize = str.lower
 
     REGULAR = "regular"
     FREE_CUSTOMER_SERVICE = "free_customer_service"
@@ -257,8 +259,7 @@ class PricingCategory(helpers.StrEnum):
         GENERAL_PURPOSE_AI: Indicates a `general-purpose AI <https://developers.facebook.com/documentation/business-messaging/whatsapp/pricing/ai-providers>`_ rate applied.
     """
 
-    _check_value = str.islower
-    _modify_value = str.lower
+    _normalize = str.lower
 
     AUTHENTICATION = "authentication"
     AUTHENTICATION_INTERNATIONAL = "authentication_international"

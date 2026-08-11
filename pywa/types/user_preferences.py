@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 __all__ = [
+    "MarketingPreference",
     "UserMarketingPreferences",
     "UserPreferenceCategory",
-    "MarketingPreference",
 ]
 
 import dataclasses
@@ -13,7 +13,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from .. import _helpers as helpers
-from .base_update import BaseUserUpdate, RawUpdate  # noqa
+from .base_update import BaseUserUpdate, RawUpdate
 from .others import Metadata
 
 if TYPE_CHECKING:
@@ -90,8 +90,7 @@ class MarketingPreference(helpers.StrEnum):
         SIGNUP: The user signed up via signup link.
     """
 
-    _check_value = str.islower
-    _modify_value = str.lower
+    _normalize = str.lower
 
     STOP = "stop"
     RESUME = "resume"
@@ -108,8 +107,7 @@ class UserPreferenceCategory(helpers.StrEnum):
         MARKETING_MESSAGES: User preferences for marketing messages.
     """
 
-    _check_value = str.islower
-    _modify_value = str.lower
+    _normalize = str.lower
 
     MARKETING_MESSAGES = "marketing_messages"
 

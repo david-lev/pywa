@@ -1,5 +1,6 @@
 import dataclasses
-from typing import Callable, TypeVar, cast
+from collections.abc import Callable
+from typing import TypeVar, cast
 
 import pytest
 

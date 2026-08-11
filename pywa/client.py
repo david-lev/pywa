@@ -13,8 +13,15 @@ import logging
 import mimetypes
 import pathlib
 import warnings
+from collections.abc import Callable, Generator, Iterable, Iterator, Sequence
 from types import ModuleType
-from typing import Any, BinaryIO, Callable, Generator, Iterable, Iterator, Literal
+from typing import (
+    Any,
+    BinaryIO,
+    ClassVar,
+    Literal,
+    cast,
+)
 
 import httpx
 
@@ -53,7 +60,7 @@ from .handlers import (
     _flow_request_handler_attr,
     _HandlerDecorators,
     _handlers_attr,
-)  # noqa
+)
 from .listeners import BaseListenerIdentifier, Listener, _Listeners
 from .server import Server
 from .types import (
@@ -205,7 +212,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
     _group_participant_cls = GroupParticipant
     _httpx_client = httpx.Client
     _async_allowed = False
-    _handlers_to_updates: dict[type[Handler], type[BaseUpdate]] = {
+    _handlers_to_updates: ClassVar[dict[type[Handler], type[BaseUpdate]]] = {
         MessageHandler: Message,
         MessageStatusHandler: MessageStatus,
         GroupMessageStatusesHandler: GroupMessageStatuses,
@@ -259,7 +266,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         flows_response_encryptor: utils.FlowResponseEncryptor
         | None = utils.default_flow_response_encryptor,
         api_version: (
-            str | int | float | Literal[utils.Version.GRAPH_API]
+            str | float | Literal[utils.Version.GRAPH_API]
         ) = utils.Version.GRAPH_API,
         handlers_modules: Iterable[ModuleType] | None = None,
         user_identifier_priority: tuple[UserIdentifier, ...] = (
@@ -358,7 +365,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             type[Handler] | None,
             list[Handler],
         ] = collections.defaultdict(list)
-        self._flow_handlers_to_register = list[FlowRequestHandler]()
+        self._flow_handlers_to_register = list[FlowRequestCallbackWrapper]()
         self._listeners = dict[BaseListenerIdentifier, Listener]()
 
         if not token:
@@ -434,13 +441,13 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
                 from pywa import WhatsApp, types, filters as fil
 
+
                 @WhatsApp.on_message(fil.text)
-                def on_text_message(wa: WhatsApp, msg: types.Message):
-                    ...
+                def on_text_message(wa: WhatsApp, msg: types.Message): ...
+
 
                 @WhatsApp.on_callback_button
-                def on_callback_button(wa: WhatsApp, msg: types.CallbackButton):
-                    ...
+                def on_callback_button(wa: WhatsApp, msg: types.CallbackButton): ...
 
             .. code-block:: python
                 :caption: main.py
@@ -490,7 +497,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             PywaDeprecationWarning,
             stacklevel=2,
         )
-        return self.waba_id
+        return self.waba_id  # ty: ignore[invalid-return-type]
 
     @business_account_id.setter
     def business_account_id(self, value: str) -> None:
@@ -545,7 +552,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 )
         self.add_handlers(*handler._completion_handlers)
         if self._server is None:
-            self._flow_handlers_to_register.append(handler)
+            self._flow_handlers_to_register.append(wrapper)
         else:
             self._register_flow_handler_wrapper(wrapper)
         return wrapper
@@ -615,7 +622,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             >>> from pywa import filters as fil
             >>> wa = WhatsApp()
             >>> @wa.on_message(fil.text)
-            ... def message_handler(_: WhatsApp, msg: Message): print(msg)
+            ... def message_handler(_: WhatsApp, msg: Message):
+            ...     print(msg)
             >>> wa.remove_callbacks(message_handler)
 
         Args:
@@ -729,6 +737,135 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
     send_text = send_message  # alias
 
+    def _send_media_with_buttons(
+        self,
+        *,
+        to: str | int,
+        media: str | int | Media | pathlib.Path | bytes | BinaryIO | Iterator[bytes],
+        media_type: Literal["image", "video", "document"],
+        caption: str | None,
+        footer: str | None,
+        buttons: Iterable[Button] | URLButton | FlowButton | None,
+        filename: str | None,
+        mime_type: str | None,
+        reply_to_message_id: str | None,
+        tracker: str | CallbackData | None,
+        identity_key_hash: str | None,
+        sender: str | int | None,
+    ) -> SentMediaMessage:
+        """Internal method shared by :meth:`send_image`, :meth:`send_video` and :meth:`send_document`."""
+        sender = helpers.resolve_arg(
+            wa=self, value=sender, method_arg="sender", client_arg="phone_id"
+        )
+        recipient, recipient_type = helpers.resolve_recipient(to)
+        is_url, uploaded, media, fallback_filename = helpers.resolve_media_param(
+            wa=self,
+            media=media,
+            mime_type=mime_type,
+            filename=filename,
+            media_type=media_type,
+            phone_id=sender,
+        )
+        if filename is utils.MISSING:
+            filename = fallback_filename
+        media_msg = helpers.get_media_msg(
+            media=media,
+            is_url=is_url,
+            caption=caption,
+            filename=filename,
+            is_interactive=bool(buttons),
+        )
+        if not buttons:
+            return SentMediaMessage.from_sent_update(
+                client=self,
+                update=self.api.send_message(
+                    sender=sender,
+                    **recipient,
+                    typ=media_type,
+                    msg=media_msg,
+                    reply_to_message_id=reply_to_message_id,
+                    biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
+                    recipient_identity_key_hash=identity_key_hash,
+                ),
+                from_phone_id=sender,
+                recipient_type=recipient_type,
+                uploaded_media=media if uploaded else None,
+            )
+        if not caption:
+            raise ValueError(
+                f"A caption must be provided when sending {'an' if media_type[0] in 'aeiou' else 'a'} {media_type} with buttons."
+            )
+        typ, kb = helpers.resolve_buttons_param(buttons)
+        return SentMediaMessage.from_sent_update(
+            client=self,
+            update=self.api.send_message(
+                sender=sender,
+                **recipient,
+                typ="interactive",
+                msg=helpers.get_interactive_msg(
+                    typ=typ,
+                    action=kb,
+                    header={
+                        "type": media_type,
+                        media_type: media_msg,
+                    },
+                    body=caption,
+                    footer=footer,
+                ),
+                reply_to_message_id=reply_to_message_id,
+                biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
+                recipient_identity_key_hash=identity_key_hash,
+            ),
+            from_phone_id=sender,
+            recipient_type=recipient_type,
+            interactive_type=typ,
+            uploaded_media=media if uploaded else None,
+        )
+
+    def _send_media(
+        self,
+        *,
+        to: str | int,
+        media: str | int | Media | pathlib.Path | bytes | BinaryIO | Iterator[bytes],
+        media_type: Literal["audio", "sticker"],
+        is_voice: bool | None = None,
+        mime_type: str | None,
+        reply_to_message_id: str | None,
+        tracker: str | CallbackData | None,
+        identity_key_hash: str | None,
+        sender: str | int | None,
+    ) -> SentMediaMessage:
+        """Internal method shared by :meth:`send_audio` and :meth:`send_sticker`."""
+        sender = helpers.resolve_arg(
+            wa=self, value=sender, method_arg="sender", client_arg="phone_id"
+        )
+        recipient, recipient_type = helpers.resolve_recipient(to)
+        is_url, uploaded, media, _ = helpers.resolve_media_param(
+            wa=self,
+            media=media,
+            mime_type=mime_type,
+            filename=None,
+            media_type=media_type,
+            phone_id=sender,
+        )
+        return SentMediaMessage.from_sent_update(
+            client=self,
+            update=self.api.send_message(
+                sender=sender,
+                **recipient,
+                typ=media_type,
+                msg=helpers.get_media_msg(
+                    media=media, is_url=is_url, is_voice=is_voice
+                ),
+                reply_to_message_id=reply_to_message_id,
+                biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
+                recipient_identity_key_hash=identity_key_hash,
+            ),
+            from_phone_id=sender,
+            recipient_type=recipient_type,
+            uploaded_media=media if uploaded else None,
+        )
+
     def send_image(
         self,
         to: str | int,
@@ -774,66 +911,19 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             The sent image message.
         """
-        sender = helpers.resolve_arg(
-            wa=self, value=sender, method_arg="sender", client_arg="phone_id"
-        )
-        recipient, recipient_type = helpers.resolve_recipient(to)
-        is_url, uploaded, media, _ = helpers.resolve_media_param(
-            wa=self,
+        return self._send_media_with_buttons(
+            to=to,
             media=image,
-            mime_type=mime_type,
-            filename=None,
             media_type="image",
-            phone_id=sender,
-        )
-        media_msg = helpers.get_media_msg(
-            media=media, is_url=is_url, caption=caption, is_interactive=bool(buttons)
-        )
-        if not buttons:
-            return SentMediaMessage.from_sent_update(
-                client=self,
-                update=self.api.send_message(
-                    sender=sender,
-                    **recipient,
-                    typ="image",
-                    msg=media_msg,
-                    reply_to_message_id=reply_to_message_id,
-                    biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
-                    recipient_identity_key_hash=identity_key_hash,
-                ),
-                from_phone_id=sender,
-                recipient_type=recipient_type,
-                uploaded_media=media if uploaded else None,
-            )
-        if not caption:
-            raise ValueError(
-                "A caption must be provided when sending an image with buttons."
-            )
-        typ, kb = helpers.resolve_buttons_param(buttons)
-        return SentMediaMessage.from_sent_update(
-            client=self,
-            update=self.api.send_message(
-                sender=sender,
-                **recipient,
-                typ="interactive",
-                msg=helpers.get_interactive_msg(
-                    typ=typ,
-                    action=kb,
-                    header={
-                        "type": "image",
-                        "image": media_msg,
-                    },
-                    body=caption,
-                    footer=footer,
-                ),
-                reply_to_message_id=reply_to_message_id,
-                biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
-                recipient_identity_key_hash=identity_key_hash,
-            ),
-            from_phone_id=sender,
-            recipient_type=recipient_type,
-            interactive_type=typ,
-            uploaded_media=media if uploaded else None,
+            caption=caption,
+            footer=footer,
+            buttons=buttons,
+            filename=None,
+            mime_type=mime_type,
+            reply_to_message_id=reply_to_message_id,
+            tracker=tracker,
+            identity_key_hash=identity_key_hash,
+            sender=sender,
         )
 
     def send_video(
@@ -881,66 +971,19 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             The sent video message.
         """
-        sender = helpers.resolve_arg(
-            wa=self, value=sender, method_arg="sender", client_arg="phone_id"
-        )
-        recipient, recipient_type = helpers.resolve_recipient(to)
-        is_url, uploaded, media, _ = helpers.resolve_media_param(
-            wa=self,
+        return self._send_media_with_buttons(
+            to=to,
             media=video,
-            mime_type=mime_type,
-            filename=None,
             media_type="video",
-            phone_id=sender,
-        )
-        media_msg = helpers.get_media_msg(
-            media=media, is_url=is_url, caption=caption, is_interactive=bool(buttons)
-        )
-        if not buttons:
-            return SentMediaMessage.from_sent_update(
-                client=self,
-                update=self.api.send_message(
-                    sender=sender,
-                    **recipient,
-                    typ="video",
-                    msg=media_msg,
-                    reply_to_message_id=reply_to_message_id,
-                    biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
-                    recipient_identity_key_hash=identity_key_hash,
-                ),
-                from_phone_id=sender,
-                recipient_type=recipient_type,
-                uploaded_media=media if uploaded else None,
-            )
-        if not caption:
-            raise ValueError(
-                "A caption must be provided when sending a video with buttons."
-            )
-        typ, kb = helpers.resolve_buttons_param(buttons)
-        return SentMediaMessage.from_sent_update(
-            client=self,
-            update=self.api.send_message(
-                sender=sender,
-                **recipient,
-                typ="interactive",
-                msg=helpers.get_interactive_msg(
-                    typ=typ,
-                    action=kb,
-                    header={
-                        "type": "video",
-                        "video": media_msg,
-                    },
-                    body=caption,
-                    footer=footer,
-                ),
-                reply_to_message_id=reply_to_message_id,
-                biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
-                recipient_identity_key_hash=identity_key_hash,
-            ),
-            from_phone_id=sender,
-            recipient_type=recipient_type,
-            interactive_type=typ,
-            uploaded_media=media if uploaded else None,
+            caption=caption,
+            footer=footer,
+            buttons=buttons,
+            filename=None,
+            mime_type=mime_type,
+            reply_to_message_id=reply_to_message_id,
+            tracker=tracker,
+            identity_key_hash=identity_key_hash,
+            sender=sender,
         )
 
     def send_document(
@@ -971,7 +1014,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             ...     to="1234567890",
             ...     document="https://example.com/example_123.pdf",
             ...     filename="example.pdf",
-            ...     caption="Example PDF"
+            ...     caption="Example PDF",
             ... )
 
         Args:
@@ -990,73 +1033,19 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             The sent document message.
         """
-
-        sender = helpers.resolve_arg(
-            wa=self, value=sender, method_arg="sender", client_arg="phone_id"
-        )
-        recipient, recipient_type = helpers.resolve_recipient(to)
-        is_url, uploaded, media, fallback_filename = helpers.resolve_media_param(
-            wa=self,
+        return self._send_media_with_buttons(
+            to=to,
             media=document,
-            mime_type=mime_type,
-            filename=filename,
             media_type="document",
-            phone_id=sender,
-        )
-        if filename is utils.MISSING:
-            filename = fallback_filename
-        media_msg = helpers.get_media_msg(
-            media=media,
-            is_url=is_url,
             caption=caption,
+            footer=footer,
+            buttons=buttons,
             filename=filename,
-            is_interactive=bool(buttons),
-        )
-        if not buttons:
-            return SentMediaMessage.from_sent_update(
-                client=self,
-                update=self.api.send_message(
-                    sender=sender,
-                    **recipient,
-                    typ="document",
-                    msg=media_msg,
-                    reply_to_message_id=reply_to_message_id,
-                    biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
-                    recipient_identity_key_hash=identity_key_hash,
-                ),
-                from_phone_id=sender,
-                recipient_type=recipient_type,
-                uploaded_media=media if uploaded else None,
-            )
-        if not caption:
-            raise ValueError(
-                "A caption must be provided when sending a document with buttons."
-            )
-        typ, kb = helpers.resolve_buttons_param(buttons)
-        return SentMediaMessage.from_sent_update(
-            client=self,
-            update=self.api.send_message(
-                sender=sender,
-                **recipient,
-                typ="interactive",
-                msg=helpers.get_interactive_msg(
-                    typ=typ,
-                    action=kb,
-                    header={
-                        "type": "document",
-                        "document": media_msg,
-                    },
-                    body=caption,
-                    footer=footer,
-                ),
-                reply_to_message_id=reply_to_message_id,
-                biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
-                recipient_identity_key_hash=identity_key_hash,
-            ),
-            from_phone_id=sender,
-            recipient_type=recipient_type,
-            interactive_type=typ,
-            uploaded_media=media if uploaded else None,
+            mime_type=mime_type,
+            reply_to_message_id=reply_to_message_id,
+            tracker=tracker,
+            identity_key_hash=identity_key_hash,
+            sender=sender,
         )
 
     def send_audio(
@@ -1081,8 +1070,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
             >>> wa = WhatsApp()
             >>> wa.send_audio(
-            ...     to='1234567890',
-            ...     audio='https://example.com/audio.mp3',
+            ...     to="1234567890",
+            ...     audio="https://example.com/audio.mp3",
             ... )
 
         Args:
@@ -1098,35 +1087,16 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             The sent audio message.
         """
-
-        sender = helpers.resolve_arg(
-            wa=self, value=sender, method_arg="sender", client_arg="phone_id"
-        )
-        recipient, recipient_type = helpers.resolve_recipient(to)
-        is_url, uploaded, media, _ = helpers.resolve_media_param(
-            wa=self,
+        return self._send_media(
+            to=to,
             media=audio,
-            mime_type=mime_type,
-            filename=None,
             media_type="audio",
-            phone_id=sender,
-        )
-        return SentMediaMessage.from_sent_update(
-            client=self,
-            update=self.api.send_message(
-                sender=sender,
-                **recipient,
-                typ="audio",
-                msg=helpers.get_media_msg(
-                    media=media, is_url=is_url, is_voice=is_voice
-                ),
-                reply_to_message_id=reply_to_message_id,
-                biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
-                recipient_identity_key_hash=identity_key_hash,
-            ),
-            from_phone_id=sender,
-            recipient_type=recipient_type,
-            uploaded_media=media if uploaded else None,
+            is_voice=is_voice,
+            mime_type=mime_type,
+            reply_to_message_id=reply_to_message_id,
+            tracker=tracker,
+            identity_key_hash=identity_key_hash,
+            sender=sender,
         )
 
     def send_voice(
@@ -1153,8 +1123,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
             >>> wa = WhatsApp()
             >>> wa.send_voice(
-            ...     to='1234567890',
-            ...     voice='https://example.com/voice.ogg',
+            ...     to="1234567890",
+            ...     voice="https://example.com/voice.ogg",
             ... )
 
         Args:
@@ -1204,8 +1174,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
             >>> wa = WhatsApp()
             >>> wa.send_sticker(
-            ...     to='1234567890',
-            ...     sticker='https://example.com/sticker.webp',
+            ...     to="1234567890",
+            ...     sticker="https://example.com/sticker.webp",
             ... )
 
         Args:
@@ -1220,33 +1190,15 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Returns:
             The sent sticker message.
         """
-
-        sender = helpers.resolve_arg(
-            wa=self, value=sender, method_arg="sender", client_arg="phone_id"
-        )
-        recipient, recipient_type = helpers.resolve_recipient(to)
-        is_url, uploaded, media, _ = helpers.resolve_media_param(
-            wa=self,
+        return self._send_media(
+            to=to,
             media=sticker,
-            mime_type=mime_type,
-            filename=None,
             media_type="sticker",
-            phone_id=sender,
-        )
-        return SentMediaMessage.from_sent_update(
-            client=self,
-            update=self.api.send_message(
-                sender=sender,
-                **recipient,
-                typ="sticker",
-                msg=helpers.get_media_msg(media=media, is_url=is_url),
-                reply_to_message_id=reply_to_message_id,
-                biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
-                recipient_identity_key_hash=identity_key_hash,
-            ),
-            from_phone_id=sender,
-            recipient_type=recipient_type,
-            uploaded_media=media if uploaded else None,
+            mime_type=mime_type,
+            reply_to_message_id=reply_to_message_id,
+            tracker=tracker,
+            identity_key_hash=identity_key_hash,
+            sender=sender,
         )
 
     def send_reaction(
@@ -1269,16 +1221,12 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         >>> wa = WhatsApp()
         >>> @wa.on_message
         ... def message_handler(_: WhatsApp, msg: Message):
-        ...     msg.react('👍')
+        ...     msg.react("👍")
 
         Example:
 
             >>> wa = WhatsApp()
-            >>> wa.send_reaction(
-            ...     to='1234567890',
-            ...     emoji='👍',
-            ...     message_id='wamid.XXX='
-            ... )
+            >>> wa.send_reaction(to="1234567890", emoji="👍", message_id="wamid.XXX=")
 
         Args:
             to: The user phone number, WhatsApp ID, BSUID or group ID to send the message to.
@@ -1329,16 +1277,13 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         >>> wa = WhatsApp()
         >>> @wa.on_message
         ... def message_handler(_: WhatsApp, msg: Message):
-        ...     msg.react('👍')
+        ...     msg.react("👍")
         ...     msg.unreact()
 
         Example:
 
             >>> wa = WhatsApp()
-            >>> wa.remove_reaction(
-            ...     to='1234567890',
-            ...     message_id='wamid.XXX='
-            ... )
+            >>> wa.remove_reaction(to="1234567890", message_id="wamid.XXX=")
 
         Args:
             to: The user phone number, WhatsApp ID, BSUID or group ID to send the message to.
@@ -1392,11 +1337,11 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
             >>> wa = WhatsApp()
             >>> wa.send_location(
-            ...     to='1234567890',
+            ...     to="1234567890",
             ...     latitude=37.4847483695049,
             ...     longitude=--122.1473373086664,
-            ...     name='WhatsApp HQ',
-            ...     address='Menlo Park, 1601 Willow Rd, United States',
+            ...     name="WhatsApp HQ",
+            ...     address="Menlo Park, 1601 Willow Rd, United States",
             ... )
 
         Args:
@@ -1457,8 +1402,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
             >>> wa = WhatsApp()
             >>> wa.request_location(
-            ...     to='1234567890',
-            ...     text='Please share your location with us.',
+            ...     to="1234567890",
+            ...     text="Please share your location with us.",
             ... )
 
         Args:
@@ -1518,8 +1463,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
             >>> wa = WhatsApp()
             >>> wa.request_contact_info(
-            ...     to='1234567890',
-            ...     text='In order to continue, please share your contact information with us.',
+            ...     to="1234567890",
+            ...     text="In order to continue, please share your contact information with us.",
             ... )
 
         Args:
@@ -1579,13 +1524,19 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             >>> from pywa.types import Contact
             >>> wa = WhatsApp()
             >>> wa.send_contact(
-            ...     to='1234567890',
+            ...     to="1234567890",
             ...     contact=Contact(
-            ...         name=Contact.Name(formatted_name='David Lev', first_name='David'),
-            ...         phones=[Contact.Phone(phone='1234567890', wa_id='1234567890', type='MOBILE')],
-            ...         emails=[Contact.Email(email='test@test.com', type='WORK')],
-            ...         urls=[Contact.Url(url='https://exmaple.com', type='HOME')],
-            ...      )
+            ...         name=Contact.Name(
+            ...             formatted_name="David Lev", first_name="David"
+            ...         ),
+            ...         phones=[
+            ...             Contact.Phone(
+            ...                 phone="1234567890", wa_id="1234567890", type="MOBILE"
+            ...             )
+            ...         ],
+            ...         emails=[Contact.Email(email="test@test.com", type="WORK")],
+            ...         urls=[Contact.Url(url="https://exmaple.com", type="HOME")],
+            ...     ),
             ... )
 
         Args:
@@ -1609,7 +1560,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 sender=sender,
                 **recipient,
                 typ="contacts",
-                msg=tuple(c.to_dict() for c in contact)
+                msg=tuple(c.to_dict() for c in cast("Iterable[Contact]", contact))
                 if isinstance(contact, Iterable)
                 else (contact.to_dict(),),
                 reply_to_message_id=reply_to_message_id,
@@ -1645,10 +1596,10 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
             >>> wa = WhatsApp()
             >>> wa.send_catalog(
-            ...     to='1234567890',
-            ...     body='Check out our catalog!',
-            ...     footer='Powered by PyWa',
-            ...     thumbnail_product_sku='SKU123',
+            ...     to="1234567890",
+            ...     body="Check out our catalog!",
+            ...     footer="Powered by PyWa",
+            ...     thumbnail_product_sku="SKU123",
             ... )
 
         Args:
@@ -1723,11 +1674,11 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
             >>> wa = WhatsApp()
             >>> wa.send_product(
-            ...     to='1234567890',
-            ...     catalog_id='1234567890',
-            ...     sku='SKU123',
-            ...     body='Check out this product!',
-            ...     footer='Powered by PyWa',
+            ...     to="1234567890",
+            ...     catalog_id="1234567890",
+            ...     sku="SKU123",
+            ...     body="Check out this product!",
+            ...     footer="Powered by PyWa",
             ... )
 
         Args:
@@ -1799,21 +1750,21 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             >>> from pywa.types import ProductsSection
             >>> wa = WhatsApp()
             >>> wa.send_products(
-            ...     to='1234567890',
-            ...     catalog_id='1234567890',
-            ...     title='Tech Products',
-            ...     body='Check out our products!',
+            ...     to="1234567890",
+            ...     catalog_id="1234567890",
+            ...     title="Tech Products",
+            ...     body="Check out our products!",
             ...     product_sections=[
             ...         ProductsSection(
-            ...             title='Smartphones',
-            ...             skus=['IPHONE12', 'GALAXYS21'],
+            ...             title="Smartphones",
+            ...             skus=["IPHONE12", "GALAXYS21"],
             ...         ),
             ...         ProductsSection(
-            ...             title='Laptops',
-            ...             skus=['MACBOOKPRO', 'SURFACEPRO'],
+            ...             title="Laptops",
+            ...             skus=["MACBOOKPRO", "SURFACEPRO"],
             ...         ),
             ...     ],
-            ...     footer='Powered by PyWa',
+            ...     footer="Powered by PyWa",
             ... )
 
         Args:
@@ -1938,7 +1889,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Example:
 
             >>> wa = WhatsApp()
-            >>> wa.mark_message_as_read(message_id='wamid.XXX=')
+            >>> wa.mark_message_as_read(message_id="wamid.XXX=")
 
         Args:
             message_id: The message ID to mark as read.
@@ -1975,7 +1926,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Example:
 
             >>> wa = WhatsApp()
-            >>> wa.indicate_typing(message_id='wamid.XXX=')
+            >>> wa.indicate_typing(message_id="wamid.XXX=")
 
         Args:
             message_id: The message ID to mark as read and display a typing indicator.
@@ -2021,18 +1972,20 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Example:
 
             >>> wa = WhatsApp()
-            >>> wa.upload_media(media='https://example.com/image.jpg')
+            >>> wa.upload_media(media="https://example.com/image.jpg")
 
-            >>> wa.upload_media(media=pathlib.Path('image.jpg'))
+            >>> wa.upload_media(media=pathlib.Path("image.jpg"))
             >>> wa.upload_media(media="/path/to/image.jpg")
 
             >>> wa.upload_media(
-            ...     media=b'...binary data...',
-            ...     mime_type='image/jpeg',
-            ...     filename='image.jpg',
+            ...     media=b"...binary data...",
+            ...     mime_type="image/jpeg",
+            ...     filename="image.jpg",
             ... )
 
-            >>> with wa.upload_media("https://my-cdn.com/sensitive-image.png") as media: # will be deleted after use
+            >>> with wa.upload_media(
+            ...     "https://my-cdn.com/sensitive-image.png"
+            ... ) as media:  # will be deleted after use
             ...     wa.send_image(to=..., image=media)
 
         Args:
@@ -2081,7 +2034,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Example:
 
             >>> wa = WhatsApp()
-            >>> wa.get_media_url(media_id='wamid.XXX=')
+            >>> wa.get_media_url(media_id="wamid.XXX=")
 
         Args:
             media_id: The media ID.
@@ -2121,9 +2074,9 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
             >>> wa = WhatsApp()
             >>> wa.download_media(
-            ...     url='https://mmg-fna.whatsapp.net/d/f/Amc.../v2/1234567890',
-            ...     path=pathlib.Path('/path/to/save'),
-            ...     filename='image.jpg',
+            ...     url="https://mmg-fna.whatsapp.net/d/f/Amc.../v2/1234567890",
+            ...     path=pathlib.Path("/path/to/save"),
+            ...     filename="image.jpg",
             ... )
 
         Args:
@@ -2176,7 +2129,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
             >>> wa = WhatsApp()
             >>> media_bytes = wa.get_media_bytes(
-            ...     url='https://mmg-fna.whatsapp.net/d/f/Amc.../v2/1234567890',
+            ...     url="https://mmg-fna.whatsapp.net/d/f/Amc.../v2/1234567890",
             ... )
 
         Args:
@@ -2219,8 +2172,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         """
         with self.api.stream_media_bytes(media_url=url, **httpx_kwargs) as res:
             res.raise_for_status()
-            for chunk in res.iter_bytes(chunk_size=chunk_size):
-                yield chunk
+            yield from res.iter_bytes(chunk_size=chunk_size)
 
     def delete_media(
         self,
@@ -2236,7 +2188,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Example:
 
             >>> wa = WhatsApp()
-            >>> wa.delete_media(media_id='wamid.XXX=')
+            >>> wa.delete_media(media_id="wamid.XXX=")
 
         Args:
             media_id: The media ID to delete.
@@ -2364,7 +2316,9 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Example:
 
             >>> wa = WhatsApp()
-            >>> wa.update_business_account_settings(disable_marketing_messages_on_cloud_api=True)
+            >>> wa.update_business_account_settings(
+            ...     disable_marketing_messages_on_cloud_api=True
+            ... )
 
         Args:
             disable_marketing_messages_on_cloud_api: Whether to block Marketing category templates on the Cloud API ``/messages`` endpoint (in pywa it means that when you :meth:`~pywa.WhatsApp.send_template` a ``MARKETING`` template you must set ``use_mm_lite_api`` to ``True``).
@@ -2552,15 +2506,15 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             >>> from pywa.types import Command
             >>> wa = WhatsApp()
             >>> wa.update_conversational_automation(
-            ...     ice_breakers=['Plan a trip', 'Create a workout plan'],
+            ...     ice_breakers=["Plan a trip", "Create a workout plan"],
             ...     commands=[
             ...         Command(
-            ...             command='start',
-            ...             description='Start a new conversation',
+            ...             command="start",
+            ...             description="Start a new conversation",
             ...         ),
             ...         Command(
-            ...             command='help',
-            ...             description='Get help with the bot',
+            ...             command="help",
+            ...             description="Get help with the bot",
             ...         ),
             ...     ],
             ... )
@@ -2715,13 +2669,13 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             >>> from pywa.types import Industry
             >>> wa = WhatsApp()
             >>> wa.update_business_profile(
-            ...     about='This is a test business',
-            ...     address='Menlo Park, 1601 Willow Rd, United States',
-            ...     description='This is a test business',
-            ...     email='test@test.com',
-            ...     profile_picture='path/to/profile.jpg',
+            ...     about="This is a test business",
+            ...     address="Menlo Park, 1601 Willow Rd, United States",
+            ...     description="This is a test business",
+            ...     email="test@test.com",
+            ...     profile_picture="path/to/profile.jpg",
             ...     industry=Industry.NOT_A_BIZ,
-            ...     websites=['https://example.com', 'https://google.com'],
+            ...     websites=["https://example.com", "https://google.com"],
             ... )
 
         Args:
@@ -2815,8 +2769,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
     def update_commerce_settings(
         self,
-        is_catalog_visible: bool = None,
-        is_cart_enabled: bool = None,
+        is_catalog_visible: bool | None = None,
+        is_cart_enabled: bool | None = None,
         *,
         phone_id: str | int | None = None,
     ) -> SuccessResult:
@@ -2957,14 +2911,20 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             >>> from pywa.types.templates import *
             >>> wa = WhatsApp()
             >>> templates = wa.upsert_authentication_template(
-            ...     name='one_tap_authentication',
-            ...     languages=[TemplateLanguage.ENGLISH_US, TemplateLanguage.FRENCH, TemplateLanguage.SPANISH],
+            ...     name="one_tap_authentication",
+            ...     languages=[
+            ...         TemplateLanguage.ENGLISH_US,
+            ...         TemplateLanguage.FRENCH,
+            ...         TemplateLanguage.SPANISH,
+            ...     ],
             ...     otp_button=OneTapOTPButton(supported_apps=...),
             ...     add_security_recommendation=True,
             ...     code_expiration_minutes=5,
             ... )
             ... for template in templates:
-            ...     print(f'Template {template.id} created with status {template.status}')
+            ...     print(
+            ...         f"Template {template.id} created with status {template.status}"
+            ...     )
 
         Args:
             name: The name of the template (should be unique, maximum 512 characters).
@@ -3008,7 +2968,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         to: str | int,
         name: str | None = None,
         language: TemplateLanguage | None = None,
-        params: list[BaseParams | dict] | None = None,
+        params: Sequence[BaseParams | dict] | None = None,
         *,
         template: Template | None = None,
         use_mm_lite_api: bool = False,
@@ -3030,33 +2990,43 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
             wa = WhatsApp(...)
             wa.send_template(
-                to='1234567890',
-                name='seasonal_promotion',
+                to="1234567890",
+                name="seasonal_promotion",
                 language=TemplateLanguage.ENGLISH_US,
                 params=[
-                    BodyText.params(season='Summer'),
-                    CopyCodeButton.params(coupon_code="25OFF", index=0)
+                    BodyText.params(season="Summer"),
+                    CopyCodeButton.params(coupon_code="25OFF", index=0),
                 ],
             )
 
             from pywa.types.templates import *
 
             t = Template(
-                name='seasonal_promotion',
+                name="seasonal_promotion",
                 category=TemplateCategory.MARKETING,
                 language=TemplateLanguage.ENGLISH_US,
                 parameter_format=ParamFormat.NAMED,
                 components=[
-                    header := HeaderText(text='Our {{sale_name}} is on!', sale_name='Summer Sale'),
-                    body := BodyText(
-                        text='Shop now through {{end_date}} and use code {{discount_code}} to get {{discount_amount}} off of all merchandise.',
-                        end_date='the end of August', discount_code='25OFF', discount_amount='25%'
+                    header := HeaderText(
+                        text="Our {{sale_name}} is on!", sale_name="Summer Sale"
                     ),
-                    FooterText(text='Use the buttons below to manage your marketing subscriptions'),
+                    body := BodyText(
+                        text="Shop now through {{end_date}} and use code {{discount_code}} to get {{discount_amount}} off of all merchandise.",
+                        end_date="the end of August",
+                        discount_code="25OFF",
+                        discount_amount="25%",
+                    ),
+                    FooterText(
+                        text="Use the buttons below to manage your marketing subscriptions"
+                    ),
                     Buttons(
                         buttons=[
-                            uns_from_promos := QuickReplyButton(text='Unsubscribe from Promos'),
-                            uns_from_all := QuickReplyButton(text='Unsubscribe from All'),
+                            uns_from_promos := QuickReplyButton(
+                                text="Unsubscribe from Promos"
+                            ),
+                            uns_from_all := QuickReplyButton(
+                                text="Unsubscribe from All"
+                            ),
                         ]
                     ),
                 ],
@@ -3065,17 +3035,17 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             wa.create_template(template=t)
 
             wa.send_template(
-                to='1234567890',
-                template=t, # provide the template object to validate parameters against
+                to="1234567890",
+                template=t,  # provide the template object to validate parameters against
                 params=[
-                    header.params(sale_name='Summer Sale'),
+                    header.params(sale_name="Summer Sale"),
                     body.params(
-                        end_date='the end of August',
-                        discount_code='25OFF',
-                        discount_amount='25%',
+                        end_date="the end of August",
+                        discount_code="25OFF",
+                        discount_amount="25%",
                     ),
-                    uns_from_promos.params(callback_data='uns_from_promos'),
-                    uns_from_all.params(callback_data='uns_from_all'),
+                    uns_from_promos.params(callback_data="uns_from_promos"),
+                    uns_from_all.params(callback_data="uns_from_all"),
                 ],
             )
 
@@ -3111,7 +3081,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 sender=sender,
                 params=params,
             )
-        template = {
+        template_payload = {
             "name": name,
             "language": {"code": language.value},
             **(
@@ -3131,7 +3101,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 sender=sender,
                 **recipient,
                 typ="template",
-                msg=template,
+                msg=template_payload,
                 reply_to_message_id=reply_to_message_id,
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
                 recipient_identity_key_hash=identity_key_hash,
@@ -3140,7 +3110,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             else self.api.send_marketing_message(
                 sender=sender,
                 **recipient,
-                template=template,
+                template=template_payload,
                 message_activity_sharing=message_activity_sharing,
                 reply_to_message_id=reply_to_message_id,
                 biz_opaque_callback_data=helpers.resolve_tracker_param(tracker),
@@ -3173,10 +3143,10 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             ...     statuses=[TemplateStatus.APPROVED],
             ...     categories=[TemplateCategory.MARKETING],
             ...     languages=[TemplateLanguage.ENGLISH_US],
-            ...     pagination=Pagination(limit=10)
+            ...     pagination=Pagination(limit=10),
             ... )
             >>> for template in templates:
-            ...     print(f'Template {template.id} - {template.name}: {template}')
+            ...     print(f"Template {template.id} - {template.name}: {template}")
 
         Args:
             statuses: The statuses of the templates to filter by (optional).
@@ -3234,7 +3204,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Example:
 
             >>> wa = WhatsApp()
-            >>> template_details = wa.get_template(template_id='1234567890')
+            >>> template_details = wa.get_template(template_id="1234567890")
 
         Args:
             template_id: The ID of the template to retrieve.
@@ -3274,10 +3244,10 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             >>> from pywa.types.templates import *
             >>> wa = WhatsApp()
             >>> updated_template = wa.update_template(
-            ...     template_id='1234567890',
+            ...     template_id="1234567890",
             ...     new_category=TemplateCategory.MARKETING,
             ...     new_components=[...],
-            ...     new_message_send_ttl_seconds=3600
+            ...     new_message_send_ttl_seconds=3600,
             ... )
 
         Args:
@@ -3299,7 +3269,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             )
         return UpdatedTemplate.from_dict(
             data=self.api.update_template(
-                template_id=template_id,
+                template_id=str(template_id),
                 template=json.loads(
                     _TemplateUpdate(
                         category=new_category,
@@ -3331,8 +3301,12 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Example:
 
             >>> wa = WhatsApp()
-            >>> wa.delete_template(template_name='seasonal_promotion') # Deletes all templates with that name
-            >>> wa.delete_template(template_name='seasonal_promotion', template_id='1234567890') # Deletes only the template with that ID
+            >>> wa.delete_template(
+            ...     template_name="seasonal_promotion"
+            ... )  # Deletes all templates with that name
+            >>> wa.delete_template(
+            ...     template_name="seasonal_promotion", template_id="1234567890"
+            ... )  # Deletes only the template with that ID
 
         Args:
             template_name: The name of the template to delete.
@@ -3351,7 +3325,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                     client_arg="waba_id",
                 ),
                 template_name=template_name,
-                template_id=template_id,
+                template_id=str(template_id) if template_id is not None else None,
             )
         )
 
@@ -3370,7 +3344,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Example:
 
             >>> wa = WhatsApp()
-            >>> wa.archive_templates(template_ids=['1234567890', '0987654321'])
+            >>> wa.archive_templates(template_ids=["1234567890", "0987654321"])
 
         Args:
             template_ids: The IDs of the templates to archive.
@@ -3406,7 +3380,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Example:
 
             >>> wa = WhatsApp()
-            >>> wa.unarchive_templates(template_ids=['1234567890', '0987654321'])
+            >>> wa.unarchive_templates(template_ids=["1234567890", "0987654321"])
 
         Args:
             template_ids: The IDs of the templates to unarchive.
@@ -3448,8 +3422,10 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             >>> wa = WhatsApp()
             >>> now = datetime.datetime.now()
             >>> result = wa.compare_templates(
-            ...     '1234567890', '0987654321',
-            ...     start=now - datetime.timedelta(days=30), end=now # Compare templates sent in the last 30 days
+            ...     "1234567890",
+            ...     "0987654321",
+            ...     start=now - datetime.timedelta(days=30),
+            ...     end=now,  # Compare templates sent in the last 30 days
             ... )
 
         Args:
@@ -3467,7 +3443,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             )
         return TemplatesCompareResult.from_dict(
             data=self.api.compare_templates(
-                template_id=template_id,
+                template_id=str(template_id),
                 template_ids=tuple(map(str, template_ids)),
                 start=str(
                     int(start.timestamp())
@@ -3573,7 +3549,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             >>> from pywa.types.flows import *
             >>> wa = WhatsApp()
             >>> wa.create_flow(
-            ...     name='Feedback',
+            ...     name="Feedback",
             ...     categories=[FlowCategory.SURVEY, FlowCategory.OTHER],
             ...     flow_json=FlowJSON(...),
             ...     publish=True,
@@ -3626,10 +3602,10 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             >>> from pywa.types.flows import FlowCategory
             >>> wa = WhatsApp()
             >>> wa.update_flow_metadata(
-            ...     flow_id='1234567890',
-            ...     name='Feedback',
+            ...     flow_id="1234567890",
+            ...     name="Feedback",
             ...     categories=[FlowCategory.SURVEY, FlowCategory.OTHER],
-            ...     endpoint_uri='https://my-api-server/feedback_flow',
+            ...     endpoint_uri="https://my-api-server/feedback_flow",
             ...     application_id=1234567890,
             ... )
 
@@ -3671,15 +3647,14 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
             >>> from pywa.types.flows import *
             >>> wa.update_flow_json(
-            ...     flow_id='1234567890',
-            ...     flow_json=FlowJSON(version='7.1', screens=[Screen(...)])
+            ...     flow_id="1234567890",
+            ...     flow_json=FlowJSON(version="7.1", screens=[Screen(...)]),
             ... )
 
             - From a json file path:
 
             >>> wa.update_flow_json(
-            ...     flow_id='1234567890',
-            ...     flow_json="/home/david/feedback_flow.json"
+            ...     flow_id="1234567890", flow_json="/home/david/feedback_flow.json"
             ... )
 
             - From a json string:
@@ -3814,11 +3789,11 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             >>> wa = WhatsApp()
             >>> flows = wa.get_flows(
             ...     invalidate_preview=True,
-            ...     phone_number_id='1234567890',
-            ...     pagination=Pagination(limit=10)
+            ...     phone_number_id="1234567890",
+            ...     pagination=Pagination(limit=10),
             ... )
             ... for flow in flows:
-            ...     print(f'Flow {flow.id} - {flow.name}: {flow}')
+            ...     print(f"Flow {flow.id} - {flow.name}: {flow}")
 
         Args:
             invalidate_preview: Whether to invalidate the preview (optional, default: True).
@@ -3951,7 +3926,9 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Example:
 
             >>> wa = WhatsApp()
-            >>> wa.register_phone_number(password='111111', data_localization_region='US')
+            >>> wa.register_phone_number(
+            ...     password="111111", data_localization_region="US"
+            ... )
 
         Args:
             pin: If your verified business phone number already has two-step verification enabled,
@@ -4436,8 +4413,9 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Example:
 
             >>> wa = WhatsApp()
-            >>> res = wa.block_users(users=['1234567890', '0987654321'])
-            >>> if res.errors: print(res.failed_users)
+            >>> res = wa.block_users(users=["1234567890", "0987654321"])
+            >>> if res.errors:
+            ...     print(res.failed_users)
 
         Args:
             users: The phone numbers/wa IDs of the users to block.
@@ -4469,7 +4447,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Example:
             >>> wa = WhatsApp()
-            >>> res = wa.unblock_users(users=['1234567890', '0987654321'])
+            >>> res = wa.unblock_users(users=["1234567890", "0987654321"])
             >>> print(res.removed_users)
 
         Args:
@@ -4504,7 +4482,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         Example:
 
             >>> wa = WhatsApp()
-            >>> for user in wa.get_blocked_users(): print(user)
+            >>> for user in wa.get_blocked_users():
+            ...     print(user)
 
         Args:
             pagination: The pagination parameters (optional).
@@ -4819,7 +4798,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             >>> wa = WhatsApp()
             >>> groups = wa.get_groups(pagination=Pagination(limit=10))
             ... for group in groups:
-            ...     print(f'Group {group.id}: {group}')
+            ...     print(f"Group {group.id}: {group}")
 
         Args:
             phone_id: The phone ID to get the groups for (optional, if not provided, the client's phone ID will be used).

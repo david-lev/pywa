@@ -1,9 +1,12 @@
 import asyncio
 import copy
 import logging
+import time
 import warnings
 from typing import TYPE_CHECKING
 
+from pywa._logging import bind_update_logger, get_update_hash
+from pywa.server import _logger, _update_hash_of
 from pywa.types.base_update import BaseUpdate
 
 from . import errors, utils
@@ -18,9 +21,6 @@ from .types import (
     StopHandling,
 )
 
-_logger = logging.getLogger(__name__)
-
-
 if TYPE_CHECKING:
     from pywa_async import WhatsApp
 
@@ -29,8 +29,8 @@ MAX_PROCESSED_UPDATES = 100_000
 
 class Server:
     async def webhook_challenge_handler(
-        self: "WhatsApp", vt: str, ch: str
-    ) -> tuple[str, int]:
+        self: "WhatsApp", vt: str | None, ch: str | None
+    ) -> tuple[str | None, int]:
         """
         Handle the verification challenge from the webhook manually.
 
@@ -86,25 +86,26 @@ class Server:
             if error_response:
                 return error_response
 
+        update_hash = get_update_hash(update)
+        log = bind_update_logger(_logger, update_hash, self._webhook_endpoint)
         try:
-            raw_update = RawUpdate(update, hmac_header=hmac_header)
+            raw_update = RawUpdate(
+                update, hmac_header=hmac_header, update_hash=update_hash
+            )
         except (TypeError, ValueError):
-            _logger.debug(
-                "Webhook ('%s') received non-JSON data: %s",
+            _logger.warning(
+                "[%s] Rejected a malformed (non-JSON) update body (%d bytes)",
                 self._webhook_endpoint,
-                update,
+                len(update) if hasattr(update, "__len__") else -1,
             )
             return "Bad Request", 400
 
-        update_hash = hmac_header or str(hash(update))
+        if log.isEnabledFor(logging.DEBUG):
+            log.debug("Received raw update: %s", raw_update)
 
         if self._skip_duplicate_updates:
             if update_hash in self._processed_updates:
-                _logger.debug(
-                    "Webhook ('%s') skipped duplicate update: %s",
-                    self._webhook_endpoint,
-                    update_hash,
-                )
+                log.info("Skipped duplicate update")
                 return "ok", 200
 
             self._processed_updates[update_hash] = None
@@ -118,34 +119,49 @@ class Server:
 
     async def _call_handlers(self: "WhatsApp", raw_update: RawUpdate) -> None:
         """Call the handlers for the given update."""
+        log = bind_update_logger(
+            _logger, raw_update._update_hash, self._webhook_endpoint
+        )
+        start = time.perf_counter()
+        handler_type: type[Handler] | None = None
         try:
             try:
                 handler_type = self._get_handler_type(raw_update)
             except (KeyError, ValueError, TypeError, IndexError):
-                (_logger.error if self._validate_updates else _logger.debug)(
-                    "Webhook ('%s') received unexpected update%s: %s",
-                    self._webhook_endpoint,
-                    " (Enable `validate_updates` to ignore updates with invalid data)"
-                    if not self._validate_updates
-                    else "",
-                    raw_update,
+                log_fn = log.error if self._validate_updates else log.debug
+                log_fn(
+                    "Received unexpected update%s: field=%s waba_id=%s",
+                    ""
+                    if self._validate_updates
+                    else " (Enable `validate_updates` to ignore updates with invalid data)",
+                    raw_update.field,
+                    raw_update.id,
                 )
                 handler_type = None
 
             if handler_type is None:
+                log.info("No handler resolved for update (field=%s)", raw_update.field)
                 return
+            log.debug("Dispatched to %s", handler_type.__name__)
             try:
                 constructed_update: BaseUpdate = self._handlers_to_updates[
                     handler_type
                 ].from_update(client=self, update=raw_update)
+                if log.isEnabledFor(logging.DEBUG):
+                    log.debug("Constructed update: %s", constructed_update)
                 if await self._process_listener(constructed_update):
                     return
                 await self._invoke_callbacks(handler_type, constructed_update)
             except Exception:
-                _logger.exception("Failed to construct update: %s", raw_update)
+                log.exception("Failed to construct update (field=%s)", raw_update.field)
         finally:
             # Always call raw update handler last
             await self._call_raw_update_handler(raw_update)
+            log.info(
+                "Finished processing update (handler=%s) in %.2fms",
+                handler_type.__name__ if handler_type else None,
+                (time.perf_counter() - start) * 1000,
+            )
 
     async def _call_raw_update_handler(self: "WhatsApp", update: RawUpdate) -> None:
         """Invoke the raw update handler."""
@@ -155,29 +171,56 @@ class Server:
         self: "WhatsApp", handler_type: type[Handler], update: BaseUpdate | RawUpdate
     ) -> None:
         """Process and call registered handlers for the update."""
+        log = bind_update_logger(
+            _logger, _update_hash_of(update), self._webhook_endpoint
+        )
         for handler in self._handlers[handler_type]:
+            callback_name = getattr(
+                handler._callback, "__name__", repr(handler._callback)
+            )
             try:
-                handled = await handler.ahandle(self, update)
+                log.debug("Checking if handler %s should handle the update", handler)
+                checked_update = await handler.acheck(self, update)
+                if checked_update is None:
+                    continue
+                log.debug("Calling '%s'", callback_name)
+                await handler._callback(
+                    self, checked_update
+                ) if handler._is_async_callback else handler._callback(
+                    self, checked_update
+                )
+                handled = True
             except StopHandling:
+                log.debug("Stopped further handling after '%s'", callback_name)
                 break
             except ContinueHandling:
+                log.debug("Continued further handling after '%s'", callback_name)
                 continue
             except Exception:
                 handled = True
-                _logger.exception(
-                    "An error occurred while '%s' was handling an update",
-                    handler._callback.__name__,
+                log.exception(
+                    "Error occurred while '%s' was handling the update",
+                    callback_name,
                 )
             if handled and not self._continue_handling:
+                log.debug("Stopped further handling after '%s'", callback_name)
                 break
+            log.debug("Continued further handling after '%s'", callback_name)
 
     async def _process_listener(self: "WhatsApp", update: BaseUpdate) -> bool:
         """Process and answer a listener if present."""
         if not (listener_identifiers := update.listener_identifiers):
             return False
+        raw = getattr(update, "raw", None)
+        log = (
+            bind_update_logger(_logger, raw._update_hash, self._webhook_endpoint)
+            if raw is not None
+            else _logger
+        )
         for identifier in listener_identifiers:
             listener = self._listeners.get(identifier)
             if listener is not None:
+                log.info("Found matching listener")
                 break
         else:
             return False
@@ -196,6 +239,7 @@ class Server:
         except StopHandling:
             return True
         except Exception as e:
+            log.exception("Exception while processing listener")
             listener.set_exception(e)
 
         return not self._continue_handling
@@ -215,17 +259,22 @@ class Server:
             headers=api._session.headers,
         )
 
+        assert self._callback_url is not None
+        assert self._verify_token is not None
         try:
             match self._callback_url_scope:
                 case utils.CallbackURLScope.APP:
+                    assert self._app_id is not None
+                    assert self._app_secret is not None
                     app_access_token = loop.run_until_complete(
                         api.get_app_access_token(
-                            client_id=self._app_id, client_secret=self._app_secret
+                            client_id=int(self._app_id),
+                            client_secret=self._app_secret,
                         )
                     )
                     res = loop.run_until_complete(
                         api.set_app_callback_url(
-                            app_id=self._app_id,
+                            app_id=int(self._app_id),
                             access_token=app_access_token["access_token"],
                             callback_url=self._callback_url,
                             verify_token=self._verify_token,
@@ -233,19 +282,21 @@ class Server:
                         )
                     )
                 case utils.CallbackURLScope.WABA:
+                    assert self.waba_id is not None
                     res = loop.run_until_complete(
                         api.set_waba_alternate_callback_url(
-                            waba_id=self.waba_id,
+                            waba_id=str(self.waba_id),
                             override_callback_uri=self._callback_url,
                             verify_token=self._verify_token,
                         )
                     )
                 case utils.CallbackURLScope.PHONE:
+                    assert self.phone_id is not None
                     res = loop.run_until_complete(
                         api.set_phone_alternate_callback_url(
                             override_callback_uri=self._callback_url,
                             verify_token=self._verify_token,
-                            phone_id=self.phone_id,
+                            phone_id=str(self.phone_id),
                         )
                     )
                 case _:

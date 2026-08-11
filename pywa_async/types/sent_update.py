@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import cast
 
 from pywa.types.others import InteractiveType
-from pywa.types.sent_update import *  # noqa MUST BE IMPORTED FIRST
+from pywa.types.sent_update import *
 from pywa.types.sent_update import (
     InitiatedCall as _InitiatedCall,
 )
@@ -48,15 +48,15 @@ from .calls import _CallShortcutsAsync
 from .media import Media
 
 __all__ = [
-    "SentMessage",
-    "SentMediaMessage",
-    "SentVoiceMessage",
-    "SentLocationRequest",
+    "InitiatedCall",
     "SentContactInfoRequest",
+    "SentLocationRequest",
+    "SentMediaMessage",
+    "SentMessage",
     "SentReaction",
     "SentTemplate",
     "SentTemplateStatus",
-    "InitiatedCall",
+    "SentVoiceMessage",
 ]
 
 from pywa.types.base_update import BaseUserUpdate
@@ -162,7 +162,7 @@ class SentMessage(_ClientShortcutsAsync, _PinUnpinActionsAsync, _SentMessage):
                     try:
                         r.wait_until_read(cancel_on_new_update=True)
                     except ListenerCanceled as e:
-                        print(e.update) # The update that canceled the listener
+                        print(e.update)  # The update that canceled the listener
                         r.reply("You turned off read receipts")
                     r.reply("You read this message", quote=True)
 
@@ -263,13 +263,17 @@ class SentMessage(_ClientShortcutsAsync, _PinUnpinActionsAsync, _SentMessage):
                 )
                 try:
                     failed = m.wait_until_failed(
-                        filters=filters.failed_with(errors.ReEngagementMessage),  # message was send after 24 hours
-                        cancel_if_delivered=True, # defaults to True, so the listener will be canceled if the message was delivered
+                        filters=filters.failed_with(
+                            errors.ReEngagementMessage
+                        ),  # message was send after 24 hours
+                        cancel_if_delivered=True,  # defaults to True, so the listener will be canceled if the message was delivered
                         timeout=5,
                     )
                     failed.reply_template(...)
                 except ListenerCanceled:
-                    print("The message was delivered successfully, so the listener was canceled.")
+                    print(
+                        "The message was delivered successfully, so the listener was canceled."
+                    )
                 except ListenerTimeout:
                     pass
 
@@ -288,18 +292,22 @@ class SentMessage(_ClientShortcutsAsync, _PinUnpinActionsAsync, _SentMessage):
             ListenerStopped: If the listener was stopped manually.
         """
         if cancel_if_delivered:
-            cancelers = (
+            cancelers = cast(
+                "pywa_filters.Filter[BaseUserUpdate] | None",
                 (cancelers | pywa_filters.delivered)
                 if cancelers
-                else pywa_filters.delivered
+                else pywa_filters.delivered,
             )
-        return await self._client.listen(
-            to=self.listener_identifier,
-            filters=pywa_filters.message_status
-            & pywa_filters.failed
-            & (filters or pywa_filters.true),
-            cancelers=cancelers,
-            timeout=timeout,
+        return cast(
+            MessageStatus,
+            await self._client.listen(
+                to=self.listener_identifier,
+                filters=pywa_filters.message_status
+                & pywa_filters.failed
+                & (filters or pywa_filters.true),
+                cancelers=cancelers,
+                timeout=timeout,
+            ),
         )
 
     async def wait_for_click(
@@ -353,12 +361,15 @@ class SentMessage(_ClientShortcutsAsync, _PinUnpinActionsAsync, _SentMessage):
                 if cancelers
                 else ignore_updates_canceler
             )
-        return await self._client.listen(
-            to=self.listener_identifier,
-            filters=pywa_filters.callback_button
-            & (pywa_filters.replays_to(self.id) & (filters or pywa_filters.true)),
-            cancelers=cancelers,
-            timeout=timeout,
+        return cast(
+            CallbackButton,
+            await self._client.listen(
+                to=self.listener_identifier,
+                filters=pywa_filters.callback_button
+                & (pywa_filters.replays_to(self.id) & (filters or pywa_filters.true)),
+                cancelers=cancelers,
+                timeout=timeout,
+            ),
         )
 
     async def wait_for_selection(
@@ -396,12 +407,15 @@ class SentMessage(_ClientShortcutsAsync, _PinUnpinActionsAsync, _SentMessage):
                 if cancelers
                 else ignore_updates_canceler
             )
-        return await self._client.listen(
-            to=self.listener_identifier,
-            filters=pywa_filters.callback_selection
-            & (pywa_filters.replays_to(self.id) & (filters or pywa_filters.true)),
-            cancelers=cancelers,
-            timeout=timeout,
+        return cast(
+            CallbackSelection,
+            await self._client.listen(
+                to=self.listener_identifier,
+                filters=pywa_filters.callback_selection
+                & (pywa_filters.replays_to(self.id) & (filters or pywa_filters.true)),
+                cancelers=cancelers,
+                timeout=timeout,
+            ),
         )
 
     async def wait_for_completion(
@@ -450,12 +464,15 @@ class SentMessage(_ClientShortcutsAsync, _PinUnpinActionsAsync, _SentMessage):
                 if cancelers
                 else ignore_updates_canceler
             )
-        return await self._client.listen(
-            to=self.listener_identifier,
-            filters=pywa_filters.flow_completion
-            & (pywa_filters.replays_to(self.id) & (filters or pywa_filters.true)),
-            cancelers=cancelers,
-            timeout=timeout,
+        return cast(
+            FlowCompletion,
+            await self._client.listen(
+                to=self.listener_identifier,
+                filters=pywa_filters.flow_completion
+                & (pywa_filters.replays_to(self.id) & (filters or pywa_filters.true)),
+                cancelers=cancelers,
+                timeout=timeout,
+            ),
         )
 
     async def wait_for_call_permission(
@@ -510,12 +527,15 @@ class SentMessage(_ClientShortcutsAsync, _PinUnpinActionsAsync, _SentMessage):
                 if cancelers
                 else ignore_updates_canceler
             )
-        return await self._client.listen(
-            to=self.listener_identifier,
-            filters=pywa_filters.call_permission_update
-            & (pywa_filters.replays_to(self.id) & (filters or pywa_filters.true)),
-            cancelers=cancelers,
-            timeout=timeout,
+        return cast(
+            CallPermissionUpdate,
+            await self._client.listen(
+                to=self.listener_identifier,
+                filters=pywa_filters.call_permission_update
+                & (pywa_filters.replays_to(self.id) & (filters or pywa_filters.true)),
+                cancelers=cancelers,
+                timeout=timeout,
+            ),
         )
 
     async def wait_for_incoming_voice_call(
@@ -680,9 +700,14 @@ class SentLocationRequest(SentMessage, _SentLocationRequest):
 
                 @wa.on_message(filters.command("start"))
                 async def start(w: WhatsApp, m: Message):
-                    r = await m.reply_location_request(text="Please share your location",)
+                    r = await m.reply_location_request(
+                        text="Please share your location",
+                    )
                     location_message = await r.wait_for_location()
-                    await r.reply(f"You shared your location: {location_message.location}", quote=True)
+                    await r.reply(
+                        f"You shared your location: {location_message.location}",
+                        quote=True,
+                    )
 
         Args:
             force_current_location: Whether to only accept current location messages.
@@ -742,9 +767,14 @@ class SentContactInfoRequest(SentMessage, _SentContactInfoRequest):
 
                 @wa.on_message(filters.command("start"))
                 async def start(w: WhatsApp, m: Message):
-                    r = await m.reply_contact_info_request(text="Please share your contact",)
+                    r = await m.reply_contact_info_request(
+                        text="Please share your contact",
+                    )
                     contact_message = await r.wait_for_contact_info()
-                    await r.reply(f"You shared your contact: {contact_message.contacts.first.name}", quote=True)
+                    await r.reply(
+                        f"You shared your contact: {contact_message.contacts.first.name}",
+                        quote=True,
+                    )
 
         Args:
             filters: The filters to apply to the contact message.

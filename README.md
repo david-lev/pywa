@@ -15,8 +15,9 @@
 <p align="center">
   <a href="https://pypi.org/project/pywa/"><img src="https://img.shields.io/pypi/v/pywa?color=%2334D058&label=pypi" alt="PyPI Version"/></a>
   <a href="https://pepy.tech/project/pywa"><img src="https://static.pepy.tech/badge/pywa" alt="Downloads"/></a>
-  <a href="https://pypi.org/project/pywa/"><img src="https://img.shields.io/pypi/pyversions/pywa?color=%2334D058" alt="Python Versions"/></a>
+  <a href="pyproject.toml"><img src="https://img.shields.io/badge/python-3.10%2B-3776ab?color=%2334D058" alt="Python Versions"/></a>
   <a href="https://github.com/david-lev/pywa/actions/workflows/tests.yml"><img src="https://img.shields.io/github/actions/workflow/status/david-lev/pywa/tests.yml?label=tests" alt="Tests"/></a>
+  <a href="https://results.pre-commit.ci/latest/github/david-lev/pywa/master"><img src="https://results.pre-commit.ci/badge/github/david-lev/pywa/master.svg" alt="pre-commit.ci status"/></a>
   <a href="https://pywa.readthedocs.io"><img src="https://readthedocs.org/projects/pywa/badge/?version=latest&" alt="Docs"/></a>
   <a href="https://github.com/david-lev/pywa/blob/master/LICENSE"><img src="https://img.shields.io/github/license/david-lev/pywa?color=%2334D058" alt="License"/></a>
   <a href="https://www.codefactor.io/repository/github/david-lev/pywa/overview/master"><img src="https://www.codefactor.io/repository/github/david-lev/pywa/badge/master" alt="Code Quality"/></a>
@@ -80,7 +81,7 @@ pip install -U "pywa[server]"
   </tr>
   <tr>
     <td>🧰 <strong>CLI Tools</strong></td>
-    <td><code>pywa dev</code> for local development, <code>pywa run</code> for production</td>
+    <td><code>pywa dev</code>/<code>pywa run</code> to serve, <code>pywa new</code> to scaffold a project or grab a full example bot, <code>pywa send</code> to message from the terminal</td>
   </tr>
 </table>
 
@@ -116,6 +117,16 @@ pywa dev    # Local development
 pywa run    # Production
 ```
 
+Don't want to start from scratch? `pywa new` scaffolds a working project, and `pywa new examples` lets you
+browse and download a full, ready-to-run bot (order taking, OTP verification, WhatsApp Flows, calls, and more —
+see the [CLI guide](https://pywa.readthedocs.io/en/latest/content/cli.html#browsing-and-downloading-example-bots) for the full list):
+
+```bash
+pywa new                            # # Generate a basic echo-bot template
+pywa new examples                   # List the official example bots
+pywa new examples 02-order-bot      # Download one — ready to run with `pywa dev`
+```
+
 ### 2. Rich Messages — Buttons, Media & More
 
 ```python
@@ -134,7 +145,9 @@ wa.send_message(
 )
 
 # Images, documents, audio — one-liners
-wa.send_image(to="9876543210", image="https://example.com/photo.jpg", caption="Check this out!")
+wa.send_image(
+    to="9876543210", image="https://example.com/photo.jpg", caption="Check this out!"
+)
 wa.send_document(to="9876543210", document="report.pdf")
 ```
 
@@ -206,10 +219,16 @@ wa.create_template(
             ht := HeaderText("Your order #{{order_id}} has shipped!", order_id="12345"),
             bt := BodyText("Track it with code {{code}}.", code="ABC123"),
             FooterText(text="Powered by PyWa"),
-            Buttons(buttons=[
-                url := URLButton(text="Track Order", url="https://example.com/track/{{1}}", example="12345"),
-                QuickReplyButton(text="Unsubscribe"),
-            ]),
+            Buttons(
+                buttons=[
+                    url := URLButton(
+                        text="Track Order",
+                        url="https://example.com/track/{{1}}",
+                        example="12345",
+                    ),
+                    QuickReplyButton(text="Unsubscribe"),
+                ]
+            ),
         ],
     ),
 )
@@ -243,27 +262,43 @@ my_flow = FlowJSON(
         Screen(
             id="SIGNUP",
             title="Join Our Newsletter",
-            layout=Layout(children=[
-                TextHeading(text="Subscribe for updates"),
-                name := TextInput(name="name", label="Name", input_type=InputType.TEXT),
-                email := TextInput(name="email", label="Email", input_type=InputType.EMAIL, required=True),
-                Footer(
-                    label="Subscribe",
-                    on_click_action=CompleteAction(
-                        payload={"name": name.ref, "email": email.ref}
+            layout=Layout(
+                children=[
+                    TextHeading(text="Subscribe for updates"),
+                    name := TextInput(
+                        name="name", label="Name", input_type=InputType.TEXT
                     ),
-                ),
-            ]),
+                    email := TextInput(
+                        name="email",
+                        label="Email",
+                        input_type=InputType.EMAIL,
+                        required=True,
+                    ),
+                    Footer(
+                        label="Subscribe",
+                        on_click_action=CompleteAction(
+                            payload={"name": name.ref, "email": email.ref}
+                        ),
+                    ),
+                ]
+            ),
         )
     ]
 )
 
-wa.create_flow(name="newsletter_signup", categories=[FlowCategory.SIGN_UP], flow_json=my_flow, publish=True)
+wa.create_flow(
+    name="newsletter_signup",
+    categories=[FlowCategory.SIGN_UP],
+    flow_json=my_flow,
+    publish=True,
+)
 
 
 @wa.on_flow_completion
 def on_signup(_: WhatsApp, flow: types.FlowCompletion):
-    flow.reply(text=f"Welcome, {flow.response['name']}! You're subscribed at {flow.response['email']}.")
+    flow.reply(
+        text=f"Welcome, {flow.response['name']}! You're subscribed at {flow.response['email']}."
+    )
 ```
 
 ### 8. Account & Resource Management
@@ -277,7 +312,9 @@ wa = WhatsApp(phone_id="1234567890", token="EAA...", waba_id=123456)
 
 # Business profile
 profile = wa.get_business_profile()
-wa.update_business_profile(about="Powered by PyWa", description="We build bots!", profile_picture="profile.jpg")
+wa.update_business_profile(
+    about="Powered by PyWa", description="We build bots!", profile_picture="profile.jpg"
+)
 
 # Media management
 media = wa.upload_media(media="photo.jpg")
@@ -299,8 +336,7 @@ wa.get_group_join_requests()
 
 # Commerce
 wa.get_commerce_settings()
-wa.update_commerce_settings(is_catalog_visible=True, is_cart_enabled=
-True)
+wa.update_commerce_settings(is_catalog_visible=True, is_cart_enabled=True)
 # User management
 wa.block_users(users=["9876543210"])
 blocked = wa.get_blocked_users()
@@ -337,7 +373,9 @@ shared_wabas = wa.get_shared_business_accounts()
 owned_wabas = wa.get_owned_business_accounts()
 
 # Provision phone numbers on a WABA
-phone = wa.create_phone_number(country_calling_code="1", phone_number="5551234567", verified_name="John Doe")
+phone = wa.create_phone_number(
+    country_calling_code="1", phone_number="5551234567", verified_name="John Doe"
+)
 wa.request_verification_code(phone_id=phone.id, code_method="SMS")
 wa.verify_phone_number(code="123456", phone_id=phone.id)
 wa.register_phone_number(phone_id=phone.id)
@@ -348,7 +386,9 @@ wa.override_phone_callback_url(callback_url="https://your-platform.com/phone/456
 
 # Migrate templates & flows between WABAs
 wa.migrate_templates(source_waba_id=111111, destination_waba_id=222222)
-wa.migrate_flows(source_waba_id=111111, destination_waba_id=222222, source_flow_names=["flow_1"])
+wa.migrate_flows(
+    source_waba_id=111111, destination_waba_id=222222, source_flow_names=["flow_1"]
+)
 ```
 
 ---
@@ -388,6 +428,7 @@ Full documentation is available at **[pywa.readthedocs.io](https://pywa.readthed
 | [Templates](https://pywa.readthedocs.io/en/latest/content/templates/overview.html)    | Create, send, and manage message templates      |
 | [Flows](https://pywa.readthedocs.io/en/latest/content/flows/overview.html)            | Build interactive multi-screen flows            |
 | [Calls](https://pywa.readthedocs.io/en/latest/content/calls/overview.html)            | Handle voice call events                        |
+| [CLI](https://pywa.readthedocs.io/en/latest/content/cli.html)                         | `dev`/`run` servers, project scaffolding, example bots, and sending messages from the terminal |
 
 ---
 

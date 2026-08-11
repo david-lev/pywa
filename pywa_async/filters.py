@@ -1,2 +1,2 @@
-from pywa.filters import *  # noqa MUST BE IMPORTED FIRST
-from pywa.filters import Filter  # noqa
+from pywa.filters import *
+from pywa.filters import Filter

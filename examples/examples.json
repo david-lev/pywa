@@ -1,0 +1,86 @@
+[
+  {
+    "slug": "01-message-router",
+    "title": "Smart Support Router Bot",
+    "emoji": "🧭",
+    "feature": "filters",
+    "description": "Route messages with composable filters: FAQ keywords, a /human escalation command, attachment handling, a denylist and a fallback."
+  },
+  {
+    "slug": "02-order-bot",
+    "title": "Quick-Serve Restaurant Ordering Bot",
+    "emoji": "🍕",
+    "feature": "types",
+    "description": "Browse a categorized menu and check out with SectionList, Button and URLButton, plus image replies."
+  },
+  {
+    "slug": "03-delivery-tracker",
+    "title": "Delivery Status Notifier Bot",
+    "emoji": "📬",
+    "feature": "updates",
+    "description": "Track sent/delivered/read/failed message statuses and react to callback-button confirmations."
+  },
+  {
+    "slug": "04-otp-verification",
+    "title": "Account Verification (OTP) Bot",
+    "emoji": "🔐",
+    "feature": "templates",
+    "description": "Create and send an authentication template with a one-time code, then verify the user's reply."
+  },
+  {
+    "slug": "05-loan-application-flow",
+    "title": "Loan Application Flow Bot",
+    "emoji": "🏦",
+    "feature": "flows",
+    "description": "A multi-screen WhatsApp Flow (personal info, loan details, review) with server-side validation."
+  },
+  {
+    "slug": "06-onboarding-survey",
+    "title": "New Customer Onboarding Survey Bot",
+    "emoji": "🧑‍🚀",
+    "feature": "listeners",
+    "description": "A linear onboarding survey built with wait_for_reply/wait_for_click/wait_for_selection instead of separate handlers."
+  },
+  {
+    "slug": "07-helpdesk-ticket-bot",
+    "title": "Multi-Channel Helpdesk Ticket Bot",
+    "emoji": "🎫",
+    "feature": "handlers",
+    "description": "Multiple handlers per update type, coordinated with priority, continue_handling and stop_handling()."
+  },
+  {
+    "slug": "08-business-profile-manager",
+    "title": "WhatsApp-Native Admin Console Bot",
+    "emoji": "🛠️",
+    "feature": "client",
+    "description": "Read/update your business profile and commerce settings, and check phone number health, from chat commands."
+  },
+  {
+    "slug": "09-call-center-bot",
+    "title": "Voice Call-Back Bot",
+    "emoji": "📞",
+    "feature": "calls",
+    "description": "Request call permission, initiate/accept calls, and handle the full WhatsApp Calling API lifecycle."
+  },
+  {
+    "slug": "10-community-group-manager",
+    "title": "Community Group Concierge Bot",
+    "emoji": "👥",
+    "feature": "groups",
+    "description": "Create and manage WhatsApp groups, share invite links, and approve/reject join requests."
+  },
+  {
+    "slug": "11-media-inbox-bot",
+    "title": "Media Inbox Bot",
+    "emoji": "📥",
+    "feature": "types (media)",
+    "description": "Download inbound images/video/audio/documents to disk, and send outbound media straight from a URL."
+  },
+  {
+    "slug": "12-existing-app-integration",
+    "title": "Existing FastAPI App Integration",
+    "emoji": "🧩",
+    "feature": "client (server=)",
+    "description": "Attach pywa's webhook to an app you already own instead of letting pywa create and manage its own server."
+  }
+]

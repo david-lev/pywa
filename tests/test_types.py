@@ -142,7 +142,6 @@ def test_business_phone_number():
             "is_official_business_account": False,
             "is_pin_enabled": True,
             "is_preverified_number": False,
-            "messaging_limit_tier": "TIER_1K",
             "search_visibility": "NON_VISIBLE",
             "platform_type": "CLOUD_API",
             "throughput": {"level": "STANDARD"},
@@ -204,7 +203,6 @@ def test_business_phone_number():
         is_official_business_account=False,
         is_pin_enabled=True,
         is_preverified_number=False,
-        messaging_limit_tier="TIER_1K",
         search_visibility="NON_VISIBLE",
         platform_type="CLOUD_API",
         throughput={"level": "STANDARD"},
@@ -247,6 +245,7 @@ def test_business_phone_number():
         # username=None,
         country_code=None,
         country_dial_code=None,
+        whatsapp_business_manager_messaging_limit=None,
     )
 
 

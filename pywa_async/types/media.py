@@ -3,23 +3,26 @@
 from __future__ import annotations
 
 __all__ = [
-    "Media",
-    "Image",
-    "Video",
-    "Sticker",
-    "Document",
+    "ArrivedMedia",
     "Audio",
+    "Document",
+    "Image",
+    "Media",
     "MediaURL",
+    "Sticker",
     "UploadedBy",
+    "Video",
 ]
 
 import datetime
 import pathlib
-from typing import TYPE_CHECKING, Any, AsyncGenerator, Awaitable, Coroutine, Generator
+from collections.abc import AsyncGenerator, Awaitable, Coroutine, Generator
+from typing import TYPE_CHECKING, Any
 
-from pywa.types.media import *  # noqa MUST BE IMPORTED FIRST
 from pywa.types.media import (
     URL_EXPIRATION_MINUTES,
+    ArrivedMedia,
+    UploadedBy,
 )
 from pywa.types.media import (
     Audio as _Audio,
@@ -32,7 +35,7 @@ from pywa.types.media import (
 )
 from pywa.types.media import (
     Media as _Media,
-)  # noqa MUST BE IMPORTED FIRST
+)
 from pywa.types.media import (
     MediaURL as _MediaURL,
 )
@@ -53,14 +56,17 @@ if TYPE_CHECKING:
 class _MediaActionsAsync:
     _client: WhatsApp
     id: str
+    uploaded_at: datetime.datetime
+    uploaded_to: str
+    url: str | None
 
     async def get_media_url(self) -> str:
         """Gets the URL of the media. (expires after 5 minutes)"""
-        if getattr(self, "url", None):
-            if (
-                datetime.datetime.now(datetime.timezone.utc) - self.uploaded_at
-            ) < datetime.timedelta(minutes=URL_EXPIRATION_MINUTES):
-                return self.url
+        url: str | None = getattr(self, "url", None)
+        if url and (
+            datetime.datetime.now(datetime.timezone.utc) - self.uploaded_at
+        ) < datetime.timedelta(minutes=URL_EXPIRATION_MINUTES):
+            return url
         return (await self._client.get_media_url(media_id=self.id)).url
 
     async def download(
@@ -82,7 +88,9 @@ class _MediaActionsAsync:
 
         >>> @wa.on_message(filters.image)
         ... async def on_message(_: WhatsApp, msg: types.Message):
-        ...     await msg.image.download(path=pathlib.Path('/path/to/save'), filename='my_image.jpg')
+        ...     await msg.image.download(
+        ...         path=pathlib.Path("/path/to/save"), filename="my_image.jpg"
+        ...     )
 
         Args:
             path: The path where to save the file (if not provided, the current working directory will be used).
@@ -143,7 +151,10 @@ class _MediaActionsAsync:
         >>> @wa.on_message(filters.document)
         ... async def on_message(_: WhatsApp, msg: types.Message):
         ...     async with httpx.AsyncClient() as client:
-        ...        await client.post('https://example.com/upload', content=await msg.document.stream())
+        ...         await client.post(
+        ...             "https://example.com/upload",
+        ...             content=await msg.document.stream(),
+        ...         )
 
         Args:
             chunk_size: The size (in bytes) of each chunk to read (default: ``64KB``).
@@ -184,14 +195,15 @@ class _MediaActionsAsync:
             to_phone_id: The phone ID to upload the media to (if not provided, the media owner's phone ID will be used).
             override_filename: The filename to use for the re-uploaded media (if not provided, the original filename will be used if available).
         """
+        url: str | None = getattr(self, "url", None)
         return await self._client.upload_media(
             media=self.id
             if (
-                not getattr(self, "url", None)
+                not url
                 or (datetime.datetime.now(datetime.timezone.utc) - self.uploaded_at)
                 > datetime.timedelta(minutes=URL_EXPIRATION_MINUTES)
             )
-            else self.url,
+            else url,
             phone_id=to_phone_id or self.uploaded_to,
             filename=override_filename,
         )
@@ -235,7 +247,7 @@ class PendingMedia(Awaitable[Media]):
         self._coro = coro
         self._media: Media | None = None
 
-    async def _handle_caching(self) -> "Media":
+    async def _handle_caching(self) -> Media:
         if self._media is None:
             if self._coro is None:
                 raise RuntimeError("Media upload was already attempted or cleared.")
@@ -248,8 +260,8 @@ class PendingMedia(Awaitable[Media]):
     def __await__(self) -> Generator[Any, None, Media]:
         return self._handle_caching().__await__()
 
-    async def __aenter__(self) -> "Media":
-        media = await self
+    async def __aenter__(self) -> Media:
+        media: Media = await self
         return await media.__aenter__()
 
     async def __aexit__(self, exc_type, exc_value, traceback):
@@ -353,6 +365,7 @@ class MediaURL(_MediaActionsAsync, _MediaURL):
     """
 
     _client: WhatsApp
+    url: str
 
     async def get_media_url(self) -> str:
         """Gets the URL of the media. (expires after 5 minutes)"""

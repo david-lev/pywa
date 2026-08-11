@@ -1,13 +1,21 @@
 """The internal API for the WhatsApp client."""
 
-from contextlib import _AsyncGeneratorContextManager
-from typing import AsyncIterator
+from __future__ import annotations
 
-from pywa.api import *  # noqa MUST BE IMPORTED FIRST
+from collections.abc import AsyncIterator
+from contextlib import _AsyncGeneratorContextManager
+from typing import TYPE_CHECKING
+
+from pywa.api import *
+from pywa.api import (
+    _logger,
+    _UnpauseTemplateResult,
+)
 
 from .errors import WhatsAppError
 
-_logger = logging.getLogger(__name__)
+if TYPE_CHECKING:
+    from ._helpers import GeneratorStreamer
 
 
 class GraphAPIAsync(GraphAPI):
@@ -23,23 +31,20 @@ class GraphAPIAsync(GraphAPI):
     ):
         super().__init__(
             token=token,
-            session=session,  # noqa
+            session=cast("httpx.Client", session),
             api_version=api_version,
         )
 
     def __str__(self):
         return f"GraphAPIAsync(session={self._session!r})"
 
-    async def _request(
-        self, method: str, endpoint: str, log_kwargs: bool = True, **kwargs
-    ) -> dict:
+    async def _request(self, method: str, endpoint: str, **kwargs) -> dict:
         """
         Internal method to make a request to the WhatsApp Cloud API.
 
         Args:
             method: The HTTP method to use.
             endpoint: The endpoint to request.
-            log_kwargs: Whether to log the kwargs or not (in debug mode).
             **kwargs: Additional arguments to pass to the request.
 
         Returns:
@@ -48,19 +53,31 @@ class GraphAPIAsync(GraphAPI):
         Raises:
             WhatsAppError: If the request failed.
         """
+        kwargs.pop(
+            "log_kwargs", None
+        )  # backwards compatibility for old versions of pywa
         _logger.debug(
-            "Making request: %s %s with kwargs: %s",
+            "Making %s request to %s with kwargs: %s",
             method,
             endpoint,
-            kwargs if log_kwargs else "OMITTED",
+            {k: v if k != "files" else "<files>" for k, v in kwargs.items()},
         )
         try:
             res = await self._session.request(method=method, url=endpoint, **kwargs)
-        except httpx.RequestError:
-            _logger.info(
+        except (httpx.TimeoutException, httpx.ConnectError, httpx.ProxyError):
+            _logger.warning(
                 "You may want to provide your own `httpx.Client` instance. e.g. `WhatsApp(session=httpx.Client(timeout=..., proxies=...))`. See https://www.python-httpx.org/api/#client for more information."
             )
             raise
+        except httpx.RequestError as e:
+            _logger.debug("%s Request to %s failed: %s", method, endpoint, e)
+            raise
+        _logger.debug(
+            "Response code %d from %s: %s",
+            res.status_code,
+            endpoint,
+            res.text,
+        )
         if res.status_code >= 400:
             raise WhatsAppError.from_dict(error=res.json()["error"], response=res)
         return res.json()
@@ -75,10 +92,7 @@ class GraphAPIAsync(GraphAPI):
 
         Return example::
 
-            {
-                'access_token': 'xyzxyzxyz',
-                'token_type': 'bearer'
-            }
+            {"access_token": "xyzxyzxyz", "token_type": "bearer"}
 
 
         Args:
@@ -97,7 +111,6 @@ class GraphAPIAsync(GraphAPI):
                 "client_id": client_id,
                 "client_secret": client_secret,
             },
-            log_kwargs=False,
         )
 
     async def get_business_access_token(
@@ -110,10 +123,7 @@ class GraphAPIAsync(GraphAPI):
 
         Return example::
 
-            {
-                'business_token': 'xyzxyzxyz',
-                'token_type': 'bearer'
-            }
+            {"business_token": "xyzxyzxyz", "token_type": "bearer"}
 
 
         Args:
@@ -134,7 +144,6 @@ class GraphAPIAsync(GraphAPI):
                 "client_secret": client_secret,
                 "code": code,
             },
-            log_kwargs=False,
         )
 
     async def set_app_callback_url(
@@ -152,9 +161,7 @@ class GraphAPIAsync(GraphAPI):
 
         Return example::
 
-            {
-                'success': True
-            }
+            {"success": True}
 
         Args:
             app_id: The ID of the app.
@@ -188,9 +195,7 @@ class GraphAPIAsync(GraphAPI):
 
         Return example::
 
-            {
-                'success': True
-            }
+            {"success": True}
 
         Args:
             waba_id: The ID of the WhatsApp Business Account.
@@ -226,17 +231,17 @@ class GraphAPIAsync(GraphAPI):
                         "whatsapp_business_api_data": {
                             "link": "https://www.facebook.com/games/?app_id=12345",
                             "name": "My App",
-                            "id": "12345"
+                            "id": "12345",
                         },
-                        "override_callback_uri": "https://example.com/wa_webhook"
+                        "override_callback_uri": "https://example.com/wa_webhook",
                     },
                     {
                         "whatsapp_business_api_data": {
                             "link": "https://www.facebook.com/games/?app_id=67890",
                             "name": "My second app",
-                            "id": "67890"
+                            "id": "67890",
                         }
-                    }
+                    },
                 ]
             }
 
@@ -306,9 +311,7 @@ class GraphAPIAsync(GraphAPI):
 
         Return example::
 
-            {
-                'success': True
-            }
+            {"success": True}
 
         Args:
             phone_id: The ID of the phone number to delete the callback URL from.
@@ -338,9 +341,7 @@ class GraphAPIAsync(GraphAPI):
 
         Return example::
 
-            {
-                'success': True
-            }
+            {"success": True}
 
         Args:
             phone_id: The ID of the phone number to set the public key on.
@@ -358,7 +359,7 @@ class GraphAPIAsync(GraphAPI):
     async def upload_media(
         self,
         phone_id: str,
-        media: bytes | str | BinaryIO | Iterator[bytes],
+        media: bytes | str | BinaryIO | Iterator[bytes] | GeneratorStreamer,
         mime_type: str,
         filename: str,
         ttl_minutes: int | None = None,
@@ -370,9 +371,7 @@ class GraphAPIAsync(GraphAPI):
 
         Return example::
 
-            {
-              'id':'<MEDIA_ID>'
-            }
+            {"id": "<MEDIA_ID>"}
 
         Args:
             phone_id: The ID of the phone number to upload the media to.
@@ -395,7 +394,6 @@ class GraphAPIAsync(GraphAPI):
             method="POST",
             endpoint=f"/{phone_id}/media",
             files=files,
-            log_kwargs=False,
         )
 
     async def get_media_url(self, media_id: str) -> dict:
@@ -407,12 +405,12 @@ class GraphAPIAsync(GraphAPI):
         Return example::
 
             {
-                'url': 'https://lookaside.fbsbx.com/whatsapp_business/attachments/?mid=645645&ext=54353&hash=xxx-xx',
-                'mime_type': 'image/jpeg',
-                'sha256': '73298ec14751fhfonf4wfxxxf52f4fb031db3892ff5',
-                'file_size': 61901,
-                'id': '137524587935346',
-                'messaging_product': 'whatsapp'
+                "url": "https://lookaside.fbsbx.com/whatsapp_business/attachments/?mid=645645&ext=54353&hash=xxx-xx",
+                "mime_type": "image/jpeg",
+                "sha256": "73298ec14751fhfonf4wfxxxf52f4fb031db3892ff5",
+                "file_size": 61901,
+                "id": "137524587935346",
+                "messaging_product": "whatsapp",
             }
 
         Args:
@@ -440,6 +438,7 @@ class GraphAPIAsync(GraphAPI):
         Returns:
             A context manager containing the response stream.
         """
+        _logger.debug("Streaming media from %s", media_url)
         return self._session.stream(
             method="GET",
             url=media_url,
@@ -458,7 +457,7 @@ class GraphAPIAsync(GraphAPI):
 
         Return example::
 
-            {'success': True}
+            {"success": True}
 
         Args:
             media_id: The ID of the media file.
@@ -473,9 +472,7 @@ class GraphAPIAsync(GraphAPI):
             params=self._filter_none(phone_number_id=phone_number_id),
         )
 
-    async def send_raw_request(
-        self, method: str, endpoint: str, log_kwargs: bool = True, **kwargs
-    ) -> Any:
+    async def send_raw_request(self, method: str, endpoint: str, **kwargs) -> Any:
         """
         Send a raw request to WhatsApp Cloud API.
 
@@ -485,7 +482,6 @@ class GraphAPIAsync(GraphAPI):
         Args:
             method: The HTTP method to use (e.g. ``POST``, ``GET``, etc.).
             endpoint: The endpoint to send the message to (e.g. ``/{phone_id}/messages/``).
-            log_kwargs: Whether to log the kwargs or not (in debug mode).
             **kwargs: Additional arguments to send with the request (e.g. ``json={...}, headers={...}``).
 
         Example:
@@ -508,7 +504,6 @@ class GraphAPIAsync(GraphAPI):
         return await self._request(
             method=method,
             endpoint=endpoint,
-            log_kwargs=log_kwargs,
             **kwargs,
         )
 
@@ -519,7 +514,7 @@ class GraphAPIAsync(GraphAPI):
         recipient: str | None,
         recipient_type: str,
         typ: str,
-        msg: dict,
+        msg: dict | tuple,
         reply_to_message_id: str | None = None,
         biz_opaque_callback_data: str | None = None,
         recipient_identity_key_hash: str | None = None,
@@ -565,8 +560,8 @@ class GraphAPIAsync(GraphAPI):
     async def send_marketing_message(
         self,
         sender: str,
-        to: str,
-        recipient: str,
+        to: str | None,
+        recipient: str | None,
         recipient_type: str,
         template: dict,
         reply_to_message_id: str | None = None,
@@ -594,10 +589,13 @@ class GraphAPIAsync(GraphAPI):
         Returns:
             The response from the WhatsApp Cloud API.
         """
+        if not to and not recipient:
+            raise ValueError("Either 'to' or 'recipient' must be provided")
         body = self._filter_none(
             messaging_product="whatsapp",
             recipient_type=recipient_type,
             to=to,
+            recipient=recipient,
             type="template",
             template=template,
             context={"message_id": reply_to_message_id}
@@ -729,9 +727,7 @@ class GraphAPIAsync(GraphAPI):
 
         Return example::
 
-            {
-                'success': True
-            }
+            {"success": True}
 
         Args:
             phone_id: The ID of the phone number to deregister.
@@ -756,9 +752,7 @@ class GraphAPIAsync(GraphAPI):
 
         Return example::
 
-            {
-                'success': True
-            }
+            {"success": True}
 
         Args:
             phone_id: The ID of the phone number that message belongs to.
@@ -862,7 +856,7 @@ class GraphAPIAsync(GraphAPI):
         Return example::
 
             {
-                'id': '1234567890',
+                "id": "1234567890",
             }
 
         Args:
@@ -925,17 +919,17 @@ class GraphAPIAsync(GraphAPI):
         Return example::
 
             {
-                'data': [
+                "data": [
                     {
-                        'verified_name': 'Test Number',
-                        'code_verification_status': 'NOT_VERIFIED',
-                        'display_phone_number': '+1 555-096-7852',
-                        'quality_rating': 'GREEN',
-                        'platform_type': 'CLOUD_API',
-                        'throughput': {'level': 'STANDARD'},
-                        'id': '277321005464405'
+                        "verified_name": "Test Number",
+                        "code_verification_status": "NOT_VERIFIED",
+                        "display_phone_number": "+1 555-096-7852",
+                        "quality_rating": "GREEN",
+                        "platform_type": "CLOUD_API",
+                        "throughput": {"level": "STANDARD"},
+                        "id": "277321005464405",
                     },
-                    ...
+                    ...,
                 ]
             }
 
@@ -1003,7 +997,7 @@ class GraphAPIAsync(GraphAPI):
     async def update_conversational_automation(
         self,
         phone_id: str,
-        prompts: tuple[dict] | None = None,
+        prompts: tuple[str, ...] | None = None,
         commands: str | None = None,
     ) -> dict[str, bool]:
         """
@@ -1013,9 +1007,7 @@ class GraphAPIAsync(GraphAPI):
 
         Return example::
 
-            {
-                'success': True
-            }
+            {"success": True}
 
         Args:
             phone_id: The ID of the phone number to update.
@@ -1043,9 +1035,7 @@ class GraphAPIAsync(GraphAPI):
 
         Return example::
 
-            {
-                'success': True
-            }
+            {"success": True}
 
         Args:
             phone_id: The ID of the phone number to update.
@@ -1074,19 +1064,18 @@ class GraphAPIAsync(GraphAPI):
         Return example::
 
             {
-              "data": [{
-                "about": "ABOUT",
-                "address": "ADDRESS",
-                "description": "DESCRIPTION",
-                "email": "EMAIL",
-                "messaging_product": "whatsapp",
-                "profile_picture_url": "https://URL",
-                "websites": [
-                   "https://WEBSITE-1",
-                   "https://WEBSITE-2"
-                 ],
-                "vertical": "INDUSTRY",
-              }]
+                "data": [
+                    {
+                        "about": "ABOUT",
+                        "address": "ADDRESS",
+                        "description": "DESCRIPTION",
+                        "email": "EMAIL",
+                        "messaging_product": "whatsapp",
+                        "profile_picture_url": "https://URL",
+                        "websites": ["https://WEBSITE-1", "https://WEBSITE-2"],
+                        "vertical": "INDUSTRY",
+                    }
+                ]
             }
 
         Args:
@@ -1113,9 +1102,7 @@ class GraphAPIAsync(GraphAPI):
 
         Return example::
 
-            {
-                "success": True
-            }
+            {"success": True}
         """
         data.update(messaging_product="whatsapp")
         return await self._request(
@@ -1135,13 +1122,13 @@ class GraphAPIAsync(GraphAPI):
         Return example::
 
             {
-              "data": [
-                {
-                  "is_cart_enabled": True,
-                  "is_catalog_visible": True,
-                  "id": "727705352028726"
-                }
-              ]
+                "data": [
+                    {
+                        "is_cart_enabled": True,
+                        "is_catalog_visible": True,
+                        "id": "727705352028726",
+                    }
+                ]
             }
 
         Args:
@@ -1173,9 +1160,7 @@ class GraphAPIAsync(GraphAPI):
 
         Return example::
 
-            {
-              "success": True
-            }
+            {"success": True}
         """
         return await self._request(
             method="POST",
@@ -1199,11 +1184,7 @@ class GraphAPIAsync(GraphAPI):
 
         Return example::
 
-            {
-                "id": "594425479261596",
-                "status": "PENDING",
-                "category": "MARKETING"
-            }
+            {"id": "594425479261596", "status": "PENDING", "category": "MARKETING"}
         """
         return await self._request(
             method="POST",
@@ -1223,9 +1204,9 @@ class GraphAPIAsync(GraphAPI):
         Example::
 
             {
-              "name": "seasonal_promotion_text_only",
-              "status": "APPROVED",
-              "id": "564750795574598"
+                "name": "seasonal_promotion_text_only",
+                "status": "APPROVED",
+                "id": "564750795574598",
             }
 
         Args:
@@ -1428,7 +1409,7 @@ class GraphAPIAsync(GraphAPI):
             ),
         )
 
-    async def unpause_template(self, template_id: str) -> dict[str, bool | str]:
+    async def unpause_template(self, template_id: str) -> _UnpauseTemplateResult:
         """
         Unpause a message template.
 
@@ -1440,9 +1421,9 @@ class GraphAPIAsync(GraphAPI):
         Returns:
             A dict with the success status of the operation.
         """
-        return await self._request(
-            method="POST",
-            endpoint=f"/{template_id}/unpause",
+        return cast(
+            _UnpauseTemplateResult,
+            await self._request(method="POST", endpoint=f"/{template_id}/unpause"),
         )
 
     async def upsert_message_templates(
@@ -1567,9 +1548,7 @@ class GraphAPIAsync(GraphAPI):
 
         Return example::
 
-            {
-              "success": True
-            }
+            {"success": True}
         """
         data = self._filter_none(
             name=name,
@@ -1596,18 +1575,18 @@ class GraphAPIAsync(GraphAPI):
         Return example::
 
             {
-              "success": true,
-              "validation_errors": [
-                {
-                  "error": "INVALID_PROPERTY",
-                  "error_type": "JSON_SCHEMA_ERROR",
-                  "message": "The property \"initial-text\" cannot be specified at \"$root/screens/0/layout/children/2/children/0\".",
-                  "line_start": 46,
-                  "line_end": 46,
-                  "column_start": 17,
-                  "column_end": 30
-                }
-              ]
+                "success": true,
+                "validation_errors": [
+                    {
+                        "error": "INVALID_PROPERTY",
+                        "error_type": "JSON_SCHEMA_ERROR",
+                        "message": 'The property "initial-text" cannot be specified at "$root/screens/0/layout/children/2/children/0".',
+                        "line_start": 46,
+                        "line_end": 46,
+                        "column_start": 17,
+                        "column_end": 30,
+                    }
+                ],
             }
         """
         return await self._request(
@@ -1619,7 +1598,6 @@ class GraphAPIAsync(GraphAPI):
                 "asset_type": (None, "FLOW_JSON"),
                 "messaging_product": (None, "whatsapp"),
             },
-            log_kwargs=False,
         )
 
     async def publish_flow(
@@ -1636,9 +1614,7 @@ class GraphAPIAsync(GraphAPI):
 
         Return example::
 
-            {
-              "success": true
-            }
+            {"success": true}
         """
         return await self._request(
             method="POST",
@@ -1659,9 +1635,7 @@ class GraphAPIAsync(GraphAPI):
 
         Return example::
 
-            {
-              "success": true
-            }
+            {"success": true}
         """
 
         return await self._request(
@@ -1683,9 +1657,7 @@ class GraphAPIAsync(GraphAPI):
 
         Return example::
 
-            {
-              "success": true
-            }
+            {"success": true}
         """
 
         return await self._request(
@@ -1710,24 +1682,20 @@ class GraphAPIAsync(GraphAPI):
         Return example::
 
             {
-              "id": "<Flow-ID>",
-              "name": "<Flow-Name>",
-              "status": "DRAFT",
-              "categories": [ "LEAD_GENERATION" ],
-              "validation_errors": [],
-              "json_version": "3.0",
-              "data_api_version": "3.0",
-              "endpoint_uri": "https://example.com",
-              "preview": {
-                "preview_url": "https://business.facebook.com/wa/manage/flows/55000..../preview/?token=b9d6.....",
-                "expires_at": "2023-05-21T11:18:09+0000"
-              },
-              "whatsapp_business_account": {
-                ...
-              },
-              "application": {
-                ...
-              }
+                "id": "<Flow-ID>",
+                "name": "<Flow-Name>",
+                "status": "DRAFT",
+                "categories": ["LEAD_GENERATION"],
+                "validation_errors": [],
+                "json_version": "3.0",
+                "data_api_version": "3.0",
+                "endpoint_uri": "https://example.com",
+                "preview": {
+                    "preview_url": "https://business.facebook.com/wa/manage/flows/55000..../preview/?token=b9d6.....",
+                    "expires_at": "2023-05-21T11:18:09+0000",
+                },
+                "whatsapp_business_account": {...},
+                "application": {...},
             }
         """
         return await self._request(
@@ -1755,20 +1723,20 @@ class GraphAPIAsync(GraphAPI):
         Return example::
 
             {
-              "data": [
-                {
-                  "id": "<Flow-ID>",
-                  "name": "<Flow-Name>",
-                  "status": "DRAFT",
-                  "categories": [ "LEAD_GENERATION" ]
-                },
-                {
-                    "id": "<Flow-ID>",
-                    "name": "<Flow-Name>",
-                    "status": "DRAFT",
-                    "categories": [ "LEAD_GENERATION" ]
-                }
-              ]
+                "data": [
+                    {
+                        "id": "<Flow-ID>",
+                        "name": "<Flow-Name>",
+                        "status": "DRAFT",
+                        "categories": ["LEAD_GENERATION"],
+                    },
+                    {
+                        "id": "<Flow-ID>",
+                        "name": "<Flow-Name>",
+                        "status": "DRAFT",
+                        "categories": ["LEAD_GENERATION"],
+                    },
+                ]
             }
         """
         return await self._request(
@@ -1794,19 +1762,14 @@ class GraphAPIAsync(GraphAPI):
         Return example::
 
             {
-              "data": [
-                {
-                  "name": "flow.json",
-                  "asset_type": "FLOW_JSON",
-                  "download_url": "https://scontent.xx.fbcdn.net/m1/v/t0.57323-24/An_Hq0jnfJ..."
-                }
-              ],
-              "paging": {
-                "cursors": {
-                  "before": "QVFIU...",
-                  "after": "QVFIU..."
-                }
-              }
+                "data": [
+                    {
+                        "name": "flow.json",
+                        "asset_type": "FLOW_JSON",
+                        "download_url": "https://scontent.xx.fbcdn.net/m1/v/t0.57323-24/An_Hq0jnfJ...",
+                    }
+                ],
+                "paging": {"cursors": {"before": "QVFIU...", "after": "QVFIU..."}},
             }
         """
         return await self._request(
@@ -1838,20 +1801,20 @@ class GraphAPIAsync(GraphAPI):
         Return example::
 
             {
-              "migrated_flows": [
-                {
-                  "source_name": "appointment-booking",
-                  "source_id": "1234",
-                  "migrated_id": "5678"
-                }
-              ],
-              "failed_flows": [
-                {
-                  "source_name": "lead-gen",
-                  "error_code": "4233041",
-                  "error_message": "Flows Migration Error: Flow with the same name exists in destination WABA."
-                }
-              ]
+                "migrated_flows": [
+                    {
+                        "source_name": "appointment-booking",
+                        "source_id": "1234",
+                        "migrated_id": "5678",
+                    }
+                ],
+                "failed_flows": [
+                    {
+                        "source_name": "lead-gen",
+                        "error_code": "4233041",
+                        "error_message": "Flows Migration Error: Flow with the same name exists in destination WABA.",
+                    }
+                ],
             }
 
         Args:
@@ -1887,10 +1850,10 @@ class GraphAPIAsync(GraphAPI):
         Return example::
 
             {
-              "code": "4O4YGZEG3RIVE1",
-              "prefilled_message": "Cyber Monday 1",
-              "deep_link_url": "https://wa.me/message/4O4YGZEG3RIVE1",
-              "qr_image_url": "https://scontent-iad3-2.xx.fbcdn.net/..."
+                "code": "4O4YGZEG3RIVE1",
+                "prefilled_message": "Cyber Monday 1",
+                "deep_link_url": "https://wa.me/message/4O4YGZEG3RIVE1",
+                "qr_image_url": "https://scontent-iad3-2.xx.fbcdn.net/...",
             }
         """
         return await self._request(
@@ -1921,13 +1884,13 @@ class GraphAPIAsync(GraphAPI):
         Return example::
 
             {
-              "data": [
-                {
-                  "code": "4O4YGZEG3RIVE1",
-                  "prefilled_message": "Cyber Monday",
-                  "deep_link_url": "https://wa.me/message/4O4YGZEG3RIVE1"
-                }
-              ]
+                "data": [
+                    {
+                        "code": "4O4YGZEG3RIVE1",
+                        "prefilled_message": "Cyber Monday",
+                        "deep_link_url": "https://wa.me/message/4O4YGZEG3RIVE1",
+                    }
+                ]
             }
         """
         return await self._request(
@@ -1950,20 +1913,15 @@ class GraphAPIAsync(GraphAPI):
         Return example::
 
             {
-              "data": [
-                {
-                  "code": "4O4YGZEG3RIVE1",
-                  "prefilled_message": "Cyber Monday 1",
-                  "deep_link_url": "https://wa.me/message/4O4YGZEG3RIVE1",
-                  "qr_image_url": "https://scontent-iad3-2.xx.fbcdn.net/..."
-                }
-              ],
-                "paging": {
-                    "cursors": {
-                    "before": "QVFIU...",
-                    "after": "QVFIU..."
+                "data": [
+                    {
+                        "code": "4O4YGZEG3RIVE1",
+                        "prefilled_message": "Cyber Monday 1",
+                        "deep_link_url": "https://wa.me/message/4O4YGZEG3RIVE1",
+                        "qr_image_url": "https://scontent-iad3-2.xx.fbcdn.net/...",
                     }
-                }
+                ],
+                "paging": {"cursors": {"before": "QVFIU...", "after": "QVFIU..."}},
             }
 
         Args:
@@ -1991,9 +1949,9 @@ class GraphAPIAsync(GraphAPI):
         Return example::
 
             {
-              "code": "4O4YGZEG3RIVE1",
-              "prefilled_message": "Cyber Tuesday",
-              "deep_link_url": "https://wa.me/message/4O4YGZEG3RIVE1"
+                "code": "4O4YGZEG3RIVE1",
+                "prefilled_message": "Cyber Tuesday",
+                "deep_link_url": "https://wa.me/message/4O4YGZEG3RIVE1",
             }
 
         Args:
@@ -2015,9 +1973,7 @@ class GraphAPIAsync(GraphAPI):
 
         Return example::
 
-            {
-              "success": True
-            }
+            {"success": True}
 
         Args:
             phone_id: The ID of the phone number to delete the QR code from.
@@ -2038,9 +1994,7 @@ class GraphAPIAsync(GraphAPI):
 
         Return example::
 
-            {
-                'success': True
-            }
+            {"success": True}
 
         Args:
             phone_id: The ID of the phone number to set the typing indicator on.
@@ -2077,12 +2031,10 @@ class GraphAPIAsync(GraphAPI):
         Return example::
 
             {
-                'messaging_product': 'whatsapp',
-                'block_users': {
-                    'removed_users': [
-                        {'input': '123456789', 'wa_id': '123456789'}
-                    ]
-                }
+                "messaging_product": "whatsapp",
+                "block_users": {
+                    "removed_users": [{"input": "123456789", "wa_id": "123456789"}]
+                },
             }
 
         Args:
@@ -2159,15 +2111,13 @@ class GraphAPIAsync(GraphAPI):
         Return example::
 
             {
-                'data': [
-                    {'messaging_product': 'whatsapp', 'wa_id': '1234567890'}
-                ],
-                'paging': {
-                    'cursors': {
-                        'before': 'eyJvZAmZAzZAXQiOjAsIn',
-                        'after': 'I6IjE3Mzc1ODA5MjUwMTk0NTIifQZDZD',
+                "data": [{"messaging_product": "whatsapp", "wa_id": "1234567890"}],
+                "paging": {
+                    "cursors": {
+                        "before": "eyJvZAmZAzZAXQiOjAsIn",
+                        "after": "I6IjE3Mzc1ODA5MjUwMTk0NTIifQZDZD",
                     }
-                }
+                },
             }
 
         Returns:
@@ -2208,7 +2158,7 @@ class GraphAPIAsync(GraphAPI):
     async def upload_file(
         self,
         upload_session_id: str,
-        file: bytes | AsyncIterator[bytes],
+        file: bytes | AsyncIterator[bytes] | BinaryIO,
         file_offset: int = 0,
         content_length: int | None = None,
     ) -> dict:
@@ -2238,7 +2188,6 @@ class GraphAPIAsync(GraphAPI):
                 ),
             },
             content=file,
-            log_kwargs=False,
         )
 
     async def get_upload_session(
@@ -2344,10 +2293,12 @@ class GraphAPIAsync(GraphAPI):
         Return example::
 
             {
-              "messaging_product": "whatsapp",
-              "calls" : [{
-                 "id" : "wacid.ABGGFjFVU2AfAgo6V",
-               }]
+                "messaging_product": "whatsapp",
+                "calls": [
+                    {
+                        "id": "wacid.ABGGFjFVU2AfAgo6V",
+                    }
+                ],
             }
 
         Args:
@@ -2386,10 +2337,7 @@ class GraphAPIAsync(GraphAPI):
 
         Return example::
 
-            {
-                "messaging_product": "whatsapp",
-                "success": True
-            }
+            {"messaging_product": "whatsapp", "success": True}
 
         Args:
             phone_id: The ID of the phone number to pre-accept the call on.
@@ -2424,10 +2372,7 @@ class GraphAPIAsync(GraphAPI):
 
         Return example::
 
-            {
-                "messaging_product": "whatsapp",
-                "success": True
-            }
+            {"messaging_product": "whatsapp", "success": True}
 
         Args:
             phone_id: The ID of the phone number to accept the call on.
@@ -2458,10 +2403,7 @@ class GraphAPIAsync(GraphAPI):
 
         Return example::
 
-            {
-                "messaging_product": "whatsapp",
-                "success": True
-            }
+            {"messaging_product": "whatsapp", "success": True}
 
         Args:
             phone_id: The ID of the phone number to reject the call on.
@@ -2488,10 +2430,7 @@ class GraphAPIAsync(GraphAPI):
 
         Return example::
 
-            {
-                "messaging_product": "whatsapp",
-                "success": True
-            }
+            {"messaging_product": "whatsapp", "success": True}
 
         Args:
             phone_id: The ID of the phone number to terminate the call on.
@@ -2530,9 +2469,7 @@ class GraphAPIAsync(GraphAPI):
 
         Return example::
 
-            {
-              "request_id": "123456789012345"
-            }
+            {"request_id": "123456789012345"}
         """
         data = self._filter_none(
             messaging_product="whatsapp",
@@ -2552,7 +2489,13 @@ class GraphAPIAsync(GraphAPI):
         subject: str | None = None,
         description: str | None = None,
         profile_picture_file: (
-            bytes | str | pathlib.Path | BinaryIO | Iterator[bytes] | None
+            bytes
+            | str
+            | pathlib.Path
+            | BinaryIO
+            | Iterator[bytes]
+            | AsyncIterator[bytes]
+            | None
         ) = None,
     ) -> dict:
         """

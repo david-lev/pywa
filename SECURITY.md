@@ -21,7 +21,8 @@ publicly.
 Please use GitHub's Private Vulnerability Reporting feature to ensure the issue remains confidential until a fix is
 released.
 
-1. Go to the **Security** tab of this repository and click **Report a vulnerability**.
+1. Go to the **Security** tab of this repository and click **Report a vulnerability** — or use this
+   shortcut: https://github.com/david-lev/pywa/security/advisories/new
 2. Provide a clear description of the issue and steps to reproduce it.
 
 Alternatively, you can email reports directly to **david@davidlev.dev**.

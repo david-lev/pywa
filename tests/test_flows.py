@@ -1,13 +1,15 @@
+# ruff:
 import dataclasses
 import datetime
 import importlib
 import json
 import pathlib
-from typing import Callable
+import re
+from collections.abc import Callable
 
 import pytest
 
-from pywa import WhatsApp, filters
+from pywa import WhatsApp, filters, types
 from pywa.handlers import FlowCompletionHandler
 from pywa.types.flows import (
     ComponentRef,
@@ -34,6 +36,9 @@ from pywa.types.flows import (
 )
 from pywa.utils import Version
 
+flows_all = {name: getattr(types.flows, name) for name in types.flows.__all__}
+flows_all.update({"datetime": datetime, "re": re})
+
 
 def test_flows_to_json():
     for version in pathlib.Path("tests/data/flows").iterdir():
@@ -51,6 +56,16 @@ def test_flows_to_json():
                     assert example_dict["version"] == version.name.replace("_", ".")
                     assert obj_dict == example_dict, (
                         f"Flow {version.name=} {flow_name=} does not match example"
+                    )
+                    assert (
+                        json.loads(
+                            eval(
+                                repr(getattr(obj_examples, flow_name)), flows_all
+                            ).to_json()
+                        )
+                        == example_dict
+                    ), (
+                        f"After eval(repr(...)) the flow {version.name=} {flow_name=} does not match example"
                     )
 
 
@@ -273,7 +288,7 @@ def test_logical_and_with_condition():
     ref1 = Ref(prefix="data", field="age")
     ref2 = Ref(prefix="form", field="is_verified")
     condition1 = ref1 > 21
-    condition2 = ref2 == True  # noqa: E712
+    condition2 = ref2 == True
     combined_condition = condition1 & condition2
     assert (
         combined_condition.to_str()
@@ -285,7 +300,7 @@ def test_logical_or_with_condition():
     ref1 = Ref(prefix="data", field="age")
     ref2 = Ref(prefix="form", field="is_verified")
     condition1 = ref1 < 18
-    condition2 = ref2 == False  # noqa:  E712
+    condition2 = ref2 == False
     combined_condition = condition1 | condition2
     assert (
         combined_condition.to_str()
@@ -302,7 +317,7 @@ def test_invert_condition():
 def test_combined_conditions_with_invert():
     ref1 = Ref(prefix="data", field="age")
     ref2 = Ref(prefix="form", field="is_verified")
-    condition = ~(ref1 > 18) & (ref2 == True)  # noqa: E712
+    condition = ~(ref1 > 18) & (ref2 == True)
     assert (
         condition.to_str() == "`(!(${data.age} > 18) && (${form.is_verified} == true))`"
     )
@@ -412,8 +427,6 @@ def test_init_values():
     )
 
 
-#
-#
 def test_error_messages():
     text_entry = TextInput(name="test", label="Test", error_message="Example")
     form = Form(name="form", children=[text_entry])
@@ -618,6 +631,7 @@ def flow_request():
         version=...,
         action=FlowRequestActionType.DATA_EXCHANGE,
         flow_token="xyz",
+        flow_token_signature=...,
         screen="START",
         data={},
         raw=...,
@@ -712,7 +726,7 @@ def test_flow_callback_wrapper_on_completion():
 def test_flow_preview_with_params():
     preview = FlowPreview(
         url="https://business.facebook.com/wa/manage/flows/1460367762010364/preview/?token=fihsufcisd-09ad-4b88-b6aa-hdiewfcw",
-        expires_at=datetime.datetime.now(),
+        expires_at=datetime.datetime.now(tz=datetime.timezone.utc),
     )
     assert (
         preview.with_params(

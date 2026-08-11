@@ -180,7 +180,7 @@ class BanInfo:
     def from_dict(cls, data: dict):
         return cls(
             state=WABABanState(data["waba_ban_state"]),
-            date=datetime.datetime.strptime(
+            date=datetime.datetime.strptime(  # noqa: DTZ007 (naive date-only string, no tz to attach)
                 data["waba_ban_date"], cls._date_fmt
             ).date(),
         )
@@ -344,13 +344,14 @@ class VolumeTierInfo:
 
     @classmethod
     def from_dict(cls, data: dict):
+        current_tier, max_tier = data["tier"].split(":")
         return cls(
             tier_update_time=datetime.datetime.fromtimestamp(
                 data["tier_update_time"], tz=datetime.timezone.utc
             ),
-            tier=tuple(int(c) for c in data["tier"].split(":")),
+            tier=(int(current_tier), int(max_tier)),
             pricing_category=PricingCategory(data["pricing_category"]),
-            effective_month=datetime.datetime.strptime(
+            effective_month=datetime.datetime.strptime(  # noqa: DTZ007 (naive date-only string, no tz to attach)
                 data["effective_month"], "%Y-%m"
             ).date(),
             region=data["region"],

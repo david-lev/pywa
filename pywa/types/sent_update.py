@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 __all__ = [
-    "SentMessage",
-    "SentMediaMessage",
-    "SentVoiceMessage",
-    "SentLocationRequest",
+    "InitiatedCall",
     "SentContactInfoRequest",
+    "SentLocationRequest",
+    "SentMediaMessage",
+    "SentMessage",
     "SentReaction",
     "SentTemplate",
     "SentTemplateStatus",
-    "InitiatedCall",
+    "SentVoiceMessage",
 ]
 
 import abc
@@ -135,15 +135,11 @@ def _ignore_updates_canceler(_, u: BaseUserUpdate) -> bool:
 
 
 def _failed_canceler(_, u: BaseUserUpdate) -> bool:
-    if isinstance(u, MessageStatus) and u.status == MessageStatusType.FAILED:
-        return True
-    return False
+    return isinstance(u, MessageStatus) and u.status == MessageStatusType.FAILED
 
 
 def _new_update_canceler(_, u: BaseUserUpdate) -> bool:
-    if u._is_user_action:
-        return True
-    return False
+    return bool(u._is_user_action)
 
 
 ignore_updates_canceler = pywa_filters.new(_ignore_updates_canceler)
@@ -178,7 +174,7 @@ class SentMessage(_SentUpdate, _PinUnpinActions):
             PywaDeprecationWarning,
             stacklevel=2,
         )
-        return self.chat.id
+        return self.chat.id  # ty: ignore[invalid-return-type]
 
     @property
     def sender(self) -> None:
@@ -188,11 +184,11 @@ class SentMessage(_SentUpdate, _PinUnpinActions):
             PywaDeprecationWarning,
             stacklevel=2,
         )
-        return self.from_phone_id
+        return self.from_phone_id  # ty: ignore[invalid-return-type]
 
     @classmethod
     def from_sent_update(
-        cls,
+        cls: type[_SentMessageType],
         *,
         client: WhatsApp,
         update: dict,
@@ -200,7 +196,7 @@ class SentMessage(_SentUpdate, _PinUnpinActions):
         recipient_type: RecipientType,
         interactive_type: InteractiveType | None = None,
         **kwargs,
-    ) -> SentMessage:
+    ) -> _SentMessageType:
         # noinspection PyArgumentList
         return cls(
             _client=client,
@@ -314,7 +310,7 @@ class SentMessage(_SentUpdate, _PinUnpinActions):
                     try:
                         r.wait_until_read(cancel_on_new_update=True)
                     except ListenerCanceled as e:
-                        print(e.update) # The update that canceled the listener
+                        print(e.update)  # The update that canceled the listener
                         r.reply("You turned off read receipts")
                     r.reply("You read this message", quote=True)
 
@@ -338,11 +334,14 @@ class SentMessage(_SentUpdate, _PinUnpinActions):
             cancelers = (
                 (cancelers | new_update_canceler) if cancelers else new_update_canceler
             )
-        return self._client.listen(
-            to=self.listener_identifier,
-            filters=pywa_filters.update_id(self.id) & pywa_filters.read,
-            cancelers=cancelers,
-            timeout=timeout,
+        return cast(
+            MessageStatus,
+            self._client.listen(
+                to=self.listener_identifier,
+                filters=pywa_filters.update_id(self.id) & pywa_filters.read,
+                cancelers=cancelers,
+                timeout=timeout,
+            ),
         )
 
     def wait_until_delivered(
@@ -412,13 +411,17 @@ class SentMessage(_SentUpdate, _PinUnpinActions):
                 )
                 try:
                     failed = m.wait_until_failed(
-                        filters=filters.failed_with(errors.ReEngagementMessage),  # message was send after 24 hours
-                        cancel_if_delivered=True, # defaults to True, so the listener will be canceled if the message was delivered
+                        filters=filters.failed_with(
+                            errors.ReEngagementMessage
+                        ),  # message was send after 24 hours
+                        cancel_if_delivered=True,  # defaults to True, so the listener will be canceled if the message was delivered
                         timeout=5,
                     )
                     failed.reply_template(...)
                 except ListenerCanceled:
-                    print("The message was delivered successfully, so the listener was canceled.")
+                    print(
+                        "The message was delivered successfully, so the listener was canceled."
+                    )
                 except ListenerTimeout:
                     pass
 
@@ -437,10 +440,11 @@ class SentMessage(_SentUpdate, _PinUnpinActions):
             ListenerStopped: If the listener was stopped manually.
         """
         if cancel_if_delivered:
-            cancelers = (
+            cancelers = cast(
+                "pywa_filters.Filter[BaseUserUpdate] | None",
                 (cancelers | pywa_filters.delivered)
                 if cancelers
-                else pywa_filters.delivered
+                else pywa_filters.delivered,
             )
         return self._client.listen(
             to=self.listener_identifier,
@@ -502,12 +506,15 @@ class SentMessage(_SentUpdate, _PinUnpinActions):
                 if cancelers
                 else ignore_updates_canceler
             )
-        return self._client.listen(
-            to=self.listener_identifier,
-            filters=pywa_filters.callback_button
-            & (pywa_filters.replays_to(self.id) & (filters or pywa_filters.true)),
-            cancelers=cancelers,
-            timeout=timeout,
+        return cast(
+            CallbackButton,
+            self._client.listen(
+                to=self.listener_identifier,
+                filters=pywa_filters.callback_button
+                & (pywa_filters.replays_to(self.id) & (filters or pywa_filters.true)),
+                cancelers=cancelers,
+                timeout=timeout,
+            ),
         )
 
     def wait_for_selection(
@@ -545,12 +552,15 @@ class SentMessage(_SentUpdate, _PinUnpinActions):
                 if cancelers
                 else ignore_updates_canceler
             )
-        return self._client.listen(
-            to=self.listener_identifier,
-            filters=pywa_filters.callback_selection
-            & (pywa_filters.replays_to(self.id) & (filters or pywa_filters.true)),
-            cancelers=cancelers,
-            timeout=timeout,
+        return cast(
+            CallbackSelection,
+            self._client.listen(
+                to=self.listener_identifier,
+                filters=pywa_filters.callback_selection
+                & (pywa_filters.replays_to(self.id) & (filters or pywa_filters.true)),
+                cancelers=cancelers,
+                timeout=timeout,
+            ),
         )
 
     def wait_for_completion(
@@ -830,9 +840,14 @@ class SentLocationRequest(SentMessage):
 
                 @wa.on_message(filters.command("start"))
                 def start(w: WhatsApp, m: Message):
-                    r = m.reply_location_request(text="Please share your location",)
+                    r = m.reply_location_request(
+                        text="Please share your location",
+                    )
                     location_message = r.wait_for_location()
-                    r.reply(f"You shared your location: {location_message.location}", quote=True)
+                    r.reply(
+                        f"You shared your location: {location_message.location}",
+                        quote=True,
+                    )
 
         Args:
             force_current_location: Whether to only accept current location messages.
@@ -893,9 +908,14 @@ class SentContactInfoRequest(SentMessage):
 
                 @wa.on_message(filters.command("start"))
                 def start(w: WhatsApp, m: Message):
-                    r = m.reply_contact_info_request(text="Please share your contact",)
+                    r = m.reply_contact_info_request(
+                        text="Please share your contact",
+                    )
                     contact_message = r.wait_for_contact_info()
-                    r.reply(f"You shared your contact: {contact_message.contacts.first.name}", quote=True)
+                    r.reply(
+                        f"You shared your contact: {contact_message.contacts.first.name}",
+                        quote=True,
+                    )
 
         Args:
             filters: The filters to apply to the contact message.
@@ -951,13 +971,15 @@ class SentTemplateStatus(helpers.StrEnum):
         HELD_FOR_QUALITY_ASSESSMENT: The template was held for quality assessment.
     """
 
-    _check_value = str.islower
-    _modify_value = str.lower
+    _normalize = str.lower
 
     ACCEPTED = "accepted"
     HELD_FOR_QUALITY_ASSESSMENT = "held_for_quality_assessment"
 
     UNKNOWN = "UNKNOWN"
+
+
+_SentTemplateType = TypeVar("_SentTemplateType", bound="SentTemplate")
 
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
@@ -977,30 +999,30 @@ class SentTemplate(SentMessage):
 
     @classmethod
     def from_sent_update(
-        cls,
+        cls: type[_SentTemplateType],
         *,
         client: WhatsApp,
         update: dict,
         from_phone_id: str,
         recipient_type: RecipientType,
         **kwargs,
-    ) -> SentTemplate:
+    ) -> _SentTemplateType:
         msg = update["messages"][0]
-        return cast(
-            SentTemplate,
-            super(SentTemplate, cls).from_sent_update(
-                client=client,
-                update=update,
-                from_phone_id=from_phone_id,
-                recipient_type=recipient_type,
-                status=(
-                    SentTemplateStatus(msg["message_status"])
-                    if "message_status" in msg
-                    else None
-                ),
-                **kwargs,
+        return super(SentTemplate, cls).from_sent_update(
+            client=client,
+            update=update,
+            from_phone_id=from_phone_id,
+            recipient_type=recipient_type,
+            status=(
+                SentTemplateStatus(msg["message_status"])
+                if "message_status" in msg
+                else None
             ),
+            **kwargs,
         )
+
+
+_InitiatedCallType = TypeVar("_InitiatedCallType", bound="InitiatedCall")
 
 
 @dataclasses.dataclass(slots=True, kw_only=True, frozen=True)
@@ -1019,13 +1041,13 @@ class InitiatedCall(_SentUpdate, _CallShortcuts):
 
     @classmethod
     def from_sent_update(
-        cls,
+        cls: type[_InitiatedCallType],
         client: WhatsApp,
         update: dict,
         from_phone_id: str,
         recipient_type: RecipientType,
         callee: str,
-    ) -> InitiatedCall:
+    ) -> _InitiatedCallType:
         return cls(
             _client=client,
             _recipient_type=recipient_type,

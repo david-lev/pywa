@@ -445,12 +445,20 @@ created = wa.create_template(
         category=types.NewTemplate.Category.MARKETING,
         language=types.NewTemplate.Language.ENGLISH_US,
         header=types.NewTemplate.Text(text="The New iPhone {15} is here!"),
-        body=types.NewTemplate.Body(text="Buy now and use the code {WA_IPHONE_15} to get {15%} off!"),
+        body=types.NewTemplate.Body(
+            text="Buy now and use the code {WA_IPHONE_15} to get {15%} off!"
+        ),
         footer=types.NewTemplate.Footer(text="Powered by PyWa"),
         buttons=[
-            types.NewTemplate.UrlButton(title="Buy Now", url="https://example.com/shop/{iphone15}"),
-            types.NewTemplate.PhoneNumberButton(title="Call Us", phone_number='1234567890'),
-            types.NewTemplate.QuickReplyButton(text="Unsubscribe from marketing messages"),
+            types.NewTemplate.UrlButton(
+                title="Buy Now", url="https://example.com/shop/{iphone15}"
+            ),
+            types.NewTemplate.PhoneNumberButton(
+                title="Call Us", phone_number="1234567890"
+            ),
+            types.NewTemplate.QuickReplyButton(
+                text="Unsubscribe from marketing messages"
+            ),
             types.NewTemplate.QuickReplyButton(text="Unsubscribe from all messages"),
         ],
     ),
@@ -470,7 +478,9 @@ wa.send_template(
         ],
         buttons=[
             types.Template.UrlButtonValue(value="iphone15"),
-            types.Template.QuickReplyButtonData(data="unsubscribe_from_marketing_messages"),
+            types.Template.QuickReplyButtonData(
+                data="unsubscribe_from_marketing_messages"
+            ),
             types.Template.QuickReplyButtonData(data="unsubscribe_from_all_messages"),
         ],
     ),
@@ -492,18 +502,27 @@ wa.create_template(
         parameter_format=ParamFormat.NAMED,
         components=[
             ht := HeaderText("The New iPhone {{iphone_num}} is here!", iphone_num=15),
-            bt := BodyText("Buy now and use the code {{code}} to get {{per}}% off!", code="WA_IPHONE_15", per=15),
+            bt := BodyText(
+                "Buy now and use the code {{code}} to get {{per}}% off!",
+                code="WA_IPHONE_15",
+                per=15,
+            ),
             FooterText(text="Powered by PyWa"),
             Buttons(
                 buttons=[
-                    url := URLButton(text="Buy Now", url="https://example.com/shop/{{1}}", example="iphone15"),
+                    url := URLButton(
+                        text="Buy Now",
+                        url="https://example.com/shop/{{1}}",
+                        example="iphone15",
+                    ),
                     PhoneNumberButton(text="Call Us", phone_number="1234567890"),
-                    qrb1 := QuickReplyButton(text="Unsubscribe from marketing messages"),
+                    qrb1 := QuickReplyButton(
+                        text="Unsubscribe from marketing messages"
+                    ),
                     qrb2 := QuickReplyButton(text="Unsubscribe from all messages"),
                 ]
             ),
-
-        ]
+        ],
     ),
 )
 
@@ -518,7 +537,7 @@ wa.send_template(
         url.params(url_variable="iphone30", index=0),
         qrb1.params(callback_data="unsubscribe_from_marketing_messages", index=1),
         qrb2.params(callback_data="unsubscribe_from_all_messages", index=2),
-    ]
+    ],
 )
 ```
 
@@ -536,7 +555,8 @@ media_id = wa.upload_media(file="path/to/file.jpg")
 
 # running sql query to store media_id
 cursor.execute(
-    "CREATE TABLE IF NOT EXISTS media (id INTEGER PRIMARY KEY AUTOINCREMENT, media_id VARCHAR UNIQUE NOT NULL)")
+    "CREATE TABLE IF NOT EXISTS media (id INTEGER PRIMARY KEY AUTOINCREMENT, media_id VARCHAR UNIQUE NOT NULL)"
+)
 cursor.execute("INSERT INTO media (media_id) VALUES (?)", (media_id,))
 
 ########################## NEW CODE ##########################
@@ -549,7 +569,8 @@ media = wa.upload_media(file="path/to/file.jpg")
 
 # running sql query to store media.id
 cursor.execute(
-    "CREATE TABLE IF NOT EXISTS media (id INTEGER PRIMARY KEY AUTOINCREMENT, media_id VARCHAR UNIQUE NOT NULL)")
+    "CREATE TABLE IF NOT EXISTS media (id INTEGER PRIMARY KEY AUTOINCREMENT, media_id VARCHAR UNIQUE NOT NULL)"
+)
 cursor.execute("INSERT INTO media (media_id) VALUES (?)", (media.id,))
 ```
 
@@ -564,12 +585,20 @@ from pywa import WhatsApp, types, filters
 wa = WhatsApp(...)
 
 
-@wa.on_message(filters=filters.new(lambda _, m: m.system and m.system.type == "customer_changed_number"))
+@wa.on_message(
+    filters=filters.new(
+        lambda _, m: m.system and m.system.type == "customer_changed_number"
+    )
+)
 def on_phone_number_change(_: WhatsApp, msg: types.Message):
     repository.update_phone_number(old=msg.system.wa_id, new=msg.system.new_wa_id)
 
 
-@wa.on_message(filters=filters.new(lambda _, m: m.system and m.system.type == "customer_changed_identity"))
+@wa.on_message(
+    filters=filters.new(
+        lambda _, m: m.system and m.system.type == "customer_changed_identity"
+    )
+)
 def on_identity_change(_: WhatsApp, msg: types.Message):
     repository.log_out_user(wa_id=msg.sender)  # secure the user account
 
@@ -741,7 +770,6 @@ def on_start(_: WhatsApp, m: types.Message):
         filters=filters.text & filters.new(lambda _, m: m.text.isalpha()),
     )
     m.reply(f"Hello {name.text}")
-
 ```
 
 5. If You are writing the handlers in separate modules and then using `add_handler` to register the callback wrapped
@@ -771,7 +799,11 @@ from pywa import WhatsApp, handlers, filters
 wa = WhatsApp(...)
 
 wa.add_handlers(handlers.MessageHandler(on_start, filters.command("start")))
-wa.add_handlers(handlers.MessageHandler(on_age, filters.text & filters.new(lambda _, m: m.text.isdigit())))
+wa.add_handlers(
+    handlers.MessageHandler(
+        on_age, filters.text & filters.new(lambda _, m: m.text.isdigit())
+    )
+)
 
 # New code
 
@@ -780,7 +812,9 @@ wa.add_handlers(handlers.MessageHandler(on_age, filters.text & filters.new(lambd
 from pywa import WhatsApp, types, filters
 
 
-@WhatsApp.on_message(filters.command("start"))  # we using the class here, not the instance!
+@WhatsApp.on_message(
+    filters.command("start")
+)  # we using the class here, not the instance!
 def on_start(_: WhatsApp, m: types.Message):
     m.reply("How old are you?")
 
@@ -803,7 +837,6 @@ wa = WhatsApp(..., handlers_modules=[module1])
    attribute of the update object to `True`:
 
 ```python
-
 from pywa import WhatsApp
 
 wa = WhatsApp(..., continue_handling=True)
@@ -813,7 +846,6 @@ wa = WhatsApp(..., continue_handling=True)
    function signature:
 
 ```python
-
 # Old code
 from pywa import WhatsApp, utils
 
@@ -824,7 +856,7 @@ def some_web_framework_handler(req):
     res, status = wa.webhook_update_handler(
         update=req.json(),
         raw_body=req.read(),
-        hmac_header=req.headers.get(utils.HUB_SIG)
+        hmac_header=req.headers.get(utils.HUB_SIG),
     )
     return res, status
 
@@ -848,7 +880,6 @@ def some_web_framework_handler(req):
    `.ref` attribute:
 
 ```python
-
 # Old code
 
 from pywa.types.flows import *
@@ -856,9 +887,7 @@ from pywa.types.flows import *
 FlowJSON(
     screens=[
         Screen(
-            data=[
-                name := ScreenData(key="name", example="David")
-            ],
+            data=[name := ScreenData(key="name", example="David")],
             layout=Layout(
                 children=[
                     date := DatePicker(
@@ -869,10 +898,7 @@ FlowJSON(
                     Footer(
                         ...,
                         on_click_action=Action(
-                            payload={
-                                "date": date.form_ref,
-                                "name": name.data_key
-                            },
+                            payload={"date": date.form_ref, "name": name.data_key},
                         ),
                     ),
                 ],
@@ -886,23 +912,21 @@ FlowJSON(
 FlowJSON(
     screens=[
         Screen(
-            data=[
-                name := ScreenData(key="name", example="David")
-            ],
+            data=[name := ScreenData(key="name", example="David")],
             layout=Layout(
                 children=[
                     date := DatePicker(
                         on_select_action=Action(
-                            payload={"date": ComponentRef("date"), "name": ScreenDataRef("name")},
+                            payload={
+                                "date": ComponentRef("date"),
+                                "name": ScreenDataRef("name"),
+                            },
                         ),
                     ),
                     Footer(
                         ...,
                         on_click_action=Action(
-                            payload={
-                                "date": date.ref,
-                                "name": name.ref
-                            },
+                            payload={"date": date.ref, "name": name.ref},
                         ),
                     ),
                 ],
@@ -910,5 +934,4 @@ FlowJSON(
         )
     ],
 )
-
 ```

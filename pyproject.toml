@@ -1,22 +1,16 @@
 [build-system]
-requires = ["setuptools>=68.0.0"]
-build-backend = "setuptools.build_meta"
+requires = ["uv_build>=0.12.3,<0.13"]
+build-backend = "uv_build"
 
-[tool.setuptools.dynamic]
-version = { attr = "pywa.__version__" }
-readme = { file = "README.md", content-type = "text/markdown" }
-
-[tool.setuptools.packages.find]
-include = ["pywa*"]
-exclude = ["tests*", "docs*"]
-
-[tool.setuptools.package-data]
-pywa = ["py.typed"]
+[tool.uv.build-backend]
+module-name = ["pywa", "pywa_async"]
+module-root = ""
 
 [project]
 name = "pywa"
+version = "4.4.0"
 description = "🚀 Build WhatsApp Bots in Python • Fast, Effortless, Powerful"
-dynamic = ["version", "readme"]
+readme = "README.md"
 license = "MIT"
 license-files = [
     "LICENSE",
@@ -73,29 +67,37 @@ server = [
     "starlette>=0.32.0",
     "uvicorn[standard]>=0.25.0"
 ]
+flask = ["flask[async]"]
+fastapi = ["fastapi[standard]"]
+cryptography = ["cryptography"]
+
+[dependency-groups]
 dev = [
     "pytest~=9.0",
     "pytest-cov~=7.0",
     "pytest-asyncio~=1.3",
     "pytest-mock~=3.15",
-    "ruff~=0.14",
+    "ruff~=0.16",
+    "ty>=0.0.65",
     "pre-commit~=4.5",
     "cryptography>=46,<47",
+    "python-dotenv~=1.0",
+    "fastapi>=0.115,<1.0",
+    "flask[async]",
+    "ngrok~=1.0",
+    "uvicorn[standard]>=0.25.0",
+    "tomli>=2.0; python_version<'3.11'",
 ]
-
 docs = [
     "sphinx-book-theme~=1.1",
     "sphinx-copybutton~=0.5",
     "sphinxext-opengraph~=0.13",
     "sphinx-togglebutton~=0.4",
-    "myst-parser~=5.0",
+    "myst-parser~=4.0",
     "sphinxcontrib-googleanalytics~=0.5",
     "sphinx-last-updated-by-git~=0.3",
     "sphinx-favicon~=1.0",
 ]
-flask = ["flask[async]"]
-fastapi = ["fastapi[standard]"]
-cryptography = ["cryptography"]
 
 [project.scripts]
 pywa = "pywa.cli:main"
@@ -107,24 +109,47 @@ pywa = "pywa.cli:main"
 "Funding" = "https://github.com/sponsors/david-lev"
 "Changelog" = "https://github.com/david-lev/pywa/blob/master/CHANGELOG.md"
 
-
-[tool.ruff]
-extend-exclude = [
-    "pywa*/__init__.py",
-]
+[tool.ruff.format]
+docstring-code-format = true
 
 [tool.ruff.lint]
-select = [
-    "E4",
-    "E7",
-    "E9",
-    "F",
-    "T",
-    "B",
-    "C4",
-    "I",
-]
 ignore = [
-    "E402",
-    "F405",
+    "PLC0414", # `pywa_async` do `from pywa.X import Y as Z` on purpose to override sync methods with async ones
+    "PYI019", # `Self` needs Python 3.11+; pywa supports 3.10+ without `typing_extensions`
+    "F401", # `pywa_async` re-exports `pywa` names as `from pywa.X import Y as Y` on purpose
+    "E731", # we use lambdas in some places for brevity (for example in `StrEnum._normalize` overrides)
+]
+extend-select = ["T20", "E711", "E712", "E731", "E741"]
+
+[tool.ruff.lint.per-file-ignores]
+"pywa/types/__init__.py" = ["I001"]
+"pywa_async/types/__init__.py" = ["I001"]
+"pywa/cli.py" = ["T201"]
+"tests/test_flows.py" = ["E712"]
+"tests/smoke_test.py" = ["T201"]
+"examples/**" = ["T201"]
+
+[tool.ty.src]
+include = ["pywa*"]
+
+[[tool.ty.overrides]]
+# `pywa_async` mirrors `pywa` but overrides every networking method as `async def`,
+# which is intentionally not Liskov-substitutable for the sync base class.
+include = ["pywa_async/**"]
+
+[tool.ty.overrides.rules]
+invalid-method-override = "ignore"
+
+[tool.coverage.run]
+source = ["pywa", "pywa_async"]
+omit = ["pywa/__main__.py"]
+
+[tool.coverage.report]
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "def __repr__",
+    "\\.\\.\\.",
 ]

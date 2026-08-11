@@ -3,17 +3,17 @@
 from __future__ import annotations
 
 __all__ = [
+    "MarketingPreference",
     "UserMarketingPreferences",
     "UserPreferenceCategory",
-    "MarketingPreference",
 ]
 
-from pywa.types.user_preferences import *  # noqa MUST BE IMPORTED FIRST
+from pywa.types.user_preferences import *
 from pywa.types.user_preferences import (
     UserMarketingPreferences as _UserMarketingPreferences,
-)  # noqa MUST BE IMPORTED FIRST
+)
 
-from .base_update import BaseUserUpdateAsync  # noqa
+from .base_update import BaseUserUpdateAsync
 
 
 class UserMarketingPreferences(BaseUserUpdateAsync, _UserMarketingPreferences):

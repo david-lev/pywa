@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import datetime
 import pathlib
-from typing import TYPE_CHECKING, AsyncIterator, BinaryIO, Callable, Iterable, Iterator
+from collections.abc import AsyncIterator, Callable, Iterable, Iterator
+from typing import TYPE_CHECKING, BinaryIO
 
-from pywa.types.base_update import *  # noqa MUST BE IMPORTED FIRST
+from pywa.types.base_update import *
 
 from .others import Contact, ProductsSection, SuccessResult
 from .user import User
@@ -57,7 +58,7 @@ class _ClientShortcutsAsync:
     _client: WhatsAppAsync
     _internal_sender: str
     _internal_recipient: str
-    _get_reply_to: Callable[[bool], str]
+    _get_reply_to: Callable[..., str]
 
     async def reply_text(
         self,
@@ -94,7 +95,10 @@ class _ClientShortcutsAsync:
             >>> wa = WhatsApp(...)
             >>> @wa.on_message
             ... async def callback(_: WhatsApp, msg: Message):
-            ...     await msg.reply(f"Hello {msg.from_user.name}! This is a reply to your message.", quote=True)
+            ...     await msg.reply(
+            ...         f"Hello {msg.from_user.name}! This is a reply to your message.",
+            ...         quote=True,
+            ...     )
 
         Args:
             text: The text to reply with (`markdown <https://faq.whatsapp.com/539178204879377>`_ allowed, max 4096 characters).
@@ -527,8 +531,8 @@ class _ClientShortcutsAsync:
             ...     await msg.reply_location(
             ...         latitude=37.4847483695049,
             ...         longitude=-122.1473373086664,
-            ...         name='WhatsApp HQ',
-            ...        address='Menlo Park, 1601 Willow Rd, United States',
+            ...         name="WhatsApp HQ",
+            ...         address="Menlo Park, 1601 Willow Rd, United States",
             ...     )
 
         Args:
@@ -578,7 +582,7 @@ class _ClientShortcutsAsync:
             >>> wa = WhatsApp(...)
             >>> @wa.on_message
             ... async def callback(_: WhatsApp, msg: Message):
-            ...     await msg.reply_location_request(text='Please share your location')
+            ...     await msg.reply_location_request(text="Please share your location")
 
         Args:
             text: The text to send with the request.
@@ -621,7 +625,7 @@ class _ClientShortcutsAsync:
             ... async def callback(_: WhatsApp, msg: Message):
             ...     # check in your db if the user has shared their contact info before, if not, request it:
             ...     await msg.reply_contact_info_request(
-            ...         text='Please share your contact info to continue using the bot',
+            ...         text="Please share your contact info to continue using the bot",
             ...         quote=True,
             ...     )
 
@@ -636,7 +640,7 @@ class _ClientShortcutsAsync:
         """
         return await self._client.request_contact_info(
             sender=self._internal_recipient,
-            to=self._get_reply_to(),  # noqa
+            to=self._get_reply_to(),
             text=text,
             reply_to_message_id=self.message_id_to_reply if quote else None,
             tracker=tracker,
@@ -667,10 +671,18 @@ class _ClientShortcutsAsync:
             ... async def callback(_: WhatsApp, msg: Message):
             ...     await msg.reply_contact(
             ...         contact=Contact(
-            ...             name=Contact.Name(formatted_name='David Lev', first_name='David'),
-            ...             phones=[Contact.Phone(phone='1234567890', wa_id='1234567890', type='MOBILE')],
-            ...             emails=[Contact.Email(email='test@test.com', type='WORK')],
-            ...             urls=[Contact.Url(url='https://exmaple.com', type='HOME')],
+            ...             name=Contact.Name(
+            ...                 formatted_name="David Lev", first_name="David"
+            ...             ),
+            ...             phones=[
+            ...                 Contact.Phone(
+            ...                     phone="1234567890",
+            ...                     wa_id="1234567890",
+            ...                     type="MOBILE",
+            ...                 )
+            ...             ],
+            ...             emails=[Contact.Email(email="test@test.com", type="WORK")],
+            ...             urls=[Contact.Url(url="https://exmaple.com", type="HOME")],
             ...         ),
             ...         quote=True,
             ...     )
@@ -799,9 +811,9 @@ class _ClientShortcutsAsync:
             >>> @wa.on_message
             ... async def callback(_: WhatsApp, msg: Message):
             ...     await msg.reply_catalog(
-            ...         body='Check out our products!',
-            ...         footer='Powered by PyWa',
-            ...         thumbnail_product_sku='SKU123',  # Optional, if not provided,
+            ...         body="Check out our products!",
+            ...         footer="Powered by PyWa",
+            ...         thumbnail_product_sku="SKU123",  # Optional, if not provided,
             ...         # the first item in the catalog will be used.
             ...     )
 
@@ -854,10 +866,10 @@ class _ClientShortcutsAsync:
             >>> @wa.on_message
             ... def callback(_: WhatsApp, msg: Message):
             ...     msg.reply_product(
-            ...         catalog_id='1234567890',
-            ...         sku='SKU123',
-            ...         body='Check out this product!',
-            ...         footer='Powered by PyWa',
+            ...         catalog_id="1234567890",
+            ...         sku="SKU123",
+            ...         body="Check out this product!",
+            ...         footer="Powered by PyWa",
             ...     )
 
         Args:
@@ -912,23 +924,23 @@ class _ClientShortcutsAsync:
             >>> wa = WhatsApp(...)
             >>> @wa.on_message
             ... async def callback(_: WhatsApp, msg: Message):
-            ...    await msg.reply_products(
-            ...        catalog_id='1234567890',
-            ...        title='Tech Products',
-            ...        body='Check out our products!',
-            ...        product_sections=[
-            ...            ProductsSection(
-            ...                title='Smartphones',
-            ...                skus=['IPHONE12', 'GALAXYS21'],
-            ...            ),
-            ...            ProductsSection(
-            ...                title='Laptops',
-            ...                skus=['MACBOOKPRO', 'SURFACEPRO'],
-            ...            ),
-            ...        ],
-            ...        footer='Powered by PyWa',
-            ...        quote=True,
-            ...    )
+            ...     await msg.reply_products(
+            ...         catalog_id="1234567890",
+            ...         title="Tech Products",
+            ...         body="Check out our products!",
+            ...         product_sections=[
+            ...             ProductsSection(
+            ...                 title="Smartphones",
+            ...                 skus=["IPHONE12", "GALAXYS21"],
+            ...             ),
+            ...             ProductsSection(
+            ...                 title="Laptops",
+            ...                 skus=["MACBOOKPRO", "SURFACEPRO"],
+            ...             ),
+            ...         ],
+            ...         footer="Powered by PyWa",
+            ...         quote=True,
+            ...     )
 
         Args:
             catalog_id: The ID of the catalog to send the product from (To get the catalog ID
@@ -1109,7 +1121,7 @@ class _ClientShortcutsAsync:
             >>> wa = WhatsApp(...)
             >>> @wa.on_message
             ... async def callback(_: WhatsApp, msg: Message):
-            ...    await msg.call(...)
+            ...     await msg.call(...)
 
         Args:
             sdp: The SDP object containing the call information.

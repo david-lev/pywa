@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
-from pywa.listeners import *  # noqa MUST BE IMPORTED FIRST
+from pywa.listeners import *
 from pywa.listeners import (
     BaseListenerIdentifier,
 )
 from pywa.listeners import (
     Listener as _Listener,
-)  # noqa MUST BE IMPORTED FIRST
+)
 from pywa.listeners import (
     ListenerCanceled as _ListenerCanceled,
 )
@@ -33,15 +33,19 @@ class ListenerCanceled(_ListenerCanceled):
             try:
                 wa.listen(
                     to=UserUpdateListenerIdentifier(
-                        sender="123456",
-                        recipient="654321"
+                        sender="123456", recipient="654321"
                     ),
                     filters=filters.message & filters.text,
-                    cancelers=filters.callback_button & filters.matches("cancel")
+                    cancelers=filters.callback_button & filters.matches("cancel"),
                 )
             except ListenerCanceled as e:
-                assert e.update.data == "cancel" # the update that caused the listener to be canceled
-                wa.send_message("123456", "You cancelled the listener by clicking the `cancel` button")
+                assert (
+                    e.update.data == "cancel"
+                )  # the update that caused the listener to be canceled
+                wa.send_message(
+                    "123456",
+                    "You cancelled the listener by clicking the `cancel` button",
+                )
 
     Attributes:
         update: The update that caused the listener to be canceled
@@ -50,7 +54,7 @@ class ListenerCanceled(_ListenerCanceled):
     update: BaseUpdate | BaseUserUpdateAsync | None
 
     def __init__(self, update: BaseUpdate | BaseUserUpdateAsync | None = None):
-        super().__init__(update)
+        super().__init__(cast("BaseUpdate | None", update))
 
 
 _UpdateT = TypeVar("_UpdateT", bound="BaseUpdate")
@@ -86,7 +90,7 @@ class Listener(_Listener):
         return not self.filters or await self.filters.check_async(wa, update)
 
     async def apply_cancelers(self, wa: WhatsApp, update: BaseUpdate) -> bool:
-        return self.cancelers and await self.cancelers.check_async(wa, update)
+        return bool(self.cancelers) and await self.cancelers.check_async(wa, update)
 
 
 class _AsyncListeners:
@@ -118,13 +122,16 @@ class _AsyncListeners:
                         await wa.send_message(
                             to="123456",
                             text="Send me a message",
-                            buttons=[Button(title="Cancel", callback_data="cancel")]
+                            buttons=[Button(title="Cancel", callback_data="cancel")],
                         )
                         update: Message = wa.listen(
-                            to=UserUpdateListenerIdentifier(sender="123456", recipient="654321"),
+                            to=UserUpdateListenerIdentifier(
+                                sender="123456", recipient="654321"
+                            ),
                             filters=filters.message & filters.text,
-                            cancelers=filters.callback_button & filters.matches("cancel"),
-                            timeout=10
+                            cancelers=filters.callback_button
+                            & filters.matches("cancel"),
+                            timeout=10,
                         )
                         print(update)
                     except ListenerTimeout:
@@ -160,6 +167,9 @@ class _AsyncListeners:
         )
         self._listeners[to] = listener
         try:
-            return await asyncio.wait_for(listener.future, timeout=timeout)
+            return cast(
+                "_UpdateT", await asyncio.wait_for(listener.future, timeout=timeout)
+            )
         except asyncio.TimeoutError:
+            assert timeout is not None  # `asyncio.wait_for(..., None)` never times out
             raise ListenerTimeout(timeout) from None

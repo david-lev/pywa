@@ -519,8 +519,7 @@ def test_detect_media_source(client):
         helpers.detect_media_source(io.BytesIO(b"binarydata")) == MediaSource.FILE_OBJ
     )
     assert (
-        helpers.detect_media_source((b for b in [b"binarydata"]))
-        == MediaSource.BYTES_GEN
+        helpers.detect_media_source(b for b in [b"binarydata"]) == MediaSource.BYTES_GEN
     )
 
     async def agen():
@@ -556,7 +555,7 @@ def test_resolve_media_param(client):
         "pywa._helpers.internal_upload_media",
         return_value=media_obj,
     ) as internal_upload_media:
-        is_url, uploaded, media, filename = helpers.resolve_media_param(
+        is_url, uploaded, _media, filename = helpers.resolve_media_param(
             wa=client,
             media="https://example.com/image.jpg",
             mime_type=None,
@@ -573,7 +572,7 @@ def test_resolve_media_param(client):
         "pywa._helpers.internal_upload_media",
         return_value=media_obj,
     ) as internal_upload_media:
-        is_url, uploaded, media, filename = helpers.resolve_media_param(
+        is_url, uploaded, _media, filename = helpers.resolve_media_param(
             wa=client,
             media="12345678",
             mime_type=None,
@@ -590,7 +589,7 @@ def test_resolve_media_param(client):
         "pywa._helpers.internal_upload_media",
         return_value=media_obj,
     ) as internal_upload_media:
-        is_url, uploaded, media, filename = helpers.resolve_media_param(
+        is_url, uploaded, _media, filename = helpers.resolve_media_param(
             wa=client,
             media=media_obj,
             mime_type=None,
@@ -607,7 +606,7 @@ def test_resolve_media_param(client):
         "pywa._helpers.internal_upload_media",
         return_value=media_obj,
     ) as internal_upload_media:
-        is_url, uploaded, media, filename = helpers.resolve_media_param(
+        is_url, uploaded, _media, filename = helpers.resolve_media_param(
             wa=client,
             media=b"mediabytes",
             mime_type=None,

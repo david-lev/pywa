@@ -1,38 +1,67 @@
 name: Bug report
-description: Create a report to help us improve
+description: Report a bug in pywa. Please provide reproducible steps, environment info and a minimal example when possible.
+title: "Bug: "
+labels: [ bug ]
 body:
-  - type: textarea
-    attributes:
-      label: Describe the bug
-      placeholder: |
-        A clear and concise description of what the bug is.
-  - type: textarea
-    attributes:
-      label: To Reproduce
-      placeholder: |
-        Steps to reproduce the behavior
-  - type: textarea
-    attributes:
-      label: Expected behavior
-      placeholder: |
-        A clear and concise description of what you expected to happen.
   - type: markdown
     attributes:
       value: |
-        #### Environment (please complete the following information):
+        Thanks for taking the time to report a bug. Fill the fields below with as much detail as you can.
   - type: input
+    id: summary
     attributes:
-      label:  pywa version
-      placeholder: e.g. 0.5.0
-  - type: input
-    attributes:
-      label:  python version
-      placeholder: e.g. 3.10.0
-  - type: input
-    attributes:
-      label:  os
-      placeholder: e.g. Windows 11
+      label: Short summary
+      description: One-line summary of the bug
+      placeholder: e.g. Sending a message fails with 500
+      validations:
+        required: true
   - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Provide step-by-step instructions to reproduce the bug
+      placeholder: 1) ...\n2) ...\n3) ...
+      validations:
+        required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What you expected to happen
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / Traceback
+      description: Paste full traceback or relevant logs (if any)
+  - type: dropdown
+    id: pywa_version
+    attributes:
+      label: pywa version
+      description: Select the pywa version you are using
+      options:
+        - label: 4.x (current)
+          value: 4.x
+        - label: 3.x or older
+          value: <4.0
+        - label: other
+          value: other
+  - type: input
+    id: python_version
+    attributes:
+      label: Python version
+      placeholder: e.g. 3.11
+  - type: input
+    id: os
+    attributes:
+      label: OS
+      placeholder: e.g. macOS 13.6
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Minimal code that reproduces the issue (if possible)
+  - type: textarea
+    id: additional
     attributes:
       label: Additional context
-      description: Add any other context about the problem here.
+      description: Any other context or notes

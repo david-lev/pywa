@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-__all__ = ["PhoneNumberChange", "IdentityChange", "SystemType", "Identity"]
+__all__ = ["Identity", "IdentityChange", "PhoneNumberChange", "SystemType"]
 
 
-from pywa.types.system import *  # noqa MUST BE IMPORTED FIRST
+from pywa.types.system import *
 from pywa.types.system import (
     IdentityChange as _UserIdentityChanged,
 )
@@ -13,7 +13,7 @@ from pywa.types.system import (
     PhoneNumberChange as _UserChangedNumber,
 )
 
-from .base_update import BaseUserUpdateAsync  # noqa
+from .base_update import BaseUserUpdateAsync
 
 
 class PhoneNumberChange(BaseUserUpdateAsync, _UserChangedNumber):

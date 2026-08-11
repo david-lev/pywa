@@ -29,7 +29,9 @@ Handlers for incoming updates.
 # Register a callback programmatically
 
 >>> print_msg_handler = handlers.MessageHandler(lambda w, m: print(m))
->>> print_txt_handler = handlers.MessageHandler(lambda w, m: print(m.text), filters.text)
+>>> print_txt_handler = handlers.MessageHandler(
+...     lambda w, m: print(m.text), filters.text
+... )
 >>> wa.add_handlers(print_msg_handler, print_txt_handler)
 >>> wa.remove_handlers(print_msg_handler, print_txt_handler)
 
@@ -38,31 +40,31 @@ Handlers for incoming updates.
 from __future__ import annotations
 
 __all__ = [
-    "MessageHandler",
+    "AccountUpdateHandler",
+    "CallConnectHandler",
+    "CallPermissionUpdateHandler",
+    "CallStatusHandler",
+    "CallTerminateHandler",
     "CallbackButtonHandler",
     "CallbackSelectionHandler",
-    "RawUpdateHandler",
-    "MessageStatusHandler",
-    "GroupMessageStatusesHandler",
-    "TemplateStatusUpdateHandler",
-    "TemplateCategoryUpdateHandler",
-    "TemplateQualityUpdateHandler",
-    "TemplateComponentsUpdateHandler",
+    "DeletedMessageHandler",
+    "EditedMessageHandler",
     "FlowCompletionHandler",
     "FlowRequestHandler",
-    "PhoneNumberChangeHandler",
+    "GroupMessageStatusesHandler",
     "IdentityChangeHandler",
-    "CallConnectHandler",
-    "CallTerminateHandler",
-    "CallStatusHandler",
-    "CallPermissionUpdateHandler",
-    "UserMarketingPreferencesHandler",
-    "EditedMessageHandler",
-    "DeletedMessageHandler",
-    "OutgoingMessageHandler",
-    "OutgoingEditedMessageHandler",
+    "MessageHandler",
+    "MessageStatusHandler",
     "OutgoingDeletedMessageHandler",
-    "AccountUpdateHandler",
+    "OutgoingEditedMessageHandler",
+    "OutgoingMessageHandler",
+    "PhoneNumberChangeHandler",
+    "RawUpdateHandler",
+    "TemplateCategoryUpdateHandler",
+    "TemplateComponentsUpdateHandler",
+    "TemplateQualityUpdateHandler",
+    "TemplateStatusUpdateHandler",
+    "UserMarketingPreferencesHandler",
 ]
 
 import abc
@@ -70,11 +72,10 @@ import collections
 import dataclasses
 import functools
 import logging
+from collections.abc import Awaitable, Callable
 from typing import (
     TYPE_CHECKING,
     Any,
-    Awaitable,
-    Callable,
     Generic,
     TypeAlias,
     TypedDict,
@@ -121,12 +122,12 @@ from .types.flows import (
     FlowRequestCannotBeDecrypted,
     FlowResponseError,
     Screen,
-)  # noqa
+)
 
 if TYPE_CHECKING:
     from .client import WhatsApp
 
-_FlowRequestHandlerT: TypeAlias = Callable[
+_FlowRequestCallback: TypeAlias = Callable[
     ["WhatsApp", FlowRequest],
     FlowResponse | dict | None | Awaitable[FlowResponse | dict | None],
 ]
@@ -220,7 +221,49 @@ _pywa_logger = logging.getLogger("pywa")
 
 
 _UpdateType = TypeVar("_UpdateType")
-_CallbackT = TypeVar("_CallbackT", bound=Callable)
+_WhatsAppT = TypeVar("_WhatsAppT", bound="WhatsApp")
+"""
+Bound to the actual ``WhatsApp`` subtype (sync or async) the decorator is called on, so that
+e.g. ``@wa.on_message`` requires callbacks typed with the same ``WhatsApp`` class as ``wa``.
+"""
+_RawUpdateT = TypeVar("_RawUpdateT", bound="RawUpdate")
+_MessageT = TypeVar("_MessageT", bound="Message")
+_CallbackButtonT = TypeVar("_CallbackButtonT", bound="CallbackButton")
+_CallbackSelectionT = TypeVar("_CallbackSelectionT", bound="CallbackSelection")
+_MessageStatusT = TypeVar("_MessageStatusT", bound="MessageStatus")
+_GroupMessageStatusesT = TypeVar("_GroupMessageStatusesT", bound="GroupMessageStatuses")
+_PhoneNumberChangeT = TypeVar("_PhoneNumberChangeT", bound="PhoneNumberChange")
+_IdentityChangeT = TypeVar("_IdentityChangeT", bound="IdentityChange")
+_TemplateStatusUpdateT = TypeVar("_TemplateStatusUpdateT", bound="TemplateStatusUpdate")
+_TemplateCategoryUpdateT = TypeVar(
+    "_TemplateCategoryUpdateT", bound="TemplateCategoryUpdate"
+)
+_TemplateQualityUpdateT = TypeVar(
+    "_TemplateQualityUpdateT", bound="TemplateQualityUpdate"
+)
+_TemplateComponentsUpdateT = TypeVar(
+    "_TemplateComponentsUpdateT", bound="TemplateComponentsUpdate"
+)
+_FlowCompletionT = TypeVar("_FlowCompletionT", bound="FlowCompletion")
+_CallConnectT = TypeVar("_CallConnectT", bound="CallConnect")
+_CallTerminateT = TypeVar("_CallTerminateT", bound="CallTerminate")
+_CallStatusT = TypeVar("_CallStatusT", bound="CallStatus")
+_CallPermissionUpdateT = TypeVar("_CallPermissionUpdateT", bound="CallPermissionUpdate")
+_UserMarketingPreferencesT = TypeVar(
+    "_UserMarketingPreferencesT", bound="UserMarketingPreferences"
+)
+_EditedMessageT = TypeVar("_EditedMessageT", bound="EditedMessage")
+_DeletedMessageT = TypeVar("_DeletedMessageT", bound="DeletedMessage")
+_OutgoingMessageT = TypeVar("_OutgoingMessageT", bound="OutgoingMessage")
+_OutgoingEditedMessageT = TypeVar(
+    "_OutgoingEditedMessageT", bound="OutgoingEditedMessage"
+)
+_OutgoingDeletedMessageT = TypeVar(
+    "_OutgoingDeletedMessageT", bound="OutgoingDeletedMessage"
+)
+_AccountUpdateT = TypeVar("_AccountUpdateT", bound="AccountUpdate")
+_FlowRequestT = TypeVar("_FlowRequestT", bound="FlowRequest")
+"""Bound to the actual update subtype, so the callback's update parameter can be narrower than the base update type."""
 
 
 class Handler(Generic[_UpdateType]):
@@ -243,24 +286,32 @@ class Handler(Generic[_UpdateType]):
         self._priority = priority
         self._is_async_callback = helpers.is_async_callable(callback)
 
-    def check(self, wa: WhatsApp, update: _UpdateType) -> bool:
-        return self._filters is None or self._filters.check_sync(wa, update)
+    def check(self, wa: WhatsApp, update: _UpdateType) -> _UpdateType | None:
+        """Return the update (possibly transformed) if this handler should handle it, else ``None``."""
+        if self._filters is not None and not self._filters.check_sync(wa, update):
+            return None
+        return update
 
     def handle(self, wa: WhatsApp, update: _UpdateType) -> bool:
-        if not self.check(wa, update):
+        if (checked_update := self.check(wa, update)) is None:
             return False
-        self._callback(wa, update)
+        self._callback(wa, checked_update)
         return True
 
-    async def acheck(self, wa: WhatsApp, update: _UpdateType) -> bool:
-        return self._filters is None or await self._filters.check_async(wa, update)
+    async def acheck(self, wa: WhatsApp, update: _UpdateType) -> _UpdateType | None:
+        """Return the update (possibly transformed) if this handler should handle it, else ``None``."""
+        if self._filters is not None and not await self._filters.check_async(
+            wa, update
+        ):
+            return None
+        return update
 
     async def ahandle(self, wa: WhatsApp, update: _UpdateType) -> bool:
-        if not await self.acheck(wa, update):
+        if (checked_update := await self.acheck(wa, update)) is None:
             return False
-        await self._callback(wa, update) if self._is_async_callback else self._callback(
-            wa, update
-        )
+        await self._callback(
+            wa, checked_update
+        ) if self._is_async_callback else self._callback(wa, checked_update)
         return True
 
     @staticmethod
@@ -311,7 +362,7 @@ class MessageHandler(Handler[Message]):
     _update = Message
 
 
-class _FactoryHandler(Generic[_UpdateType], Handler[_UpdateType]):
+class _FactoryHandler(Handler[_UpdateType], Generic[_UpdateType]):
     """Base class for handlers that use a factory to construct the callback data."""
 
     _update = None
@@ -336,22 +387,24 @@ class _FactoryHandler(Generic[_UpdateType], Handler[_UpdateType]):
                 return None
             if (data := getattr(update, self._data_field)) is None:
                 return None
-            update = dataclasses.replace(
-                update, **{self._data_field: self._factory.from_str(data)}
+            update = cast(
+                "_UpdateType",
+                dataclasses.replace(
+                    cast("helpers.DataclassInstance", update),
+                    **{self._data_field: self._factory.from_str(data)},
+                ),
             )
         return update
 
-    def handle(self, wa: WhatsApp, update: _UpdateType) -> bool:
-        update = self._process_update(update)
-        if update is None:
-            return False
-        return super().handle(wa, update)
+    def check(self, wa: WhatsApp, update: _UpdateType) -> _UpdateType | None:
+        if (processed_update := self._process_update(update)) is None:
+            return None
+        return super().check(wa, processed_update)
 
-    async def ahandle(self, wa: WhatsApp, update: _UpdateType) -> bool:
-        update = self._process_update(update)
-        if update is None:
-            return False
-        return await super().ahandle(wa, update)
+    async def acheck(self, wa: WhatsApp, update: _UpdateType) -> _UpdateType | None:
+        if (processed_update := self._process_update(update)) is None:
+            return None
+        return await super().acheck(wa, processed_update)
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(callback={self._callback}, filters={self._filters}, factory={self._factory}, priority={self._priority})"
@@ -368,7 +421,7 @@ class CallbackButtonHandler(_FactoryHandler[CallbackButton]):
         >>> from pywa import WhatsApp, filters
         >>> wa = WhatsApp(...)
         >>> print_btn = lambda _, btn: print(btn)
-        >>> wa.add_handlers(CallbackButtonHandler(print_btn, filters.startswith('id:')))
+        >>> wa.add_handlers(CallbackButtonHandler(print_btn, filters.startswith("id:")))
 
     Args:
         callback: The callback function. (Takes a :class:`~pywa.client.WhatsApp` instance and a :class:`~pywa.types.CallbackButton` as positional arguments)
@@ -392,7 +445,9 @@ class CallbackSelectionHandler(_FactoryHandler[CallbackSelection]):
         >>> from pywa import WhatsApp, filters
         >>> wa = WhatsApp(...)
         >>> print_selection = lambda _, sel: print(sel)
-        >>> wa.add_handlers(CallbackSelectionHandler(print_selection, filters.startswith('id:')))
+        >>> wa.add_handlers(
+        ...     CallbackSelectionHandler(print_selection, filters.startswith("id:"))
+        ... )
 
     Args:
         callback: The callback function. (Takes a :class:`~pywa.client.WhatsApp` instance and a :class:`~pywa.types.callback.CallbackSelection` as positional arguments)
@@ -441,7 +496,9 @@ class GroupMessageStatusesHandler(Handler[GroupMessageStatuses]):
 
         >>> from pywa import WhatsApp, filters
         >>> wa = WhatsApp(...)
-        >>> wa.add_handlers(GroupMessageStatusesHandler(lambda _, status: print(status)))
+        >>> wa.add_handlers(
+        ...     GroupMessageStatusesHandler(lambda _, status: print(status))
+        ... )
 
     Args:
         callback: The callback function (Takes a :class:`~pywa.client.WhatsApp` instance and a :class:`~pywa.types.groups.GroupMessageStatuses` as positional arguments).
@@ -530,7 +587,9 @@ class TemplateCategoryUpdateHandler(Handler[TemplateCategoryUpdate]):
         >>> from pywa import WhatsApp
         >>> wa = WhatsApp(...)
         >>> print_template_category_update = lambda _, msg: print(msg)
-        >>> wa.add_handlers(TemplateCategoryUpdateHandler(print_template_category_update))
+        >>> wa.add_handlers(
+        ...     TemplateCategoryUpdateHandler(print_template_category_update)
+        ... )
 
     Args:
         callback: The callback function (Takes a :class:`~pywa.client.WhatsApp` instance and a :class:`~pywa.types.templates.TemplateCategoryUpdate` as positional arguments)
@@ -575,7 +634,9 @@ class TemplateComponentsUpdateHandler(Handler[TemplateComponentsUpdate]):
         >>> from pywa import WhatsApp
         >>> wa = WhatsApp(...)
         >>> print_template_components_update = lambda _, msg: print(msg)
-        >>> wa.add_handlers(TemplateComponentsUpdateHandler(print_template_components_update))
+        >>> wa.add_handlers(
+        ...     TemplateComponentsUpdateHandler(print_template_components_update)
+        ... )
 
     Args:
         callback: The callback function (Takes a :class:`~pywa.client.WhatsApp` instance and a :class:`~pywa.types.templates.TemplateComponentsUpdate` as positional arguments)
@@ -597,7 +658,9 @@ class UserMarketingPreferencesHandler(Handler[UserMarketingPreferences]):
         >>> from pywa import WhatsApp
         >>> wa = WhatsApp(...)
         >>> print_user_marketing_preferences = lambda _, msg: print(msg)
-        >>> wa.add_handlers(UserMarketingPreferencesHandler(print_user_marketing_preferences))
+        >>> wa.add_handlers(
+        ...     UserMarketingPreferencesHandler(print_user_marketing_preferences)
+        ... )
 
     Args:
         callback: The callback function (Takes a :class:`~pywa.client.WhatsApp` instance and a :class:`~pywa.types.user_preferences.UserMarketingPreferences` as positional arguments)
@@ -819,7 +882,9 @@ class OutgoingDeletedMessageHandler(Handler[OutgoingDeletedMessage]):
         >>> from pywa import WhatsApp
         >>> wa = WhatsApp(...)
         >>> print_outgoing_deleted_message = lambda _, msg: print(msg)
-        >>> wa.add_handlers(OutgoingDeletedMessageHandler(print_outgoing_deleted_message))
+        >>> wa.add_handlers(
+        ...     OutgoingDeletedMessageHandler(print_outgoing_deleted_message)
+        ... )
 
     Args:
         callback: The callback function (Takes a :class:`~pywa.client.WhatsApp` instance and a :class:`~pywa.types.OutgoingDeletedMessage` as positional arguments)
@@ -880,8 +945,8 @@ _flow_req_has_error_filter = new_filter(
 
 
 def _log_flow_request(req: FlowRequest) -> None:
-    _pywa_logger.info(
-        "🔀 Flow '%s' received for screen '%s'.",
+    _pywa_logger.debug(
+        "Flow '%s' received for screen '%s'.",
         req.action.value,
         req.screen,
     )
@@ -901,7 +966,7 @@ class _CallbackWrapperDecorators(abc.ABC):
     def add_handler(
         self,
         *,
-        callback: _FlowRequestHandlerT,
+        callback: _FlowRequestCallback,
         action: FlowRequestActionType,
         screen: Screen | str | None = None,
         filters: Filter[FlowRequest] | None = None,
@@ -919,7 +984,7 @@ class _CallbackWrapperDecorators(abc.ABC):
         action: FlowRequestActionType,
         screen: Screen | str | None = None,
         filters: Filter[FlowRequest] | None = None,
-    ) -> Callable[[_FlowRequestHandlerT], _FlowRequestHandlerT] | _FlowRequestHandlerT:
+    ) -> Callable[[_FlowRequestCallback], _FlowRequestCallback] | _FlowRequestCallback:
         """
         Decorator to help you add more handlers to the same endpoint and split the logic into multiple functions.
 
@@ -934,7 +999,7 @@ class _CallbackWrapperDecorators(abc.ABC):
             The function itself.
         """
 
-        def decorator(callback: _FlowRequestHandlerT) -> _FlowRequestHandlerT:
+        def decorator(callback: _FlowRequestCallback) -> _FlowRequestCallback:
             self.add_handler(
                 callback=callback, action=action, screen=screen, filters=filters
             )
@@ -942,12 +1007,28 @@ class _CallbackWrapperDecorators(abc.ABC):
 
         return decorator
 
+    @overload
     def on_init(
-        self=None,
+        self: _CallbackWrapperDecorators,
         filters: Filter[FlowRequest] | None = None,
         *,
         call_on_error: bool = False,
-    ) -> Callable[[_FlowRequestHandlerT], _FlowRequestHandlerT]:
+    ) -> Callable[[_FlowRequestCallback], _FlowRequestCallback]: ...
+
+    @overload
+    def on_init(
+        self: _CallbackWrapperDecorators,
+        filters: _FlowRequestCallback,
+        *,
+        call_on_error: bool = False,
+    ) -> _FlowRequestCallback: ...
+
+    def on_init(
+        self: _CallbackWrapperDecorators,
+        filters: Filter[FlowRequest] | _FlowRequestCallback | None = None,
+        *,
+        call_on_error: bool = False,
+    ) -> Callable[[_FlowRequestCallback], _FlowRequestCallback] | _FlowRequestCallback:
         """
         Decorator to add a handler for the :class:`FlowRequestActionType.INIT` action.
 
@@ -963,8 +1044,7 @@ class _CallbackWrapperDecorators(abc.ABC):
             ... ))
 
             >>> @wa.on_flow_request("/feedback_flow")
-            >>> def feedback_flow_handler(_: WhatsApp, req: FlowRequest):
-            ...    ...
+            >>> def feedback_flow_handler(_: WhatsApp, req: FlowRequest): ...
 
             >>> @feedback_flow_handler.on_init  # This will be called when the flow is started.
             >>> def on_init(_: WhatsApp, req: FlowRequest) -> FlowResponse:
@@ -978,14 +1058,15 @@ class _CallbackWrapperDecorators(abc.ABC):
             The callback function.
         """
         if callable(filters):  # @handler.on_init
+            callback = cast("_FlowRequestCallback", filters)
             self.add_handler(
-                callback=filters,
+                callback=callback,
                 action=FlowRequestActionType.INIT,
                 filters=_get_filters_with_error_filter(None, call_on_error),
             )
-            return filters
+            return callback
 
-        def deco(callback: _FlowRequestHandlerT) -> _FlowRequestHandlerT:
+        def deco(callback: _FlowRequestCallback) -> _FlowRequestCallback:
             self.add_handler(
                 callback=callback,
                 action=FlowRequestActionType.INIT,
@@ -995,13 +1076,31 @@ class _CallbackWrapperDecorators(abc.ABC):
 
         return deco
 
+    @overload
     def on_data_exchange(
-        self=None,
+        self: _CallbackWrapperDecorators,
         screen: Screen | str | None = None,
         filters: Filter[FlowRequest] | None = None,
         *,
         call_on_error: bool = False,
-    ) -> Callable[[_FlowRequestHandlerT], _FlowRequestHandlerT]:
+    ) -> Callable[[_FlowRequestCallback], _FlowRequestCallback]: ...
+
+    @overload
+    def on_data_exchange(
+        self: _CallbackWrapperDecorators,
+        screen: _FlowRequestCallback,
+        filters: Filter[FlowRequest] | None = None,
+        *,
+        call_on_error: bool = False,
+    ) -> _FlowRequestCallback: ...
+
+    def on_data_exchange(
+        self: _CallbackWrapperDecorators,
+        screen: Screen | str | _FlowRequestCallback | None = None,
+        filters: Filter[FlowRequest] | None = None,
+        *,
+        call_on_error: bool = False,
+    ) -> Callable[[_FlowRequestCallback], _FlowRequestCallback] | _FlowRequestCallback:
         """
         Decorator to add a handler for the :class:`FlowRequestActionType.DATA_EXCHANGE` action.
 
@@ -1013,11 +1112,12 @@ class _CallbackWrapperDecorators(abc.ABC):
             >>> wa = WhatsApp(...)
 
             >>> @wa.on_flow_request("/feedback_flow")
-            >>> def feedback_flow_handler(_: WhatsApp, req: FlowRequest):
-            ...    ...
+            >>> def feedback_flow_handler(_: WhatsApp, req: FlowRequest): ...
 
             >>> @feedback_flow_handler.on_data_exchange(screen="SURVEY", filters=filters.new(lambda _, r: r.data["rating"] == "5"))
-            >>> def on_survey_with_rating_5(_: WhatsApp, req: FlowRequest) -> FlowResponse:
+            >>> def on_survey_with_rating_5(
+            ...     _: WhatsApp, req: FlowRequest
+            ... ) -> FlowResponse:
             ...     return req.respond(...)
 
         Args:
@@ -1029,15 +1129,16 @@ class _CallbackWrapperDecorators(abc.ABC):
             The callback function.
         """
         if callable(screen):  # @handler.on_data_exchange
+            callback = cast("_FlowRequestCallback", screen)
             self.add_handler(
-                callback=screen,
+                callback=callback,
                 action=FlowRequestActionType.DATA_EXCHANGE,
                 screen=None,
                 filters=_get_filters_with_error_filter(None, call_on_error),
             )
-            return screen
+            return callback
 
-        def deco(callback: _FlowRequestHandlerT) -> _FlowRequestHandlerT:
+        def deco(callback: _FlowRequestCallback) -> _FlowRequestCallback:
             self.add_handler(
                 callback=callback,
                 action=FlowRequestActionType.DATA_EXCHANGE,
@@ -1048,12 +1149,28 @@ class _CallbackWrapperDecorators(abc.ABC):
 
         return deco
 
+    @overload
     def on_back(
-        self=None,
+        self: _CallbackWrapperDecorators,
         *,
         screen: Screen | str | None = None,
         filters: Filter[FlowRequest] | None = None,
-    ) -> Callable[[_FlowRequestHandlerT], _FlowRequestHandlerT]:
+    ) -> Callable[[_FlowRequestCallback], _FlowRequestCallback]: ...
+
+    @overload
+    def on_back(
+        self: _CallbackWrapperDecorators,
+        *,
+        screen: _FlowRequestCallback,
+        filters: Filter[FlowRequest] | None = None,
+    ) -> _FlowRequestCallback: ...
+
+    def on_back(
+        self: _CallbackWrapperDecorators,
+        *,
+        screen: Screen | str | _FlowRequestCallback | None = None,
+        filters: Filter[FlowRequest] | None = None,
+    ) -> Callable[[_FlowRequestCallback], _FlowRequestCallback] | _FlowRequestCallback:
         """
         Decorator to add a handler for the :class:`FlowRequestActionType.BACK` action.
 
@@ -1065,8 +1182,7 @@ class _CallbackWrapperDecorators(abc.ABC):
             >>> wa = WhatsApp(...)
 
             >>> @wa.on_flow_request("/feedback_flow")
-            >>> def feedback_flow_handler(_: WhatsApp, req: FlowRequest):
-            ...     ...
+            >>> def feedback_flow_handler(_: WhatsApp, req: FlowRequest): ...
 
             >>> @feedback_flow_handler.on_back(screen="SURVEY")
             >>> def on_back(_: WhatsApp, req: FlowRequest) -> FlowResponse:
@@ -1080,15 +1196,16 @@ class _CallbackWrapperDecorators(abc.ABC):
             The callback function.
         """
         if callable(screen):
+            callback = cast("_FlowRequestCallback", screen)
             self.add_handler(
-                callback=screen,
+                callback=callback,
                 action=FlowRequestActionType.BACK,
                 screen=None,
                 filters=filters,
             )
-            return screen
+            return callback
 
-        def deco(callback: _FlowRequestHandlerT) -> _FlowRequestHandlerT:
+        def deco(callback: _FlowRequestCallback) -> _FlowRequestCallback:
             self.add_handler(
                 callback=callback,
                 action=FlowRequestActionType.BACK,
@@ -1099,12 +1216,31 @@ class _CallbackWrapperDecorators(abc.ABC):
 
         return deco
 
+    @overload
     def on_completion(
-        self=None,
+        self: _CallbackWrapperDecorators,
         filters: Filter[FlowCompletion] | None = None,
         *,
         priority: int = 0,
-    ) -> Callable[[_FlowCompletionCallback], _FlowCompletionCallback]:
+    ) -> Callable[[_FlowCompletionCallback], _FlowCompletionCallback]: ...
+
+    @overload
+    def on_completion(
+        self: _CallbackWrapperDecorators,
+        filters: _FlowCompletionCallback,
+        *,
+        priority: int = 0,
+    ) -> _FlowCompletionCallback: ...
+
+    def on_completion(
+        self: _CallbackWrapperDecorators,
+        filters: Filter[FlowCompletion] | _FlowCompletionCallback | None = None,
+        *,
+        priority: int = 0,
+    ) -> (
+        Callable[[_FlowCompletionCallback], _FlowCompletionCallback]
+        | _FlowCompletionCallback
+    ):
         """
         Decorator to add a handler for flow completion requests.
 
@@ -1117,18 +1253,24 @@ class _CallbackWrapperDecorators(abc.ABC):
             >>> wa.send_message(to=..., buttons=types.FlowButton(flow_name="feedback", flow_token="feedback:123")
 
             >>> @wa.on_flow_request("/feedback_flow")
-            ... def feedback_flow_handler(_: WhatsApp, req: FlowRequest):
-            ...     ...
+            ... def feedback_flow_handler(_: WhatsApp, req: FlowRequest): ...
 
-            >>> @feedback_flow_handler.on_completion(filters.new(lambda _, c: c.token.startswith("feedback") and c.rating == 5))
+            >>> @feedback_flow_handler.on_completion(
+            ...     filters.new(
+            ...         lambda _, c: c.token.startswith("feedback") and c.rating == 5
+            ...     )
+            ... )
             ... def on_flow_completion(_: WhatsApp, flow: FlowCompletion):
             ...     print("Flow completed with rating 5")
         """
         if callable(filters):
+            callback = cast("_FlowCompletionCallback", filters)
             self.add_completion_handler(
-                FlowCompletionHandler(callback=filters, filters=None, priority=priority)
+                FlowCompletionHandler(
+                    callback=callback, filters=None, priority=priority
+                )
             )
-            return filters
+            return callback
 
         def deco(callback: _FlowCompletionCallback) -> _FlowCompletionCallback:
             self.add_completion_handler(
@@ -1159,7 +1301,7 @@ class FlowRequestHandler(_CallbackWrapperDecorators):
 
     def __init__(
         self,
-        callback: _FlowRequestHandlerT,
+        callback: _FlowRequestCallback,
         *,
         endpoint: str,
         acknowledge_errors: bool = True,
@@ -1171,7 +1313,7 @@ class FlowRequestHandler(_CallbackWrapperDecorators):
         self._main_handler = callback
         self._handlers: dict[
             tuple[FlowRequestActionType | str, str | None],
-            list[tuple[Filter[FlowRequest] | None, _FlowRequestHandlerT]],
+            list[tuple[Filter[FlowRequest] | None, _FlowRequestCallback]],
         ] = collections.defaultdict(list)  # {(action, screen?): [(filters?, callback)]}
         self._completion_handlers: list[FlowCompletionHandler] = []
         self._endpoint = endpoint
@@ -1184,7 +1326,7 @@ class FlowRequestHandler(_CallbackWrapperDecorators):
     def add_handler(
         self,
         *,
-        callback: _FlowRequestHandlerT,
+        callback: _FlowRequestCallback,
         action: FlowRequestActionType,
         screen: Screen | str | None = None,
         filters: Filter[FlowRequest] | None = None,
@@ -1222,34 +1364,41 @@ def _handle_on_update(
 
     # Case 1: @wa.on_x (no parentheses)
     if is_wa_instance and callable(filters):
-        self.add_handlers(
-            handler_type(callback=filters, filters=None, priority=priority, **kwargs)
+        callback = cast(Callable, filters)
+        cast("WhatsApp", self).add_handlers(
+            handler_type(callback=callback, filters=None, priority=priority, **kwargs)
         )
-        return filters
+        return callback
 
     # Case 2: @WhatsApp.on_x (no parentheses)
     if not is_wa_instance and callable(self):
+        callback = cast(Callable, self)
         _register_func_handler(
             handler_type=handler_type,
-            callback=self,
+            callback=callback,
             filters=None,
             priority=priority,
             **kwargs,
         )
-        return self
+        return callback
 
     def deco(callback: Callable) -> Callable:
         if is_wa_instance:  # Case 3: @wa.on_x(...) (with parentheses)
-            self.add_handlers(
+            cast("WhatsApp", self).add_handlers(
                 handler_type(
-                    callback=callback, filters=filters, priority=priority, **kwargs
+                    callback=callback,
+                    filters=cast("Filter[Any] | None", filters),
+                    priority=priority,
+                    **kwargs,
                 )
             )
         else:  # Case 4: @WhatsApp.on_x(...) (with parentheses)
             _register_func_handler(
                 handler_type=handler_type,
                 callback=callback,
-                filters=self if (isinstance(self, Filter)) else filters,
+                filters=self
+                if (isinstance(self, Filter))
+                else cast("Filter[Any] | None", filters),
                 priority=priority,
                 **kwargs,
             )
@@ -1266,10 +1415,20 @@ class _HandlerDecorators:
 
     @overload
     def on_raw_update(
-        self: WhatsApp,
+        self: _WhatsAppT,
         filters: Filter[RawUpdate] | None = None,
         priority: int = 0,
-    ) -> Callable[[_RawUpdateCallback], _RawUpdateCallback]: ...
+    ) -> Callable[
+        [Callable[[_WhatsAppT, _RawUpdateT], Any | Awaitable[Any]]],
+        Callable[[_WhatsAppT, _RawUpdateT], Any | Awaitable[Any]],
+    ]: ...
+
+    @overload
+    def on_raw_update(
+        self: _WhatsAppT,
+        filters: Callable[[_WhatsAppT, _RawUpdateT], Any | Awaitable[Any]],
+        priority: int = 0,
+    ) -> Callable[[_WhatsAppT, _RawUpdateT], Any | Awaitable[Any]]: ...
 
     @overload
     def on_raw_update(
@@ -1324,10 +1483,20 @@ class _HandlerDecorators:
 
     @overload
     def on_message(
-        self: WhatsApp,
+        self: _WhatsAppT,
         filters: Filter[Message] | None = None,
         priority: int = 0,
-    ) -> Callable[[_MessageCallback], _MessageCallback]: ...
+    ) -> Callable[
+        [Callable[[_WhatsAppT, _MessageT], Any | Awaitable[Any]]],
+        Callable[[_WhatsAppT, _MessageT], Any | Awaitable[Any]],
+    ]: ...
+
+    @overload
+    def on_message(
+        self: _WhatsAppT,
+        filters: Callable[[_WhatsAppT, _MessageT], Any | Awaitable[Any]],
+        priority: int = 0,
+    ) -> Callable[[_WhatsAppT, _MessageT], Any | Awaitable[Any]]: ...
 
     @overload
     def on_message(
@@ -1364,10 +1533,15 @@ class _HandlerDecorators:
 
             >>> from pywa import WhatsApp, types, filters
             >>> wa = WhatsApp(...)
-            >>> @wa.on_message(filters.command("start") | filters.matches("hello", ignore_case=True))
+            >>> @wa.on_message(
+            ...     filters.command("start")
+            ...     | filters.matches("hello", ignore_case=True)
+            ... )
             ... def hello_handler(_: WhatsApp, msg: types.Message):
             ...     msg.react("👋")
-            ...     msg.reply_text(text=f"Hello {msg.from_user.name}! How can I help you?")
+            ...     msg.reply_text(
+            ...         text=f"Hello {msg.from_user.name}! How can I help you?"
+            ...     )
 
         Args:
             filters: Filters to apply to the incoming messages.
@@ -1382,11 +1556,22 @@ class _HandlerDecorators:
 
     @overload
     def on_callback_button(
-        self: WhatsApp,
+        self: _WhatsAppT,
         filters: Filter[CallbackButton] | None = None,
         factory: type[CallbackData] | None = None,
         priority: int = 0,
-    ) -> Callable[[_CallbackButtonCallback], _CallbackButtonCallback]: ...
+    ) -> Callable[
+        [Callable[[_WhatsAppT, _CallbackButtonT], Any | Awaitable[Any]]],
+        Callable[[_WhatsAppT, _CallbackButtonT], Any | Awaitable[Any]],
+    ]: ...
+
+    @overload
+    def on_callback_button(
+        self: _WhatsAppT,
+        filters: Callable[[_WhatsAppT, _CallbackButtonT], Any | Awaitable[Any]],
+        factory: type[CallbackData] | None = None,
+        priority: int = 0,
+    ) -> Callable[[_WhatsAppT, _CallbackButtonT], Any | Awaitable[Any]]: ...
 
     @overload
     def on_callback_button(
@@ -1435,7 +1620,9 @@ class _HandlerDecorators:
             ...     admin: bool
             >>> @wa.on_callback_button(factory=UserData)
             ... def on_user_click(_: WhatsApp, btn: types.CallbackButton[UserData]):
-            ...     print(f"User {btn.data.id} (admin: {btn.data.admin}) clicked the button")
+            ...     print(
+            ...         f"User {btn.data.id} (admin: {btn.data.admin}) clicked the button"
+            ...     )
 
         Args:
             filters: Filters to apply to the incoming callback button presses.
@@ -1452,11 +1639,22 @@ class _HandlerDecorators:
 
     @overload
     def on_callback_selection(
-        self: WhatsApp,
+        self: _WhatsAppT,
         filters: Filter[CallbackSelection] | None = None,
         factory: type[CallbackData] | None = None,
         priority: int = 0,
-    ) -> Callable[[_CallbackSelectionCallback], _CallbackSelectionCallback]: ...
+    ) -> Callable[
+        [Callable[[_WhatsAppT, _CallbackSelectionT], Any | Awaitable[Any]]],
+        Callable[[_WhatsAppT, _CallbackSelectionT], Any | Awaitable[Any]],
+    ]: ...
+
+    @overload
+    def on_callback_selection(
+        self: _WhatsAppT,
+        filters: Callable[[_WhatsAppT, _CallbackSelectionT], Any | Awaitable[Any]],
+        factory: type[CallbackData] | None = None,
+        priority: int = 0,
+    ) -> Callable[[_WhatsAppT, _CallbackSelectionT], Any | Awaitable[Any]]: ...
 
     @overload
     def on_callback_selection(
@@ -1507,8 +1705,12 @@ class _HandlerDecorators:
             ...     item_id: str
             ...     price: float
             >>> @wa.on_callback_selection(factory=ShopData)
-            ... def on_shop_selection(_: WhatsApp, sel: types.CallbackSelection[ShopData]):
-            ...     sel.reply_text(text=f"You selected item {sel.data.item_id} which costs {sel.data.price}$")
+            ... def on_shop_selection(
+            ...     _: WhatsApp, sel: types.CallbackSelection[ShopData]
+            ... ):
+            ...     sel.reply_text(
+            ...         text=f"You selected item {sel.data.item_id} which costs {sel.data.price}$"
+            ...     )
 
         Args:
             filters: Filters to apply to the incoming callback selections.
@@ -1525,11 +1727,22 @@ class _HandlerDecorators:
 
     @overload
     def on_message_status(
-        self: WhatsApp,
+        self: _WhatsAppT,
         filters: Filter[MessageStatus] | None = None,
         factory: type[CallbackData] | None = None,
         priority: int = 0,
-    ) -> Callable[[_MessageStatusCallback], _MessageStatusCallback]: ...
+    ) -> Callable[
+        [Callable[[_WhatsAppT, _MessageStatusT], Any | Awaitable[Any]]],
+        Callable[[_WhatsAppT, _MessageStatusT], Any | Awaitable[Any]],
+    ]: ...
+
+    @overload
+    def on_message_status(
+        self: _WhatsAppT,
+        filters: Callable[[_WhatsAppT, _MessageStatusT], Any | Awaitable[Any]],
+        factory: type[CallbackData] | None = None,
+        priority: int = 0,
+    ) -> Callable[[_WhatsAppT, _MessageStatusT], Any | Awaitable[Any]]: ...
 
     @overload
     def on_message_status(
@@ -1577,7 +1790,9 @@ class _HandlerDecorators:
             >>> wa = WhatsApp(...)
             >>> @wa.on_message_status(filters.failed_with(errors.ReEngagementMessage))
             ... def on_re_engagement_failed(_: WhatsApp, status: types.MessageStatus):
-            ...     print(f"Message failed to send to {status.from_user} because 24h passed")
+            ...     print(
+            ...         f"Message failed to send to {status.from_user} because 24h passed"
+            ...     )
 
 
         Args:
@@ -1595,10 +1810,20 @@ class _HandlerDecorators:
 
     @overload
     def on_group_message_statuses(
-        self: WhatsApp,
+        self: _WhatsAppT,
         filters: Filter[GroupMessageStatuses] | None = None,
         priority: int = 0,
-    ) -> Callable[[_GroupMessageStatusesCallback], _GroupMessageStatusesCallback]: ...
+    ) -> Callable[
+        [Callable[[_WhatsAppT, _GroupMessageStatusesT], Any | Awaitable[Any]]],
+        Callable[[_WhatsAppT, _GroupMessageStatusesT], Any | Awaitable[Any]],
+    ]: ...
+
+    @overload
+    def on_group_message_statuses(
+        self: _WhatsAppT,
+        filters: Callable[[_WhatsAppT, _GroupMessageStatusesT], Any | Awaitable[Any]],
+        priority: int = 0,
+    ) -> Callable[[_WhatsAppT, _GroupMessageStatusesT], Any | Awaitable[Any]]: ...
 
     @overload
     def on_group_message_statuses(
@@ -1645,7 +1870,9 @@ class _HandlerDecorators:
             >>> wa = WhatsApp(...)
             >>> @wa.on_group_message_statuses(filters.read)
             ... def on_group_read(_: WhatsApp, statuses: types.GroupMessageStatuses):
-            ...     print(f"Message {statuses.id} was read by {len(statuses.statuses)} participants in {statuses.group_id}")
+            ...     print(
+            ...         f"Message {statuses.id} was read by {len(statuses.statuses)} participants in {statuses.group_id}"
+            ...     )
 
         Args:
             filters: Filters to apply to the incoming group message status changes.
@@ -1660,10 +1887,20 @@ class _HandlerDecorators:
 
     @overload
     def on_phone_number_change(
-        self: WhatsApp,
+        self: _WhatsAppT,
         filters: Filter[PhoneNumberChange] | None = None,
         priority: int = 0,
-    ) -> Callable[[_PhoneNumberChangeCallback], _PhoneNumberChangeCallback]: ...
+    ) -> Callable[
+        [Callable[[_WhatsAppT, _PhoneNumberChangeT], Any | Awaitable[Any]]],
+        Callable[[_WhatsAppT, _PhoneNumberChangeT], Any | Awaitable[Any]],
+    ]: ...
+
+    @overload
+    def on_phone_number_change(
+        self: _WhatsAppT,
+        filters: Callable[[_WhatsAppT, _PhoneNumberChangeT], Any | Awaitable[Any]],
+        priority: int = 0,
+    ) -> Callable[[_WhatsAppT, _PhoneNumberChangeT], Any | Awaitable[Any]]: ...
 
     @overload
     def on_phone_number_change(
@@ -1723,10 +1960,20 @@ class _HandlerDecorators:
 
     @overload
     def on_identity_change(
-        self: WhatsApp,
+        self: _WhatsAppT,
         filters: Filter[IdentityChange] | None = None,
         priority: int = 0,
-    ) -> Callable[[_IdentityChangeCallback], _IdentityChangeCallback]: ...
+    ) -> Callable[
+        [Callable[[_WhatsAppT, _IdentityChangeT], Any | Awaitable[Any]]],
+        Callable[[_WhatsAppT, _IdentityChangeT], Any | Awaitable[Any]],
+    ]: ...
+
+    @overload
+    def on_identity_change(
+        self: _WhatsAppT,
+        filters: Callable[[_WhatsAppT, _IdentityChangeT], Any | Awaitable[Any]],
+        priority: int = 0,
+    ) -> Callable[[_WhatsAppT, _IdentityChangeT], Any | Awaitable[Any]]: ...
 
     @overload
     def on_identity_change(
@@ -1783,10 +2030,20 @@ class _HandlerDecorators:
 
     @overload
     def on_template_status_update(
-        self: WhatsApp,
+        self: _WhatsAppT,
         filters: Filter[TemplateStatusUpdate] | None = None,
         priority: int = 0,
-    ) -> Callable[[_TemplateStatusUpdateCallback], _TemplateStatusUpdateCallback]: ...
+    ) -> Callable[
+        [Callable[[_WhatsAppT, _TemplateStatusUpdateT], Any | Awaitable[Any]]],
+        Callable[[_WhatsAppT, _TemplateStatusUpdateT], Any | Awaitable[Any]],
+    ]: ...
+
+    @overload
+    def on_template_status_update(
+        self: _WhatsAppT,
+        filters: Callable[[_WhatsAppT, _TemplateStatusUpdateT], Any | Awaitable[Any]],
+        priority: int = 0,
+    ) -> Callable[[_WhatsAppT, _TemplateStatusUpdateT], Any | Awaitable[Any]]: ...
 
     @overload
     def on_template_status_update(
@@ -1830,8 +2087,12 @@ class _HandlerDecorators:
             >>> from pywa import WhatsApp, types, filters
             >>> wa = WhatsApp(...)
             >>> @wa.on_template_status_update(filters.template_status_approved)
-            ... def on_template_approved(_: WhatsApp, update: types.TemplateStatusUpdate):
-            ...     print(f"Template {update.template_name} is now approved and ready to use!")
+            ... def on_template_approved(
+            ...     _: WhatsApp, update: types.TemplateStatusUpdate
+            ... ):
+            ...     print(
+            ...         f"Template {update.template_name} is now approved and ready to use!"
+            ...     )
 
         Args:
             filters: Filters to apply to the incoming template status changes.
@@ -1846,12 +2107,20 @@ class _HandlerDecorators:
 
     @overload
     def on_template_category_update(
-        self: WhatsApp,
+        self: _WhatsAppT,
         filters: Filter[TemplateCategoryUpdate] | None = None,
         priority: int = 0,
     ) -> Callable[
-        [_TemplateCategoryUpdateCallback], _TemplateCategoryUpdateCallback
+        [Callable[[_WhatsAppT, _TemplateCategoryUpdateT], Any | Awaitable[Any]]],
+        Callable[[_WhatsAppT, _TemplateCategoryUpdateT], Any | Awaitable[Any]],
     ]: ...
+
+    @overload
+    def on_template_category_update(
+        self: _WhatsAppT,
+        filters: Callable[[_WhatsAppT, _TemplateCategoryUpdateT], Any | Awaitable[Any]],
+        priority: int = 0,
+    ) -> Callable[[_WhatsAppT, _TemplateCategoryUpdateT], Any | Awaitable[Any]]: ...
 
     @overload
     def on_template_category_update(
@@ -1899,8 +2168,12 @@ class _HandlerDecorators:
             >>> from pywa import WhatsApp, types, filters
             >>> wa = WhatsApp(...)
             >>> @wa.on_template_category_update
-            ... def category_update_handler(client: WhatsApp, update: types.TemplateCategoryUpdate):
-            ...     print(f"Template {update.template_name} category changed from {update.previous_category} to {update.new_category}!")
+            ... def category_update_handler(
+            ...     client: WhatsApp, update: types.TemplateCategoryUpdate
+            ... ):
+            ...     print(
+            ...         f"Template {update.template_name} category changed from {update.previous_category} to {update.new_category}!"
+            ...     )
 
         Args:
             filters: Filters to apply to the incoming template category changes.
@@ -1915,10 +2188,20 @@ class _HandlerDecorators:
 
     @overload
     def on_template_quality_update(
-        self: WhatsApp,
+        self: _WhatsAppT,
         filters: Filter[TemplateQualityUpdate] | None = None,
         priority: int = 0,
-    ) -> Callable[[_TemplateQualityUpdateCallback], _TemplateQualityUpdateCallback]: ...
+    ) -> Callable[
+        [Callable[[_WhatsAppT, _TemplateQualityUpdateT], Any | Awaitable[Any]]],
+        Callable[[_WhatsAppT, _TemplateQualityUpdateT], Any | Awaitable[Any]],
+    ]: ...
+
+    @overload
+    def on_template_quality_update(
+        self: _WhatsAppT,
+        filters: Callable[[_WhatsAppT, _TemplateQualityUpdateT], Any | Awaitable[Any]],
+        priority: int = 0,
+    ) -> Callable[[_WhatsAppT, _TemplateQualityUpdateT], Any | Awaitable[Any]]: ...
 
     @overload
     def on_template_quality_update(
@@ -1962,8 +2245,12 @@ class _HandlerDecorators:
             >>> from pywa import WhatsApp, types, filters
             >>> wa = WhatsApp(...)
             >>> @wa.on_template_quality_update
-            ... def quality_update_handler(client: WhatsApp, update: types.TemplateQualityUpdate):
-            ...     print(f"Template {update.template_name} quality changed to {update.new_quality_score}!")
+            ... def quality_update_handler(
+            ...     client: WhatsApp, update: types.TemplateQualityUpdate
+            ... ):
+            ...     print(
+            ...         f"Template {update.template_name} quality changed to {update.new_quality_score}!"
+            ...     )
 
         Args:
             filters: Filters to apply to the incoming template quality changes.
@@ -1978,12 +2265,22 @@ class _HandlerDecorators:
 
     @overload
     def on_template_components_update(
-        self: WhatsApp,
+        self: _WhatsAppT,
         filters: Filter[TemplateComponentsUpdate] | None = None,
         priority: int = 0,
     ) -> Callable[
-        [_TemplateComponentsUpdateCallback], _TemplateComponentsUpdateCallback
+        [Callable[[_WhatsAppT, _TemplateComponentsUpdateT], Any | Awaitable[Any]]],
+        Callable[[_WhatsAppT, _TemplateComponentsUpdateT], Any | Awaitable[Any]],
     ]: ...
+
+    @overload
+    def on_template_components_update(
+        self: _WhatsAppT,
+        filters: Callable[
+            [_WhatsAppT, _TemplateComponentsUpdateT], Any | Awaitable[Any]
+        ],
+        priority: int = 0,
+    ) -> Callable[[_WhatsAppT, _TemplateComponentsUpdateT], Any | Awaitable[Any]]: ...
 
     @overload
     def on_template_components_update(
@@ -2031,7 +2328,9 @@ class _HandlerDecorators:
             >>> from pywa import WhatsApp, types, filters
             >>> wa = WhatsApp(...)
             >>> @wa.on_template_components_update
-            ... def components_update_handler(client: WhatsApp, update: types.TemplateComponentsUpdate):
+            ... def components_update_handler(
+            ...     client: WhatsApp, update: types.TemplateComponentsUpdate
+            ... ):
             ...     print(f"Template {update.template_name} components updated!")
 
         Args:
@@ -2047,10 +2346,20 @@ class _HandlerDecorators:
 
     @overload
     def on_flow_completion(
-        self: WhatsApp,
+        self: _WhatsAppT,
         filters: Filter[FlowCompletion] | None = None,
         priority: int = 0,
-    ) -> Callable[[_FlowCompletionCallback], _FlowCompletionCallback]: ...
+    ) -> Callable[
+        [Callable[[_WhatsAppT, _FlowCompletionT], Any | Awaitable[Any]]],
+        Callable[[_WhatsAppT, _FlowCompletionT], Any | Awaitable[Any]],
+    ]: ...
+
+    @overload
+    def on_flow_completion(
+        self: _WhatsAppT,
+        filters: Callable[[_WhatsAppT, _FlowCompletionT], Any | Awaitable[Any]],
+        priority: int = 0,
+    ) -> Callable[[_WhatsAppT, _FlowCompletionT], Any | Awaitable[Any]]: ...
 
     @overload
     def on_flow_completion(
@@ -2090,7 +2399,9 @@ class _HandlerDecorators:
 
             >>> from pywa import WhatsApp, types, filters
             >>> wa = WhatsApp(...)
-            >>> @wa.on_flow_completion(filters.startswith("feedback")) # flow.token startswith "filters"
+            >>> @wa.on_flow_completion(
+            ...     filters.startswith("feedback")
+            ... )  # flow.token startswith "filters"
             ... def on_feedback_complete(_: WhatsApp, flow: types.FlowCompletion):
             ...     print(f"User {flow.from_user.name} completed feedback: {flow.body}")
 
@@ -2107,10 +2418,20 @@ class _HandlerDecorators:
 
     @overload
     def on_call_connect(
-        self: WhatsApp,
+        self: _WhatsAppT,
         filters: Filter[CallConnect] | None = None,
         priority: int = 0,
-    ) -> Callable[[_CallConnectCallback], _CallConnectCallback]: ...
+    ) -> Callable[
+        [Callable[[_WhatsAppT, _CallConnectT], Any | Awaitable[Any]]],
+        Callable[[_WhatsAppT, _CallConnectT], Any | Awaitable[Any]],
+    ]: ...
+
+    @overload
+    def on_call_connect(
+        self: _WhatsAppT,
+        filters: Callable[[_WhatsAppT, _CallConnectT], Any | Awaitable[Any]],
+        priority: int = 0,
+    ) -> Callable[[_WhatsAppT, _CallConnectT], Any | Awaitable[Any]]: ...
 
     @overload
     def on_call_connect(
@@ -2165,10 +2486,20 @@ class _HandlerDecorators:
 
     @overload
     def on_call_terminate(
-        self: WhatsApp,
+        self: _WhatsAppT,
         filters: Filter[CallTerminate] | None = None,
         priority: int = 0,
-    ) -> Callable[[_CallTerminateCallback], _CallTerminateCallback]: ...
+    ) -> Callable[
+        [Callable[[_WhatsAppT, _CallTerminateT], Any | Awaitable[Any]]],
+        Callable[[_WhatsAppT, _CallTerminateT], Any | Awaitable[Any]],
+    ]: ...
+
+    @overload
+    def on_call_terminate(
+        self: _WhatsAppT,
+        filters: Callable[[_WhatsAppT, _CallTerminateT], Any | Awaitable[Any]],
+        priority: int = 0,
+    ) -> Callable[[_WhatsAppT, _CallTerminateT], Any | Awaitable[Any]]: ...
 
     @overload
     def on_call_terminate(
@@ -2210,7 +2541,9 @@ class _HandlerDecorators:
             >>> wa = WhatsApp(...)
             >>> @wa.on_call_terminate
             ... def on_call_terminate(_: WhatsApp, call: types.CallTerminate):
-            ...     print(f"Call with {call.from_user.name} ended. duration: {call.duration}s")
+            ...     print(
+            ...         f"Call with {call.from_user.name} ended. duration: {call.duration}s"
+            ...     )
 
         Args:
             filters: Filters to apply to the incoming call terminate.
@@ -2225,11 +2558,22 @@ class _HandlerDecorators:
 
     @overload
     def on_call_status(
-        self: WhatsApp,
+        self: _WhatsAppT,
         filters: Filter[CallStatus] | None = None,
         factory: type[CallbackData] | None = None,
         priority: int = 0,
-    ) -> Callable[[_CallStatusCallback], _CallStatusCallback]: ...
+    ) -> Callable[
+        [Callable[[_WhatsAppT, _CallStatusT], Any | Awaitable[Any]]],
+        Callable[[_WhatsAppT, _CallStatusT], Any | Awaitable[Any]],
+    ]: ...
+
+    @overload
+    def on_call_status(
+        self: _WhatsAppT,
+        filters: Callable[[_WhatsAppT, _CallStatusT], Any | Awaitable[Any]],
+        factory: type[CallbackData] | None = None,
+        priority: int = 0,
+    ) -> Callable[[_WhatsAppT, _CallStatusT], Any | Awaitable[Any]]: ...
 
     @overload
     def on_call_status(
@@ -2272,7 +2616,9 @@ class _HandlerDecorators:
             >>> wa = WhatsApp(...)
             >>> @wa.on_call_status(filters.call_answered)
             ... def on_call_answered(_: WhatsApp, call: types.CallStatus):
-            ...     print(f"Call with {call.from_user.name} answered at {call.timestamp}")
+            ...     print(
+            ...         f"Call with {call.from_user.name} answered at {call.timestamp}"
+            ...     )
 
         Args:
             filters: Filters to apply to the incoming call status.
@@ -2289,10 +2635,20 @@ class _HandlerDecorators:
 
     @overload
     def on_call_permission_update(
-        self: WhatsApp,
+        self: _WhatsAppT,
         filters: Filter[CallPermissionUpdate] | None = None,
         priority: int = 0,
-    ) -> Callable[[_CallPermissionUpdateCallback], _CallPermissionUpdateCallback]: ...
+    ) -> Callable[
+        [Callable[[_WhatsAppT, _CallPermissionUpdateT], Any | Awaitable[Any]]],
+        Callable[[_WhatsAppT, _CallPermissionUpdateT], Any | Awaitable[Any]],
+    ]: ...
+
+    @overload
+    def on_call_permission_update(
+        self: _WhatsAppT,
+        filters: Callable[[_WhatsAppT, _CallPermissionUpdateT], Any | Awaitable[Any]],
+        priority: int = 0,
+    ) -> Callable[[_WhatsAppT, _CallPermissionUpdateT], Any | Awaitable[Any]]: ...
 
     @overload
     def on_call_permission_update(
@@ -2336,8 +2692,12 @@ class _HandlerDecorators:
             >>> from pywa import WhatsApp, types
             >>> wa = WhatsApp(...)
             >>> @wa.on_call_permission_update
-            ... def call_permission_handler(client: WhatsApp, update: types.CallPermissionUpdate):
-            ...     if update: # Use boolean context to check if the call permission is granted
+            ... def call_permission_handler(
+            ...     client: WhatsApp, update: types.CallPermissionUpdate
+            ... ):
+            ...     if (
+            ...         update
+            ...     ):  # Use boolean context to check if the call permission is granted
             ...         update.reply("We will now be able to call you!")
             ...         update.call(...)
 
@@ -2354,12 +2714,22 @@ class _HandlerDecorators:
 
     @overload
     def on_user_marketing_preferences(
-        self: WhatsApp,
+        self: _WhatsAppT,
         filters: Filter[UserMarketingPreferences] | None = None,
         priority: int = 0,
     ) -> Callable[
-        [_UserMarketingPreferencesCallback], _UserMarketingPreferencesCallback
+        [Callable[[_WhatsAppT, _UserMarketingPreferencesT], Any | Awaitable[Any]]],
+        Callable[[_WhatsAppT, _UserMarketingPreferencesT], Any | Awaitable[Any]],
     ]: ...
+
+    @overload
+    def on_user_marketing_preferences(
+        self: _WhatsAppT,
+        filters: Callable[
+            [_WhatsAppT, _UserMarketingPreferencesT], Any | Awaitable[Any]
+        ],
+        priority: int = 0,
+    ) -> Callable[[_WhatsAppT, _UserMarketingPreferencesT], Any | Awaitable[Any]]: ...
 
     @overload
     def on_user_marketing_preferences(
@@ -2406,9 +2776,15 @@ class _HandlerDecorators:
 
             >>> from pywa import WhatsApp, types, filters
             >>> wa = WhatsApp(...)
-            >>> @wa.on_user_marketing_preferences(filters.user_marketing_preferences_stop)
-            ... def on_marketing_stop(_: WhatsApp, pref: types.UserMarketingPreferences):
-            ...     print(f"User {pref.from_user.wa_id} wants to stop receiving marketing messages")
+            >>> @wa.on_user_marketing_preferences(
+            ...     filters.user_marketing_preferences_stop
+            ... )
+            ... def on_marketing_stop(
+            ...     _: WhatsApp, pref: types.UserMarketingPreferences
+            ... ):
+            ...     print(
+            ...         f"User {pref.from_user.wa_id} wants to stop receiving marketing messages"
+            ...     )
 
         Args:
             filters: Filters to apply to the incoming user marketing preferences updates.
@@ -2423,10 +2799,20 @@ class _HandlerDecorators:
 
     @overload
     def on_edited_message(
-        self: WhatsApp,
+        self: _WhatsAppT,
         filters: Filter[EditedMessage] | None = None,
         priority: int = 0,
-    ) -> Callable[[_EditedMessageCallback], _EditedMessageCallback]: ...
+    ) -> Callable[
+        [Callable[[_WhatsAppT, _EditedMessageT], Any | Awaitable[Any]]],
+        Callable[[_WhatsAppT, _EditedMessageT], Any | Awaitable[Any]],
+    ]: ...
+
+    @overload
+    def on_edited_message(
+        self: _WhatsAppT,
+        filters: Callable[[_WhatsAppT, _EditedMessageT], Any | Awaitable[Any]],
+        priority: int = 0,
+    ) -> Callable[[_WhatsAppT, _EditedMessageT], Any | Awaitable[Any]]: ...
 
     @overload
     def on_edited_message(
@@ -2467,8 +2853,12 @@ class _HandlerDecorators:
             >>> from pywa import WhatsApp, types, filters
             >>> wa = WhatsApp(...)
             >>> @wa.on_edited_message(filters.text)
-            ... def edited_message_handler(client: WhatsApp, edited_msg: types.EditedMessage):
-            ...     print(f"The user {edited_msg.from_user} just edited their message to: {edited_msg.message.text}")
+            ... def edited_message_handler(
+            ...     client: WhatsApp, edited_msg: types.EditedMessage
+            ... ):
+            ...     print(
+            ...         f"The user {edited_msg.from_user} just edited their message to: {edited_msg.message.text}"
+            ...     )
 
         Args:
             filters: Filters to apply to the incoming edited messages.
@@ -2483,10 +2873,20 @@ class _HandlerDecorators:
 
     @overload
     def on_deleted_message(
-        self: WhatsApp,
+        self: _WhatsAppT,
         filters: Filter[DeletedMessage] | None = None,
         priority: int = 0,
-    ) -> Callable[[_DeletedMessageCallback], _DeletedMessageCallback]: ...
+    ) -> Callable[
+        [Callable[[_WhatsAppT, _DeletedMessageT], Any | Awaitable[Any]]],
+        Callable[[_WhatsAppT, _DeletedMessageT], Any | Awaitable[Any]],
+    ]: ...
+
+    @overload
+    def on_deleted_message(
+        self: _WhatsAppT,
+        filters: Callable[[_WhatsAppT, _DeletedMessageT], Any | Awaitable[Any]],
+        priority: int = 0,
+    ) -> Callable[[_WhatsAppT, _DeletedMessageT], Any | Awaitable[Any]]: ...
 
     @overload
     def on_deleted_message(
@@ -2528,7 +2928,9 @@ class _HandlerDecorators:
             >>> wa = WhatsApp(...)
             >>> @wa.on_deleted_message
             ... def on_delete(_: WhatsApp, msg: types.DeletedMessage):
-            ...     print(f"User {msg.from_user.name} revoked a message (ID: {msg.original_message_id})")
+            ...     print(
+            ...         f"User {msg.from_user.name} revoked a message (ID: {msg.original_message_id})"
+            ...     )
 
         Args:
             filters: Filters to apply to the incoming deleted messages.
@@ -2543,10 +2945,20 @@ class _HandlerDecorators:
 
     @overload
     def on_outgoing_message(
-        self: WhatsApp,
+        self: _WhatsAppT,
         filters: Filter[OutgoingMessage] | None = None,
         priority: int = 0,
-    ) -> Callable[[_OutgoingMessageCallback], _OutgoingMessageCallback]: ...
+    ) -> Callable[
+        [Callable[[_WhatsAppT, _OutgoingMessageT], Any | Awaitable[Any]]],
+        Callable[[_WhatsAppT, _OutgoingMessageT], Any | Awaitable[Any]],
+    ]: ...
+
+    @overload
+    def on_outgoing_message(
+        self: _WhatsAppT,
+        filters: Callable[[_WhatsAppT, _OutgoingMessageT], Any | Awaitable[Any]],
+        priority: int = 0,
+    ) -> Callable[[_WhatsAppT, _OutgoingMessageT], Any | Awaitable[Any]]: ...
 
     @overload
     def on_outgoing_message(
@@ -2590,8 +3002,12 @@ class _HandlerDecorators:
             >>> from pywa import WhatsApp, types, filters
             >>> wa = WhatsApp(...)
             >>> @wa.on_outgoing_message(filters.text)
-            ... def outgoing_message_handler(client: WhatsApp, msg: types.OutgoingMessage):
-            ...     print(f"You just sent a message to {msg.to_user.wa_id} with content: {msg.text}")
+            ... def outgoing_message_handler(
+            ...     client: WhatsApp, msg: types.OutgoingMessage
+            ... ):
+            ...     print(
+            ...         f"You just sent a message to {msg.to_user.wa_id} with content: {msg.text}"
+            ...     )
 
         Args:
             filters: Filters to apply to the outgoing messages.
@@ -2606,10 +3022,20 @@ class _HandlerDecorators:
 
     @overload
     def on_outgoing_edited_message(
-        self: WhatsApp,
+        self: _WhatsAppT,
         filters: Filter[OutgoingEditedMessage] | None = None,
         priority: int = 0,
-    ) -> Callable[[_OutgoingEditedMessageCallback], _OutgoingEditedMessageCallback]: ...
+    ) -> Callable[
+        [Callable[[_WhatsAppT, _OutgoingEditedMessageT], Any | Awaitable[Any]]],
+        Callable[[_WhatsAppT, _OutgoingEditedMessageT], Any | Awaitable[Any]],
+    ]: ...
+
+    @overload
+    def on_outgoing_edited_message(
+        self: _WhatsAppT,
+        filters: Callable[[_WhatsAppT, _OutgoingEditedMessageT], Any | Awaitable[Any]],
+        priority: int = 0,
+    ) -> Callable[[_WhatsAppT, _OutgoingEditedMessageT], Any | Awaitable[Any]]: ...
 
     @overload
     def on_outgoing_edited_message(
@@ -2653,8 +3079,12 @@ class _HandlerDecorators:
             >>> from pywa import WhatsApp, types, filters
             >>> wa = WhatsApp(...)
             >>> @wa.on_outgoing_edited_message(filters.text)
-            ... def outgoing_message_edit_handler(client: WhatsApp, msg: types.OutgoingEditedMessage):
-            ...     print(f"You just edited a message to {msg.to_user.wa_id} with new content: {msg.message.text}")
+            ... def outgoing_message_edit_handler(
+            ...     client: WhatsApp, msg: types.OutgoingEditedMessage
+            ... ):
+            ...     print(
+            ...         f"You just edited a message to {msg.to_user.wa_id} with new content: {msg.message.text}"
+            ...     )
 
         Args:
             filters: Filters to apply to the outgoing message edits.
@@ -2669,12 +3099,20 @@ class _HandlerDecorators:
 
     @overload
     def on_outgoing_deleted_message(
-        self: WhatsApp,
+        self: _WhatsAppT,
         filters: Filter[OutgoingDeletedMessage] | None = None,
         priority: int = 0,
     ) -> Callable[
-        [_OutgoingDeletedMessageCallback], _OutgoingDeletedMessageCallback
+        [Callable[[_WhatsAppT, _OutgoingDeletedMessageT], Any | Awaitable[Any]]],
+        Callable[[_WhatsAppT, _OutgoingDeletedMessageT], Any | Awaitable[Any]],
     ]: ...
+
+    @overload
+    def on_outgoing_deleted_message(
+        self: _WhatsAppT,
+        filters: Callable[[_WhatsAppT, _OutgoingDeletedMessageT], Any | Awaitable[Any]],
+        priority: int = 0,
+    ) -> Callable[[_WhatsAppT, _OutgoingDeletedMessageT], Any | Awaitable[Any]]: ...
 
     @overload
     def on_outgoing_deleted_message(
@@ -2722,8 +3160,12 @@ class _HandlerDecorators:
             >>> from pywa import WhatsApp, types, filters
             >>> wa = WhatsApp(...)
             >>> @wa.on_outgoing_deleted_message
-            ... def outgoing_message_delete_handler(client: WhatsApp, msg: types.OutgoingDeletedMessage):
-            ...     print(f"You just deleted a message to {msg.to_user.wa_id} with id {msg.original_message_id}")
+            ... def outgoing_message_delete_handler(
+            ...     client: WhatsApp, msg: types.OutgoingDeletedMessage
+            ... ):
+            ...     print(
+            ...         f"You just deleted a message to {msg.to_user.wa_id} with id {msg.original_message_id}"
+            ...     )
 
         Args:
             filters: Filters to apply to the outgoing message deletions.
@@ -2738,10 +3180,20 @@ class _HandlerDecorators:
 
     @overload
     def on_account_update(
-        self: WhatsApp,
+        self: _WhatsAppT,
         filters: Filter[AccountUpdate] | None = None,
         priority: int = 0,
-    ) -> Callable[[_AccountUpdateCallback], _AccountUpdateCallback]: ...
+    ) -> Callable[
+        [Callable[[_WhatsAppT, _AccountUpdateT], Any | Awaitable[Any]]],
+        Callable[[_WhatsAppT, _AccountUpdateT], Any | Awaitable[Any]],
+    ]: ...
+
+    @overload
+    def on_account_update(
+        self: _WhatsAppT,
+        filters: Callable[[_WhatsAppT, _AccountUpdateT], Any | Awaitable[Any]],
+        priority: int = 0,
+    ) -> Callable[[_WhatsAppT, _AccountUpdateT], Any | Awaitable[Any]]: ...
 
     @overload
     def on_account_update(
@@ -2798,7 +3250,7 @@ class _HandlerDecorators:
 
     @overload
     def on_flow_request(
-        self: WhatsApp,
+        self: _WhatsAppT,
         endpoint: str,
         *,
         acknowledge_errors: bool = True,
@@ -2807,14 +3259,19 @@ class _HandlerDecorators:
         request_decryptor: utils.FlowRequestDecryptor | None = None,
         response_encryptor: utils.FlowResponseEncryptor | None = None,
     ) -> Callable[
-        [_FlowRequestHandlerT],
+        [
+            Callable[
+                [_WhatsAppT, _FlowRequestT],
+                FlowResponse | dict | None | Awaitable[FlowResponse | dict | None],
+            ]
+        ],
         FlowRequestCallbackWrapper | FlowRequestHandler,
     ]: ...
 
     @overload
     def on_flow_request(
         self: str,
-        endpoint: str = None,
+        endpoint: str | None = None,
         *,
         acknowledge_errors: bool = True,
         private_key: str | None = None,
@@ -2822,13 +3279,13 @@ class _HandlerDecorators:
         request_decryptor: utils.FlowRequestDecryptor | None = None,
         response_encryptor: utils.FlowResponseEncryptor | None = None,
     ) -> Callable[
-        [_FlowRequestHandlerT],
+        [_FlowRequestCallback],
         FlowRequestCallbackWrapper | FlowRequestHandler,
     ]: ...
 
     def on_flow_request(
-        self: WhatsApp | str = None,
-        endpoint: str = None,
+        self: WhatsApp | str | None = None,
+        endpoint: str | None = None,
         *,
         acknowledge_errors: bool = True,
         private_key: str | None = None,
@@ -2836,7 +3293,7 @@ class _HandlerDecorators:
         request_decryptor: utils.FlowRequestDecryptor | None = None,
         response_encryptor: utils.FlowResponseEncryptor | None = None,
     ) -> Callable[
-        [_FlowRequestHandlerT],
+        [_FlowRequestCallback],
         FlowRequestCallbackWrapper | FlowRequestHandler,
     ]:
         """
@@ -2848,16 +3305,18 @@ class _HandlerDecorators:
 
             >>> from pywa import WhatsApp, types
             >>> wa = WhatsApp(business_private_key='...', ...)
-            >>> @wa.on_flow_request('/feedback_flow')
-            ... def feedback_handler(_: WhatsApp, req: types.FlowRequest):
-            ...     ...
+            >>> @wa.on_flow_request("/feedback_flow")
+            ... def feedback_handler(_: WhatsApp, req: types.FlowRequest): ...
             >>> @feedback_handler.on_init
             ... def on_init(_: WhatsApp, req: types.FlowRequest):
             ...     return req.respond(screen="SURVEY")
             >>> @feedback_handler.on_data_exchange(screen="SURVEY")
             ... def on_survey(_: WhatsApp, req: types.FlowRequest):
             ...     print(f"Received rating: {req.data['rating']}")
-            ...     return req.respond(screen="THANKS", data={"message": "We appreciate your feedback!"})
+            ...     return req.respond(
+            ...         screen="THANKS",
+            ...         data={"message": "We appreciate your feedback!"},
+            ...     )
 
         Args:
             endpoint: The endpoint to listen to (The endpoint uri you set to the flow. e.g ``/feedback_flow``).
@@ -2870,7 +3329,7 @@ class _HandlerDecorators:
         """
 
         def decorator(
-            callback: _FlowRequestHandlerT,
+            callback: _FlowRequestCallback,
         ) -> FlowRequestCallbackWrapper | FlowRequestHandler:
             ep = (self if isinstance(self, str) else endpoint) or endpoint
             if not ep:
@@ -2887,7 +3346,7 @@ class _HandlerDecorators:
             )
 
             if hasattr(self, "add_flow_request_handler"):
-                return self.add_flow_request_handler(handler)
+                return cast("WhatsApp", self).add_flow_request_handler(handler)
 
             setattr(handler, _flow_request_handler_attr, True)
             return handler
@@ -2924,7 +3383,7 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
         self,
         wa: WhatsApp,
         endpoint: str,
-        callback: _FlowRequestHandlerT,
+        callback: _FlowRequestCallback,
         acknowledge_errors: bool = True,
         private_key: str | None = None,
         private_key_password: str | None = None,
@@ -2937,7 +3396,7 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
         self._main_handler = callback
         self._handlers: dict[
             tuple[FlowRequestActionType | str, str | None],
-            list[tuple[Filter[FlowRequest] | None, _FlowRequestHandlerT]],
+            list[tuple[Filter[FlowRequest] | None, _FlowRequestCallback]],
         ] = collections.defaultdict(list)  # {(action, screen?): [(filters?, callback)]}
         self._acknowledge_errors = acknowledge_errors
         self._private_key = private_key or wa._private_key
@@ -2977,7 +3436,7 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
     def add_handler(
         self,
         *,
-        callback: _FlowRequestHandlerT,
+        callback: _FlowRequestCallback,
         action: FlowRequestActionType | str,
         screen: Screen | str | None = None,
         filters: Filter[FlowRequest] | None = None,
@@ -2990,12 +3449,13 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
         Example:
 
             >>> wa = WhatsApp(...)
-            >>> def feedback_flow_handler(_: WhatsApp, req: FlowRequest):
-            ...    ...
+            >>> def feedback_flow_handler(_: WhatsApp, req: FlowRequest): ...
             >>> on_init = lambda _, req: ...
             >>> on_survey_data_exchange = lambda _, req: ...
             >>> wa.add_flow_request_handler(
-            ...     FlowRequestHandler(callback=feedback_flow_handler, endpoint="/feedback_flow")
+            ...     FlowRequestHandler(
+            ...         callback=feedback_flow_handler, endpoint="/feedback_flow"
+            ...     )
             ... ).add_handler(callback=on_init, action=FlowRequestActionType.INIT)
 
         Args:
@@ -3031,7 +3491,7 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
         self._wa.add_handlers(handler)
         return self
 
-    def _get_callback(self, req: FlowRequest) -> _FlowRequestHandlerT:
+    def _get_callback(self, req: FlowRequest) -> _FlowRequestCallback:
         """Resolve the callback to use for the incoming request."""
         for filters, callback in (
             *self._handlers[(req.action, None)],  # Precedence to no-screen handlers
@@ -3041,7 +3501,7 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
                 return callback
         return self._main_handler
 
-    async def _get_callback_async(self, req: FlowRequest) -> _FlowRequestHandlerT:
+    async def _get_callback_async(self, req: FlowRequest) -> _FlowRequestCallback:
         """Resolve the callback to use for the incoming request (async version)."""
         for filters, callback in (
             *self._handlers[(req.action, None)],  # Precedence to no-screen handlers
@@ -3063,7 +3523,8 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
         """
         try:
             decrypted_request, aes_key, iv = self._decrypt_request(payload)
-        except Exception:
+        # untrusted webhook payload: never crash on malformed/tampered input
+        except Exception:  # noqa: BLE001
             return "Decryption failed", FlowRequestCannotBeDecrypted.status_code
 
         if decrypted_request["action"] == "ping":
@@ -3105,7 +3566,8 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
         """
         try:
             decrypted_request, aes_key, iv = self._decrypt_request(payload)
-        except Exception:
+        # untrusted webhook payload: never crash on malformed/tampered input
+        except Exception:  # noqa: BLE001
             return "Decryption failed", FlowRequestCannotBeDecrypted.status_code
 
         if decrypted_request["action"] == "ping":
@@ -3134,6 +3596,8 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
     def _decrypt_request(
         self, payload: EncryptedFlowRequestType
     ) -> tuple[dict, bytes, bytes]:
+        assert self._request_decryptor is not None  # validated in __init__
+        assert self._private_key is not None  # validated in __init__
         decrypted_request, aes_key, iv = self._request_decryptor(
             payload["encrypted_flow_data"],
             payload["encrypted_aes_key"],
@@ -3147,6 +3611,7 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
         return decrypted_request, aes_key, iv
 
     def _encrypt_response(self, response: dict, aes_key: bytes, iv: bytes) -> str:
+        assert self._response_encryptor is not None  # validated in __init__
         return self._response_encryptor(response, aes_key, iv)
 
     def _execute_callback(
@@ -3169,7 +3634,7 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
             _logger.exception(
                 "Flow Endpoint ('%s'): An error occurred while %s was handling a flow request",
                 self._endpoint,
-                callback.__name__,
+                getattr(callback, "__name__", repr(callback)),
             )
             return "An error occurred", 500
 
@@ -3186,7 +3651,7 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
             ), 200
         if not isinstance(res, (FlowResponse, dict)):
             raise TypeError(
-                f"Flow endpoint ('{self._endpoint}') callback ('{callback.__name__}') must return a `FlowResponse`"
+                f"Flow endpoint ('{self._endpoint}') callback ('{getattr(callback, '__name__', repr(callback))}') must return a `FlowResponse`"
                 f" or `dict`, not {type(res)}"
             )
         return self._encrypt_response(
@@ -3200,7 +3665,14 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
     ) -> tuple[str, int]:
         callback = await self._get_callback_async(req)
         try:
-            res = await callback(self._wa, req)
+            res = (
+                await cast(
+                    "Callable[[WhatsApp, FlowRequest], Awaitable[FlowResponse | dict | None]]",
+                    callback,
+                )(self._wa, req)
+                if helpers.is_async_callable(callback)
+                else callback(self._wa, req)
+            )
             if isinstance(
                 res, FlowResponseError
             ):  # typing backward compatibility. error should be raised, not returned
@@ -3215,7 +3687,7 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
             _logger.exception(
                 "Flow Endpoint ('%s'): An error occurred while %s was handling a flow request",
                 self._endpoint,
-                callback.__name__,
+                getattr(callback, "__name__", repr(callback)),
             )
             return "An error occurred", 500
 
@@ -3232,7 +3704,7 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
             ), 200
         if not isinstance(res, (FlowResponse, dict)):
             raise TypeError(
-                f"Flow endpoint ('{self._endpoint}') callback ('{callback.__name__}') must return a `FlowResponse`"
+                f"Flow endpoint ('{self._endpoint}') callback ('{getattr(callback, '__name__', repr(callback))}') must return a `FlowResponse`"
                 f" or `dict`, not {type(res)}"
             )
         return self._encrypt_response(
