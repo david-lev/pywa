@@ -145,7 +145,7 @@ include = ["pywa_async/**"]
 invalid-method-override = "ignore"
 
 [tool.coverage.run]
-source = ["pywa", "pywa_async"]
+include = ["pywa/*", "pywa_async/*"]
 omit = ["pywa/__main__.py"]
 
 [tool.coverage.report]

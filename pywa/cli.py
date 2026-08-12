@@ -22,6 +22,7 @@ import httpx
 from . import __version__ as pywa_version
 from ._logging import ENV_LOG_LEVEL, format_banner, setup_console_logging
 from .client import WhatsApp
+from .errors import SendMessageError
 
 GITHUB_REPO = "david-lev/pywa"
 GITHUB_API_BASE = "https://api.github.com/repos"
@@ -289,11 +290,14 @@ def send_messages(
                 f"✅ [{index + 1}/{len(to)}] Sent {send_type} to {recipient} (Msg ID: {sent.id})"
             )
 
-        # one recipient's failure shouldn't abort the batch
-        except Exception as e:  # noqa: BLE001
+        except SendMessageError as e:
             print(
                 f"❌ [{index + 1}/{len(to)}] Failed to send {send_type} to {recipient}: {e}"
             )
+        except Exception as e:
+            raise PywaCLIException(
+                f"Unexpected error while sending {send_type} to {recipient}: {e}"
+            ) from e
 
 
 DEFAULT_PROJECT = """from pywa_async import WhatsApp, filters, types, utils
