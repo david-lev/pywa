@@ -29,7 +29,7 @@ callback_url = os.getenv("CALLBACK_URL")
 if not callback_url:
     callback_url = start_ngrok_tunnel(auth_token=os.environ["NGROK_AUTH_TOKEN"])
 
-with open(os.environ["BUSINESS_PRIVATE_KEY_PATH"]) as f:
+with open(os.environ["BUSINESS_PRIVATE_KEY_PATH"], encoding="utf-8") as f:
     business_private_key = f.read()
 
 wa = WhatsApp(

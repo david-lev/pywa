@@ -20,7 +20,7 @@ body:
     attributes:
       label: Steps to reproduce
       description: Provide step-by-step instructions to reproduce the bug
-      placeholder: 1) ...\n2) ...\n3) ...
+      placeholder: e.g. 1. Create a new pywa client 2. Call `wa.send_message(...)` 3. Observe the error
     validations:
       required: true
   - type: textarea
@@ -37,14 +37,11 @@ body:
     id: pywa_version
     attributes:
       label: pywa version
-      description: Select the pywa version you are using
+      description: Select the pywa version you are using (run `pywa --version` to check)
       options:
         - label: 4.x (current)
-          value: 4.x
         - label: 3.x or older
-          value: <4.0
         - label: other
-          value: other
   - type: input
     id: python_version
     attributes:

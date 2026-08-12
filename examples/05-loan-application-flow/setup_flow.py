@@ -31,7 +31,9 @@ async def main():
     # Upload your business public key once (required for encrypted flow data exchange).
     # See README.md for how to generate the private.pem / public.pem pair.
     key_path = pathlib.Path(os.environ["BUSINESS_PUBLIC_KEY_PATH"])
-    await wa.set_business_public_key(await asyncio.to_thread(key_path.read_text))
+    await wa.set_business_public_key(
+        await asyncio.to_thread(key_path.read_text, encoding="utf-8")
+    )
 
     created = await wa.create_flow(
         name="Loan Application",

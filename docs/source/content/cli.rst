@@ -78,7 +78,7 @@ Both ``pywa dev`` and ``pywa run`` share the following options:
 * ``path``: Optional positional argument pointing to the Python file containing the ``WhatsApp`` instance.
 * ``--host <str>``: The host to bind the socket to. Default: ``127.0.0.1``.
 * ``--port <int>``: The port to bind the socket to. Default: ``8000``.
-* ``--app <str>``: Specify the variable name of the ``WhatsApp`` client instance within the script (e.g., if you set ``my_wa_client = WhatsApp(...)``, pass ``--app my_wa_client``). By default, Pywa auto-detects instances named ``wa``, ``bot``, ``client``, ``app``, or ``main``.
+* ``--app <str>``: Specify the variable name of the ``WhatsApp`` client instance within the script (e.g., if you set ``my_wa_client = WhatsApp(...)``, pass ``--app my_wa_client``). By default, Pywa auto-detects ``WhatsApp`` instances in the script. If multiple instances exist, you must specify which one to use with this option - otherwise, the first instance found will be used.
 * ``--entrypoint <str>``: Explicit entrypoint string (e.g., ``main:wa``). This overrides ``path`` and ``--app``.
 * ``--log-level <level>``: Set the logging level (choices: ``critical``, ``error``, ``warning``, ``info``, ``debug``, ``trace``).
 * ``--ssl-keyfile <path>``: Path to an SSL key file.
@@ -87,7 +87,7 @@ Both ``pywa dev`` and ``pywa run`` share the following options:
 Production-only Options (``pywa run``)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-* ``--workers <int>``: Number of worker processes to run.
+* ``--workers <int>``: Number of worker processes to run (this will disable the listeners feature! e.g. ``msg.wait_for_reply(...)``). Default: ``1``.
 * ``--proxy-headers`` / ``--no-proxy-headers``: Enable/Disable proxy headers (``X-Forwarded-Proto``, ``X-Forwarded-For``) to populate the request's URL scheme and client IP address.
 * ``--forwarded-allow-ips <str>``: Comma-separated list of IPs to trust with proxy headers. Use ``*`` to trust all IPs.
 * ``--timeout-keep-alive <int>``: Close keep-alive connections if no new data is received within this timeout (in seconds).
