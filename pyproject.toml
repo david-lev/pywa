@@ -119,11 +119,15 @@ ignore = [
     "F401", # `pywa_async` re-exports `pywa` names as `from pywa.X import Y as Y` on purpose
     "E731", # we use lambdas in some places for brevity (for example in `StrEnum._normalize` overrides)
 ]
-extend-select = ["T20", "E711", "E712", "E731", "E741"]
+extend-select = [
+    "T20", # flake8-print: forbid stray `print()`/`pprint()` calls in library code (use `logging` instead)
+    "E711", # forbid `== None` / `!= None`; use `is None` / `is not None` instead
+    "E712", # forbid `== True` / `== False`; use `is`/`is not` or plain truthiness instead; exempted below for `tests/test_flows.py`, which asserts against literal booleans in Flow JSON conditions
+    "E741", # forbid ambiguous single-character names (`l`, `O`, `I`)
+]
 
 [tool.ruff.lint.per-file-ignores]
-"pywa/types/__init__.py" = ["I001"]
-"pywa_async/types/__init__.py" = ["I001"]
+"pywa*/types/__init__.py" = ["I001"]
 "pywa/cli.py" = ["T201"]
 "tests/test_flows.py" = ["E712"]
 "tests/smoke_test.py" = ["T201"]
