@@ -92,7 +92,7 @@ class User(BaseUser):
         profile = data.get("profile", {})  # TODO `profile` should not be optional
         return cls(
             _client=client,
-            bsuid=data["user_id"],
+            bsuid=cast(str, data.get("user_id")),
             wa_id=data.get("wa_id") or None,  # avoid empty string
             name=profile.get("name"),
             username=profile.get("username"),
