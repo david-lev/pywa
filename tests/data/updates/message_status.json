@@ -338,5 +338,48 @@
         ]
       }
     ]
+  },
+  "failed_wa_id_only": {
+    "object": "whatsapp_business_account",
+    "entry": [
+      {
+        "id": "5467539754836534",
+        "changes": [
+          {
+            "value": {
+              "messaging_product": "whatsapp",
+              "metadata": {
+                "display_phone_number": "972123456789",
+                "phone_number_id": "1122334455667"
+              },
+              "contacts": [
+                {
+                  "wa_id": "972987654321"
+                }
+              ],
+              "statuses": [
+                {
+                  "id": "wamid.xyzxyz",
+                  "status": "failed",
+                  "timestamp": "1689380458",
+                  "recipient_id": "972987654321",
+                  "errors": [
+                    {
+                      "code": 131026,
+                      "title": "Message undeliverable",
+                      "message": "Message undeliverable",
+                      "error_data": {
+                        "details": "Message Undeliverable."
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            "field": "messages"
+          }
+        ]
+      }
+    ]
   }
 }
