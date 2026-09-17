@@ -568,7 +568,9 @@ class LibraryTemplate:
     library_template_name: str
     category: TemplateCategory
     language: TemplateLanguage
-    library_template_body_inputs: list[BaseLibraryBodyInput] | BaseLibraryBodyInput | None = None
+    library_template_body_inputs: (
+        list[BaseLibraryBodyInput] | BaseLibraryBodyInput | None
+    ) = None
     library_template_button_inputs: list[BaseLibraryButtonInput] | None = None
     message_send_ttl_seconds: int | None = None
 
@@ -3669,7 +3671,7 @@ class AuthenticationBody(BaseBodyComponent):
             *,
             add_contact_number: bool | None = None,
             add_security_recommendation: bool | None = None,
-            code_expiration_minutes: bool | None = None,
+            code_expiration_minutes: int | None = None,
         ):
             self.add_contact_number = add_contact_number
             self.add_security_recommendation = add_security_recommendation
@@ -3682,7 +3684,7 @@ class AuthenticationBody(BaseBodyComponent):
                     "add_contact_number": self.add_contact_number,
                     "add_security_recommendation": self.add_security_recommendation,
                     "code_expiration_minutes": self.code_expiration_minutes,
-                }
+                }.items()
                 if v is not None
             }
 
@@ -3691,7 +3693,7 @@ class AuthenticationBody(BaseBodyComponent):
         *,
         add_contact_number: bool | None = None,
         add_security_recommendation: bool | None = None,
-        code_expiration_minutes: bool | None = None,
+        code_expiration_minutes: int | None = None,
     ) -> AuthenticationBody._LibraryInput:
         """
         Fill the library body input for the authentication body component.
@@ -3699,8 +3701,7 @@ class AuthenticationBody(BaseBodyComponent):
         Args:
             add_contact_number: Set to ``True`` to include the user's contact number in the body text.
             add_security_recommendation: Set to ``True`` to include the security recommendation in the body text.
-            code_expiration_minutes: Set to ``True`` to include the code expiration minutes in the body text.
-
+            code_expiration_minutes: Indicates the number of minutes the password or code is valid.
         Returns:
             An instance of BaseLibraryBodyInput containing the parameters for the authentication body.
         """
