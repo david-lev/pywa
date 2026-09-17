@@ -561,14 +561,16 @@ class LibraryTemplate:
         language: The language of the template.
         library_template_body_inputs: Optional inputs for the body of the template.
         library_template_button_inputs: Optional inputs for the buttons of the template.
+        message_send_ttl_seconds: The time-to-live (TTL) for the template message in seconds. (See `Time-to-live (TTL) <https://developers.facebook.com/docs/whatsapp/business-management-api/time-to-live>`_).
     """
 
     name: str
     library_template_name: str
     category: TemplateCategory
     language: TemplateLanguage
-    library_template_body_inputs: list[BaseLibraryBodyInput] | None = None
+    library_template_body_inputs: list[BaseLibraryBodyInput] | BaseLibraryBodyInput | None = None
     library_template_button_inputs: list[BaseLibraryButtonInput] | None = None
+    message_send_ttl_seconds: int | None = None
 
     def to_json(self) -> str:
         return _template_to_json(self)
@@ -2097,7 +2099,7 @@ class BodyText(_BaseTextComponent, BaseBodyComponent):
                 for k, v in {
                     "add_track_package_link": self.add_track_package_link,
                     "add_learn_more_link": self.add_learn_more_link,
-                }
+                }.items()
                 if v is not None
             }
 
