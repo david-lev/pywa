@@ -90,6 +90,11 @@ TESTS: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
         "read": [lambda s: s.status == MessageStatusType.READ],
         "played": [lambda s: s.status == MessageStatusType.PLAYED],
         "failed": [lambda s: s.error is not None],
+        "failed_not_on_whatsapp": [
+            lambda s: s.error is not None,
+            lambda s: s.from_user.bsuid is None,
+            lambda s: s.from_user.wa_id is not None,
+        ],
         "with_tracker": [lambda s: s.tracker is not None],
         "group": [lambda s: s.group_id is not None],
     },

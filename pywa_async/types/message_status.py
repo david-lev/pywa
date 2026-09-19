@@ -16,9 +16,24 @@ __all__ = [
 from pywa.types.message_status import *  # noqa MUST BE IMPORTED FIRST
 from pywa.types.message_status import MessageStatus as _MessageStatus
 
-
+from pywa.types.message_status import User as _User
+from .user import BaseUserAsync
 from .base_update import BaseUserUpdateAsync
 from .callback import _CallbackDataT
+
+
+class User(BaseUserAsync, _User):
+    """
+    Represents the WhatsApp user a :class:`MessageStatus` was sent to.
+
+    Attributes:
+        bsuid: The WhatsApp user’s BSUID. See `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids>`_ for more information. Will be ``None`` if the message status is ``FAILED`` because the user has no WhatsApp account.
+        wa_id: The user's phone number in international format (without the '+' sign). Will be unavailable if the user enables the username feature. See `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids#phone-numbers>`_ for more information.
+        name: The name of the user.
+        username: The username of the user.
+        identity_key_hash: The identity key hash of the user (Only if identity key check is enabled on the phone number settings).
+        parent_bsuid: The Parent business-scoped user ID. See `developers.facebook.com <https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids#parent-business-scoped-user-ids>`_ for more information.
+    """
 
 
 class MessageStatus(BaseUserUpdateAsync, _MessageStatus[_CallbackDataT]):
@@ -65,10 +80,13 @@ class MessageStatus(BaseUserUpdateAsync, _MessageStatus[_CallbackDataT]):
         metadata: The metadata of the message (to which phone number it was sent).
         status: The status of the message.
         timestamp: The timestamp when the status was updated (in UTC).
-        from_user: The user who the message was sent to.
+        from_user: The user who the message was sent to. The user may not have a WhatsApp account, in which case the ``bsuid`` attribute will be ``None``.
         conversation: The conversation that the message was sent in (See `Conversation <https://developers.facebook.com/docs/whatsapp/pricing#conversations>`_).
         pricing: The pricing of the message (Optional).
         error: The error that occurred (if status is :class:`MessageStatusType.FAILED`).
         tracker: The tracker that the message was sent with (e.g. ``wa.send_message(tracker=...)``).
         shared_data: Shared data between handlers.
     """
+
+    from_user: User
+    _usr_cls = User
