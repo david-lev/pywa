@@ -79,7 +79,7 @@ class GraphAPIAsync(GraphAPI):
             res.text,
         )
         if res.status_code >= 400:
-            raise WhatsAppError.from_dict(error=res.json()["error"], response=res)
+            raise WhatsAppError.from_dict(error=self._extract_error(res), response=res)
         return res.json()
 
     async def get_app_access_token(
