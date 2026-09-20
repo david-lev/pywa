@@ -8,7 +8,7 @@ import time
 import warnings
 from collections import OrderedDict
 from collections.abc import Callable
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from . import _helpers as helpers
 from . import errors, handlers, utils
@@ -20,7 +20,13 @@ from ._logging import (
     setup_console_logging,
 )
 from .errors import PywaDeprecationWarning, PywaWarning
-from .types import AccountUpdate, MessageType, RawUpdate, UserPreferenceCategory
+from .types import (
+    AccountUpdate,
+    MessageStatus,
+    MessageType,
+    RawUpdate,
+    UserPreferenceCategory,
+)
 from .types.base_update import (
     BaseUpdate,
     ContinueHandling,
@@ -400,14 +406,20 @@ class Server:
                 return
             log.debug("Dispatched to %s", handler_type.__name__)
             try:
-                constructed_update: BaseUpdate = self._handlers_to_updates[
-                    handler_type
-                ].from_update(client=self, update=raw_update)
-                if log.isEnabledFor(logging.DEBUG):
-                    log.debug("Constructed update: %s", constructed_update)
-                if self._process_listener(constructed_update):
-                    return
-                self._invoke_callbacks(handler_type, constructed_update)
+                update_type = self._handlers_to_updates[handler_type]
+                constructed_updates = (
+                    cast(type[MessageStatus], update_type).from_updates(
+                        client=self, update=raw_update
+                    )
+                    if handler_type is handlers.MessageStatusHandler
+                    else (update_type.from_update(client=self, update=raw_update),)
+                )
+                for constructed_update in constructed_updates:
+                    if log.isEnabledFor(logging.DEBUG):
+                        log.debug("Constructed update: %s", constructed_update)
+                    if self._process_listener(constructed_update):
+                        continue
+                    self._invoke_callbacks(handler_type, constructed_update)
             except Exception:
                 log.exception("Failed to construct update (field=%s)", raw_update.field)
         finally:
@@ -473,7 +485,7 @@ class Server:
         )
         for identifier in listener_identifiers:
             listener = self._listeners.get(identifier)
-            if listener is not None:
+            if listener is not None and not listener.is_set():
                 log.debug("Found matching listener")
                 break
         else:

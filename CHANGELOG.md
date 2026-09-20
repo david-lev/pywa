@@ -6,6 +6,7 @@
 
 #### 4.4.0 (2026-11-08) **Latest**
 
+- [server] dispatch every message status included in a batched webhook update
 - [server] enhance logging infrastructure with update hash and context binding
 - [cli] add commands to list and download official example bots from GitHub
 - [cli] add `--access-log` option to command line arguments for production and development
