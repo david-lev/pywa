@@ -1,3 +1,4 @@
+import copy
 import io
 import json
 import logging
@@ -279,6 +280,9 @@ def test_setup_console_logging_pins_cli_banner_to_info(clean_logging):
 _MESSAGE_UPDATE = json.loads(
     pathlib.Path("tests/data/updates/message.json").read_text()
 )["text"]
+_MESSAGE_STATUS_UPDATE = json.loads(
+    pathlib.Path("tests/data/updates/message_status.json").read_text()
+)["sent"]
 _PHONE_NUMBER = "972987654321"
 _MESSAGE_TEXT = "Body Text"
 _CONTACT_NAME = "Test Name"
@@ -286,6 +290,35 @@ _CONTACT_NAME = "Test Name"
 
 def _make_client() -> WhatsApp:
     return WhatsApp(phone_id="1122334455667", token="xyz", filter_updates=False)
+
+
+def test_batched_message_statuses_are_all_dispatched():
+    wa = _make_client()
+    seen = []
+    wa.on_message_status(
+        lambda _, status: seen.append((status.id, status.from_user.wa_id))
+    )
+
+    update = copy.deepcopy(_MESSAGE_STATUS_UPDATE)
+    value = update["entry"][0]["changes"][0]["value"]
+    statuses = value["statuses"]
+    for index, status_id in enumerate(("wamid.second", "wamid.third"), start=2):
+        status = copy.deepcopy(statuses[0])
+        status["id"] = status_id
+        status["recipient_id"] = f"97298765432{index}"
+        statuses.append(status)
+        contact = copy.deepcopy(value["contacts"][0])
+        contact["wa_id"] = status["recipient_id"]
+        value["contacts"].append(contact)
+    value["contacts"].reverse()
+
+    wa.webhook_update_handler(json.dumps(update).encode())
+
+    assert seen == [
+        ("wamid.xyzxyz", "972987654321"),
+        ("wamid.second", "972987654322"),
+        ("wamid.third", "972987654323"),
+    ]
 
 
 def test_pii_absent_at_info(caplog):
