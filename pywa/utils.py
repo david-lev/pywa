@@ -113,7 +113,7 @@ class Version(enum.Enum):
     min: str
 
     # KEY = (MIN_VERSION: str, LATEST_VERSION: str)
-    GRAPH_API = ("17.0", "25.0")
+    GRAPH_API = ("17.0", "26.0")
     FLOW_JSON = ("2.1", "7.3")
     FLOW_DATA_API = ("3.0", "4.0")
     FLOW_MSG = ("3", "3")

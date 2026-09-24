@@ -371,6 +371,7 @@ def test_all_methods_are_overwritten_in_async(overrides):
             GraphAPISync.stream_media_bytes,
             GraphAPISync._join_fields,
             GraphAPISync._filter_none,
+            GraphAPISync._extract_error,
             ServerSync._delayed_register_callback_url,
             ServerSync._register_callback_url,
             ServerSync._get_handler_type,

@@ -23,7 +23,11 @@
   <a href="https://www.codefactor.io/repository/github/david-lev/pywa/overview/master"><img src="https://www.codefactor.io/repository/github/david-lev/pywa/badge/master" alt="Code Quality"/></a>
   <a href="https://t.me/py_wa"><img src="https://badges.aleen42.com/src/telegram.svg"  alt="Updates"/></a></p>
 
----
+<p align="center">
+  <a href="https://pywa.cloud/r/pywa-readme">
+    <img src="https://pywa.cloud/assets/readme-banner.png" alt="Pywa Cloud — ship a WhatsApp bot without shipping a server. Join the waitlist at pywa.cloud" width="820">
+  </a>
+</p>
 
 **PyWa** is a comprehensive, fully-typed Python framework for
 the [WhatsApp Cloud API](https://developers.facebook.com/docs/whatsapp/cloud-api).

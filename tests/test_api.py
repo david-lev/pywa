@@ -93,6 +93,45 @@ def test_request_error_raises_whatsapp_error(api, mocker):
         api._request(method="GET", endpoint="/foo")
 
 
+def test_request_non_json_error_raises_whatsapp_error(api, mocker):
+    mocker.patch.object(
+        api._session,
+        "request",
+        return_value=httpx.Response(
+            429, text="<html>429</html>", request=httpx.Request("GET", "https://x.test")
+        ),
+    )
+    with pytest.raises(WhatsAppError) as exc_info:
+        api._request(method="GET", endpoint="/foo")
+    assert exc_info.value.code == 429
+    assert exc_info.value.status_code == 429
+
+
+def test_request_error_missing_error_key_raises_whatsapp_error(api, mocker):
+    mocker.patch.object(
+        api._session,
+        "request",
+        return_value=_response(503, {"unexpected": "shape"}),
+    )
+    with pytest.raises(WhatsAppError) as exc_info:
+        api._request(method="GET", endpoint="/foo")
+    assert exc_info.value.code == 503
+
+
+def test_request_empty_body_error_raises_whatsapp_error(api, mocker):
+    mocker.patch.object(
+        api._session,
+        "request",
+        return_value=httpx.Response(
+            400, text="", request=httpx.Request("GET", "https://x.test")
+        ),
+    )
+    with pytest.raises(WhatsAppError) as exc_info:
+        api._request(method="GET", endpoint="/foo")
+    assert exc_info.value.code == 400
+    assert "400" in exc_info.value.message
+
+
 @pytest.mark.parametrize(
     "exc",
     [httpx.TimeoutException("t"), httpx.ConnectError("c"), httpx.ProxyError("p")],

@@ -161,6 +161,47 @@ def test_resolve_buttons_param():
     )
 
     assert helpers.resolve_buttons_param(
+        types.FlowButton(
+            title="Next",
+            flow_id="flow_id",
+            flow_token="flow_token",
+            flow_action_type=types.FlowActionType.NAVIGATE,
+            flow_action_screen="START",
+            flow_action_payload={
+                "single": types.flows.DataSource(id="1", title="English"),
+                "multi": [
+                    types.flows.DataSource(id="1", title="English"),
+                    types.flows.DataSource(id="2", title="Hebrew"),
+                ],
+            },
+            flow_message_version="3",
+        )
+    ) == (
+        types.others.InteractiveType.FLOW,
+        {
+            "name": "flow",
+            "parameters": {
+                "mode": "published",
+                "flow_message_version": "3",
+                "flow_token": "flow_token",
+                "flow_id": "flow_id",
+                "flow_cta": "Next",
+                "flow_action": "navigate",
+                "flow_action_payload": {
+                    "screen": "START",
+                    "data": {
+                        "single": {"id": "1", "title": "English"},
+                        "multi": [
+                            {"id": "1", "title": "English"},
+                            {"id": "2", "title": "Hebrew"},
+                        ],
+                    },
+                },
+            },
+        },
+    )
+
+    assert helpers.resolve_buttons_param(
         types.SectionList(
             button_title="Menu",
             sections=[

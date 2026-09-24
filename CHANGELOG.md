@@ -3,8 +3,16 @@
 
 > NOTE: pywa follows the [semver](https://semver.org/) versioning standard.
 
+#### 4.5.0 (2026-24-09) **Latest**
 
-#### 4.4.0 (2026-11-08) **Latest**
+- [message_status] allow `from_user.bsuid` to be `None` when the recipient has no WhatsApp account
+- [templates] added `message_send_ttl_seconds` field to `LibraryTemplate` and update body_inputs type hint
+- [api] guard `_request` error parsing against non-JSON error bodies
+- [callback] add recursive JSON serialization for `flow_action_payload` to support `DataSource`
+- [utils] update `GRAPH_API` version to 26.0
+- [cli] improve error handling in message sending and add tests for CLI commands
+
+#### 4.4.0 (2026-11-08)
 
 - [server] enhance logging infrastructure with update hash and context binding
 - [cli] add commands to list and download official example bots from GitHub

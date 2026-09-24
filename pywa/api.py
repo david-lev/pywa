@@ -65,6 +65,19 @@ class GraphAPI:
         """Join fields with a comma, or return None if empty."""
         return ",".join(fields) if fields else None
 
+    @staticmethod
+    def _extract_error(res: httpx.Response) -> dict:
+        """Extract the ``error`` dict from an error response, falling back to a synthetic one
+        (built from the status code and raw body) when the response isn't the expected JSON shape."""
+        try:
+            return res.json()["error"]
+        except (ValueError, KeyError, TypeError):
+            return {
+                "code": res.status_code,
+                "message": res.text
+                or f"Non-JSON error response (HTTP {res.status_code})",
+            }
+
     def _request(self, method: str, endpoint: str, **kwargs) -> dict:
         """
         Internal method to make a request to the WhatsApp Cloud API.
@@ -106,7 +119,7 @@ class GraphAPI:
             res.text,
         )
         if res.status_code >= 400:
-            raise WhatsAppError.from_dict(error=res.json()["error"], response=res)
+            raise WhatsAppError.from_dict(error=self._extract_error(res), response=res)
         return res.json()
 
     def get_app_access_token(

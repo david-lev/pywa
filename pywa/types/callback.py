@@ -39,7 +39,7 @@ from typing import (
 from .. import _helpers as helpers
 from .. import utils
 from .base_update import BaseUserUpdate, RawUpdate
-from .flows import FlowActionType, FlowStatus
+from .flows import DataSource, FlowActionType, FlowStatus
 from .others import InteractiveType, MessageType, Metadata, ReplyToMessage
 
 if TYPE_CHECKING:
@@ -657,6 +657,15 @@ class FlowButton(BaseButton):
                 "Either flow_id or flow_name must be provided, but not both."
             )
 
+    def _to_json(self, value: Any) -> Any:
+        if isinstance(value, dict):
+            return {key: self._to_json(item) for key, item in value.items()}
+        if isinstance(value, (list, tuple, set)):
+            return [self._to_json(item) for item in value]
+        if isinstance(value, DataSource):
+            return self._to_json(value.to_dict())
+        return value
+
     def to_dict(self) -> dict:
         return {
             "name": self._action_name,
@@ -677,7 +686,7 @@ class FlowButton(BaseButton):
                         "flow_action_payload": {
                             "screen": self.flow_action_screen,
                             **(
-                                {"data": self.flow_action_payload}
+                                {"data": self._to_json(self.flow_action_payload)}
                                 if self.flow_action_payload is not None
                                 else {}
                             ),

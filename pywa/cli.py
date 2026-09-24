@@ -314,7 +314,7 @@ wa = WhatsApp(
 )
 
 @wa.on_message(filters.text)
-async def echo_handler(message: types.Message):
+async def echo_handler(_: WhatsApp, message: types.Message):
     await message.reply(f"You said: {message.text}")
 
 # Run in your terminal: pywa dev
