@@ -29,20 +29,24 @@ class PhoneNumberChange(BaseUserUpdate):
         id: The message ID.
         metadata: The metadata of the message (to which phone number it was sent).
         type: The type of the message (always ``MessageType.SYSTEM``).
-        sys_type: The type of the system message (always ``SystemType.USER_CHANGED_NUMBER``).
+        sys_type: The type of the system message (``SystemType.USER_CHANGED_NUMBER`` or ``SystemType.USER_CHANGED_USER_ID``).
         from_user: The user who changed their phone number. The user will contain the old phone number in the ``wa_id`` field.
         timestamp: The timestamp when the message was arrived to WhatsApp servers (in UTC).
-        old_wa_id: The old WhatsApp ID of the user.
+        old_wa_id: The old WhatsApp ID of the user (``None`` when the phone number is not shared).
         new_wa_id: The new WhatsApp ID of the user.
+        old_user_id: The user's previous BSUID, if available.
         new_parent_id: he user’s new parent BSUID, if you have enabled parent BSUIDs
+        old_parent_id: The user's previous parent BSUID, if you have enabled parent BSUIDs.
         body: The body of the system message (e.g., `John changed their phone number`).
     """
 
     type: MessageType
     sys_type: SystemType
-    old_wa_id: str
+    old_wa_id: str | None
     new_wa_id: str | None
+    old_user_id: str | None
     new_user_id: str | None
+    old_parent_id: str | None
     new_parent_id: str | None
     body: str
 
@@ -68,15 +72,17 @@ class PhoneNumberChange(BaseUserUpdate):
             from_user=client._usr_cls(
                 _client=client,
                 bsuid=sys.get("user_id"),
-                wa_id=msg["from"],
+                wa_id=msg.get("from"),
                 parent_bsuid=sys.get("parent_user_id"),
                 name=None,
                 username=None,
                 identity_key_hash=None,
             ),
-            old_wa_id=sys.get("customer") or msg["from"],  # v12^ from
+            old_wa_id=sys.get("customer") or msg.get("from"),  # v12^ from
             new_wa_id=sys.get("wa_id") or sys.get("new_wa_id"),  # v12^ wa_id
+            old_user_id=sys.get("previous_user_id"),
             new_user_id=sys.get("user_id"),
+            old_parent_id=sys.get("previous_parent_user_id"),
             new_parent_id=sys.get("parent_user_id"),
             body=sys["body"],
         )
