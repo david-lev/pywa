@@ -7,6 +7,11 @@ In the realm of WhatsApp messaging, templates serve as pre-approved message stru
 
 Think of templates as reusable message blueprints that ensure your communications are consistent, compliant, and ready to engage your audience. They can include various components such as headers, bodies, footers, and buttons, allowing for rich and interactive messages.
 
+.. image:: ../../../../_static/ads/template-builder-ad.png
+    :alt: Pywa Studio (beta) - design WhatsApp message templates visually and export Pywa Python
+    :target: https://studio.pywa.cloud/templates
+    :width: 100%
+
 PyWa offers a comprehensive and intuitive interface to create, manage, and send these templates seamlessly. Whether you're looking to send promotional offers, account updates, or authentication codes, PyWa's templating system ensures your messages are structured, consistent, and compliant with WhatsApp's guidelines.
 
 - From `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates>`_:

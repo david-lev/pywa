@@ -5,11 +5,12 @@
 
 PyWa has built-in support for WhatsApp Flows, allowing you to create rich, structured interactions with your users directly within WhatsApp.
 
-.. image:: ../../../../_static/guides/flows-new.webp
-    :alt: WhatsApp Flows
-    :width: 100%
-
 Flows let your users perform complex tasks — such as booking appointments, browsing products, or completing sign-up forms — without leaving the chat interface.
+
+.. image:: ../../../../_static/ads/flow-builder-ad.png
+    :alt: Pywa Studio (beta) - design WhatsApp Flows visually and export Pywa Python
+    :target: https://studio.pywa.cloud/flows
+    :width: 100%
 
 Working with WhatsApp Flows in PyWa involves four main steps:
 
