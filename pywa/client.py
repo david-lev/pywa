@@ -3228,6 +3228,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         new_components: list[TemplateBaseComponent] | None = None,
         new_message_send_ttl_seconds: int | None = None,
         new_parameter_format: ParamFormat | None = None,
+        new_cta_url_link_tracking_opted_out: bool | None = None,
+        new_is_primary_device_delivery_only: bool | None = None,
         app_id: str | int | None = None,
     ) -> UpdatedTemplate:
         """
@@ -3256,6 +3258,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             new_components: The new components of the template (optional, if not provided, the existing components will be used).
             new_message_send_ttl_seconds: The new message send TTL in seconds (optional, if not provided, the existing TTL will be used).
             new_parameter_format: The new parameter format (optional, if not provided, the existing format will be used).
+            new_cta_url_link_tracking_opted_out: Opt out (``True``) or in (``False``) of CTA URL link tracking (optional).
+            new_is_primary_device_delivery_only: Deliver the template only to the user's primary device (optional).
             app_id: The App ID to upload the template header example media to (optional, if not provided, the client's app ID will be used).
 
         Returns:
@@ -3276,6 +3280,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                         components=new_components,
                         message_send_ttl_seconds=new_message_send_ttl_seconds,
                         parameter_format=new_parameter_format,
+                        cta_url_link_tracking_opted_out=new_cta_url_link_tracking_opted_out,
+                        is_primary_device_delivery_only=new_is_primary_device_delivery_only,
                     ).to_json()
                 ),
             ),

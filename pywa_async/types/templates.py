@@ -192,6 +192,7 @@ class TemplateDetails(_TemplateDetails):
         quality_score: The quality score of the template, if applicable (See `Template Quality Score <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates#template-quality-score>`_).
         cta_url_link_tracking_opted_out: Optional boolean field for opting out/in of link tracking at template level.
         sub_category: The sub-category of the template, if applicable.
+        is_primary_device_delivery_only: Whether the template is delivered only to the user's primary device.
     """
 
     _client: WhatsAppAsync

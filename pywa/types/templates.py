@@ -713,7 +713,9 @@ class TemplateLanguage(helpers.StrEnum):
     ARABIC_QA = "ar_QA"
     ARABIC_SA = "ar_SA"
     AZERBAIJANI = "az"
+    BELARUSIAN = "be_BY"
     BENGALI = "bn"
+    BENGALI_IN = "bn_IN"
     BULGARIAN = "bg"
     CATALAN = "ca"
     CHINESE_CHN = "zh_CN"
@@ -722,21 +724,38 @@ class TemplateLanguage(helpers.StrEnum):
     CROATIAN = "hr"
     CZECH = "cs"
     DANISH = "da"
+    DARI = "prs_AF"
     DUTCH = "nl"
+    DUTCH_BE = "nl_BE"
     ENGLISH = "en"
     ENGLISH_UK = "en_GB"
     ENGLISH_US = "en_US"
     ENGLISH_AU = "en_AU"
     ENGLISH_CA = "en_CA"
     ENGLISH_IN = "en_IN"
+    ENGLISH_AE = "en_AE"
+    ENGLISH_GH = "en_GH"
+    ENGLISH_IE = "en_IE"
+    ENGLISH_JM = "en_JM"
+    ENGLISH_MY = "en_MY"
+    ENGLISH_NZ = "en_NZ"
+    ENGLISH_QA = "en_QA"
+    ENGLISH_SG = "en_SG"
+    ENGLISH_UG = "en_UG"
+    ENGLISH_ZA = "en_ZA"
     ESTONIAN = "et"
     FILIPINO = "fil"
     FINNISH = "fi"
     FRENCH = "fr"
     FRENCH_CA = "fr_CA"
     FRENCH_BE = "fr_BE"
+    FRENCH_CH = "fr_CH"
+    FRENCH_CI = "fr_CI"
+    FRENCH_MA = "fr_MA"
     GEORGIAN = "ka"
     GERMAN = "de"
+    GERMAN_AT = "de_AT"
+    GERMAN_CH = "de_CH"
     GREEK = "el"
     GUJARATI = "gu"
     HAUSA = "ha"
@@ -760,6 +779,7 @@ class TemplateLanguage(helpers.StrEnum):
     MALAYALAM = "ml"
     MARATHI = "mr"
     NORWEGIAN = "nb"
+    PASHTO = "ps_AF"
     PERSIAN = "fa"
     POLISH = "pl"
     PORTUGUESE_BR = "pt_BR"
@@ -768,6 +788,7 @@ class TemplateLanguage(helpers.StrEnum):
     ROMANIAN = "ro"
     RUSSIAN = "ru"
     SERBIAN = "sr"
+    SINHALA = "si_LK"
     SLOVAK = "sk"
     SLOVENIAN = "sl"
     SPANISH = "es"
@@ -778,6 +799,12 @@ class TemplateLanguage(helpers.StrEnum):
     SPANISH_CO = "es_CO"
     SPANISH_PE = "es_PE"
     SPANISH_VE = "es_VE"
+    SPANISH_CR = "es_CR"
+    SPANISH_DO = "es_DO"
+    SPANISH_EC = "es_EC"
+    SPANISH_HN = "es_HN"
+    SPANISH_PA = "es_PA"
+    SPANISH_UY = "es_UY"
     SWAHILI = "sw"
     SWEDISH = "sv"
     TAMIL = "ta"
@@ -3907,6 +3934,10 @@ class Template(_BaseTemplateActions):
         components: Components that make up the template. Header, BodyText, FooterText, Buttons, Cards, etc. (See `Template Components <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components>`_).
         parameter_format: The type of parameter formatting the :class:`HeaderText` and :class:`BodyText` components of the template will use. Defaults to ``POSITIONAL``.
         message_send_ttl_seconds: The time-to-live (TTL) for the template message in seconds. (See `Time-to-live (TTL) <https://developers.facebook.com/docs/whatsapp/business-management-api/time-to-live>`_).
+        degrees_of_freedom_spec: Configure automatic creative optimizations for this template (Marketing Messages API for WhatsApp).
+        sub_category: The sub-category of the template, if applicable (e.g. ``ORDER_DETAILS``, ``ORDER_STATUS`` for utility templates).
+        cta_url_link_tracking_opted_out: Opt out (``True``) or in (``False``) of CTA URL link tracking for this template.
+        is_primary_device_delivery_only: Deliver the template only to the user's primary device.
     """
 
     name: str
@@ -3916,6 +3947,9 @@ class Template(_BaseTemplateActions):
     parameter_format: ParamFormat | None = None
     message_send_ttl_seconds: int | None = None
     degrees_of_freedom_spec: DegreesOfFreedomSpec | None = None
+    sub_category: str | None = None
+    cta_url_link_tracking_opted_out: bool | None = None
+    is_primary_device_delivery_only: bool | None = None
 
     def to_json(self) -> str:
         """
@@ -3936,6 +3970,9 @@ class Template(_BaseTemplateActions):
             if "parameter_format" in data
             else None,
             message_send_ttl_seconds=data.get("message_send_ttl_seconds"),
+            sub_category=data.get("sub_category"),
+            cta_url_link_tracking_opted_out=data.get("cta_url_link_tracking_opted_out"),
+            is_primary_device_delivery_only=data.get("is_primary_device_delivery_only"),
         )
 
 
@@ -4252,6 +4289,7 @@ class TemplateDetails(helpers.APIObject, _BaseTemplateActions):
         quality_score: The quality score of the template, if applicable (See `Template Quality Score <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates#template-quality-score>`_).
         cta_url_link_tracking_opted_out: Optional boolean field for opting out/in of link tracking at template level.
         sub_category: The sub-category of the template, if applicable.
+        is_primary_device_delivery_only: Whether the template is delivered only to the user's primary device.
     """
 
     _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
@@ -4268,9 +4306,10 @@ class TemplateDetails(helpers.APIObject, _BaseTemplateActions):
     rejected_reason: TemplateRejectionReason | None
     library_template_name: str | None
     quality_score: QualityScore | None
-    cta_url_link_tracking_opted_out: bool | None
+    cta_url_link_tracking_opted_out: bool
     sub_category: str | None
     degrees_of_freedom_spec: DegreesOfFreedomSpec | None
+    is_primary_device_delivery_only: bool
 
     @classmethod
     def from_dict(
@@ -4304,8 +4343,13 @@ class TemplateDetails(helpers.APIObject, _BaseTemplateActions):
             quality_score=QualityScore.from_dict(data=data["quality_score"])
             if "quality_score" in data
             else None,
-            cta_url_link_tracking_opted_out=data.get("cta_url_link_tracking_opted_out"),
+            cta_url_link_tracking_opted_out=data.get(
+                "cta_url_link_tracking_opted_out", False
+            ),
             sub_category=data.get("sub_category"),
+            is_primary_device_delivery_only=data.get(
+                "is_primary_device_delivery_only", False
+            ),
             degrees_of_freedom_spec=DegreesOfFreedomSpec(
                 creative_features_spec=CreativeFeaturesSpec.from_dict(
                     data["degrees_of_freedom_spec"]["creative_features_spec"]
