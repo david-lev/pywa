@@ -188,9 +188,8 @@ class MessageStatus(BaseUserUpdate, Generic[_CallbackDataT]):
         contact_idx: int = 0,
         status_idx: int = 0,
     ) -> MessageStatus:
-        status = (value := (entry := update["entry"][0])["changes"][0]["value"])[
-            "statuses"
-        ][status_idx]
+        value = (entry := update["entry"][0])["changes"][0]["value"]
+        status = value["statuses"][status_idx]
         error = value.get("errors", status.get("errors", (None,)))[0]
         return cls(
             _client=client,
@@ -211,6 +210,32 @@ class MessageStatus(BaseUserUpdate, Generic[_CallbackDataT]):
             if "pricing" in status
             else None,
             error=WhatsAppError.from_dict(error=error) if error else None,
+        )
+
+    @classmethod
+    def from_updates(
+        cls, client: WhatsApp, update: RawUpdate
+    ) -> tuple[MessageStatus, ...]:
+        value = update["entry"][0]["changes"][0]["value"]
+        statuses = value["statuses"]
+        contacts = value["contacts"]
+        contact_indexes = {
+            identifier: index
+            for index, contact in enumerate(contacts)
+            for identifier in (contact.get("user_id"), contact.get("wa_id"))
+            if identifier is not None
+        }
+        return tuple(
+            cls.from_update(
+                client=client,
+                update=update,
+                contact_idx=contact_indexes.get(
+                    status.get("recipient_participant_user_id", status["recipient_id"]),
+                    min(status_idx, len(contacts) - 1),
+                ),
+                status_idx=status_idx,
+            )
+            for status_idx, status in enumerate(statuses)
         )
 
 

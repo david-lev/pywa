@@ -3,7 +3,7 @@ import copy
 import logging
 import time
 import warnings
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from pywa._logging import bind_update_logger, get_update_hash
 from pywa.server import _logger, _update_hash_of
@@ -13,10 +13,12 @@ from . import errors, utils
 from .errors import PywaDeprecationWarning
 from .handlers import (
     Handler,
+    MessageStatusHandler,
     RawUpdateHandler,
 )
 from .types import (
     ContinueHandling,
+    MessageStatus,
     RawUpdate,
     StopHandling,
 )
@@ -144,14 +146,20 @@ class Server:
                 return
             log.debug("Dispatched to %s", handler_type.__name__)
             try:
-                constructed_update: BaseUpdate = self._handlers_to_updates[
-                    handler_type
-                ].from_update(client=self, update=raw_update)
-                if log.isEnabledFor(logging.DEBUG):
-                    log.debug("Constructed update: %s", constructed_update)
-                if await self._process_listener(constructed_update):
-                    return
-                await self._invoke_callbacks(handler_type, constructed_update)
+                update_type = self._handlers_to_updates[handler_type]
+                constructed_updates = (
+                    cast(type[MessageStatus], update_type).from_updates(
+                        client=self, update=raw_update
+                    )
+                    if handler_type is MessageStatusHandler
+                    else (update_type.from_update(client=self, update=raw_update),)
+                )
+                for constructed_update in constructed_updates:
+                    if log.isEnabledFor(logging.DEBUG):
+                        log.debug("Constructed update: %s", constructed_update)
+                    if await self._process_listener(constructed_update):
+                        continue
+                    await self._invoke_callbacks(handler_type, constructed_update)
             except Exception:
                 log.exception("Failed to construct update (field=%s)", raw_update.field)
         finally:
@@ -219,7 +227,7 @@ class Server:
         )
         for identifier in listener_identifiers:
             listener = self._listeners.get(identifier)
-            if listener is not None:
+            if listener is not None and not listener.is_set():
                 log.info("Found matching listener")
                 break
         else:

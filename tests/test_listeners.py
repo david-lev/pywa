@@ -7,12 +7,14 @@ import pytest
 from pywa import WhatsApp as WhatsAppSync
 from pywa import filters
 from pywa.listeners import (
+    Listener,
     ListenerCanceled,
     ListenerStopped,
     ListenerTimeout,
     UserUpdateListenerIdentifier,
 )
 from pywa_async import WhatsApp as WhatsAppAsync
+from pywa_async.listeners import Listener as ListenerAsync
 
 
 class DummyUpdate:
@@ -47,6 +49,17 @@ def test_listener_success_sync(wa_sync: WhatsAppSync):
     assert isinstance(result, DummyUpdate)
 
 
+def test_completed_listener_ignores_later_update_sync(wa_sync: WhatsAppSync):
+    identifier = next(DummyUpdate().listener_identifiers)
+    listener = Listener(filters=filters.true, cancelers=filters.false)
+    wa_sync._listeners[identifier] = listener
+    first = DummyUpdate()
+
+    assert wa_sync._process_listener(first) is True
+    assert wa_sync._process_listener(DummyUpdate()) is False
+    assert listener.result is first
+
+
 @pytest.mark.asyncio
 async def test_listener_success_async(wa_async: WhatsAppAsync):
     identifiers = DummyUpdate().listener_identifiers
@@ -62,6 +75,23 @@ async def test_listener_success_async(wa_async: WhatsAppAsync):
         to=first_id, filters=filters.true, cancelers=filters.false, timeout=1
     )
     assert isinstance(result, DummyUpdate)
+
+
+@pytest.mark.asyncio
+async def test_completed_listener_ignores_later_update_async(wa_async: WhatsAppAsync):
+    identifier = next(DummyUpdate().listener_identifiers)
+    listener = ListenerAsync(
+        wa=wa_async,
+        identifier=identifier,
+        filters=filters.true,
+        cancelers=filters.false,
+    )
+    wa_async._listeners[identifier] = listener
+    first = DummyUpdate()
+
+    assert await wa_async._process_listener(first) is True
+    assert await wa_async._process_listener(DummyUpdate()) is False
+    assert listener.future.result() is first
 
 
 def test_listener_timeout_sync(wa_sync: WhatsAppSync):
