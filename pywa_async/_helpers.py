@@ -381,6 +381,9 @@ async def upload_template_media_components(
             for example, comps in itertools.groupby(
                 not_uploaded, key=lambda x: x._example
             )
+            # A component read back from WhatsApp without sample media has nothing to
+            # upload; `to_dict` reports it if such a template is submitted.
+            if example is not None
         ]
     )
 

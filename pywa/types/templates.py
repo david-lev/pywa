@@ -1503,7 +1503,8 @@ class _BaseMediaHeaderComponent(BaseHeaderComponent, abc.ABC):
         | bytes
         | BinaryIO
         | Iterator[bytes]
-        | AsyncIterator[bytes],
+        | AsyncIterator[bytes]
+        | None,
         *,
         mime_type: str | None = None,
     ):
@@ -1511,7 +1512,7 @@ class _BaseMediaHeaderComponent(BaseHeaderComponent, abc.ABC):
         Initializes a media header component for a template.
 
         Args:
-            example: An example of the media to be used in the header (can be a URL, file path, bytes, bytes generator, file-like object, base64 or a :py:class:`~pywa.types.media.Media` instance).
+            example: An example of the media to be used in the header (can be a URL, file path, bytes, bytes generator, file-like object, base64 or a :py:class:`~pywa.types.media.Media` instance). ``None`` only when the component came from a template read back from WhatsApp without sample media; such a component cannot be submitted.
             mime_type: The mime type of the example (optional, required when passing bytes, bytes generator, or path without extension).
         """
         self._example = example
@@ -1530,9 +1531,12 @@ class _BaseMediaHeaderComponent(BaseHeaderComponent, abc.ABC):
         | BinaryIO
         | Iterator[bytes]
         | AsyncIterator[bytes]
+        | None
     ):
         """
         Returns the example media for the header component.
+
+        ``None`` when the template was read back from WhatsApp and no sample media was returned for it.
         """
         return self._example
 
@@ -1556,6 +1560,14 @@ class _BaseMediaHeaderComponent(BaseHeaderComponent, abc.ABC):
 
     @classmethod
     def from_dict(cls, data: dict) -> _BaseMediaHeaderComponent:
+        # WhatsApp does not always return the sample media when a template is read back
+        # (e.g. the sample templates Meta provisions on a new WABA come back as
+        # ``{"type": "HEADER", "format": "IMAGE"}``), so ``example`` can be missing entirely.
+        # Only that exact shape is accepted here: an ``example`` that is present but not the
+        # documented one still raises, so an actual API change is reported rather than
+        # silently parsed into a component with no media.
+        if "example" not in data:
+            return cls(example=None)
         return cls(example=data["example"]["header_handle"][0])
 
     def to_dict(self) -> dict:
