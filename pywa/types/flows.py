@@ -1251,6 +1251,9 @@ class FlowJSON:
     """
     Represents a WhatsApp Flow JSON.
 
+    - A flow can have at most 100 screens, and its JSON cannot exceed 10 MB.
+    - A flow can have at most 3 :class:`ImageCarousel` components.
+    - Only the latest Flow JSON versions can be published; older versions can still be sent.
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson>`_.
 
     Attributes:
@@ -1315,7 +1318,7 @@ class DataSource:
         description: The description of the data source. Limited to 300 characters.
         metadata: The metadata of the data source. Limited to 20 characters.
         enabled: Whether the data source is enabled or not. Default to ``True``.
-        image: The base64 encoded image of the data source. Limited to 1MB (added in v5.0).
+        image: The base64 encoded image of the data source. Limited to 100KB since v6.0 (300KB before) (added in v5.0).
         alt_text: The alt text of the image. (added in v5.0).
         color: 6-digit hex color code. (added in v5.0).
         on_select_action: The action to perform when an item is selected. (added in v6.0).
@@ -1560,7 +1563,8 @@ class Screen:
     """
     Represents a screen (page) in a WhatsApp flow.
 
-    - The maximum number of components (children) per screen is 50.
+    - The maximum number of components (children) per screen is 50 (nested components count).
+    - :class:`CompleteAction` can only be used on a terminal screen.
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#screens>`_.
 
     Example:
@@ -1575,7 +1579,7 @@ class Screen:
         ... )
 
     Attributes:
-        id: Unique identifier of the screen which works as a page url. ``SUCCESS`` is a reserved keyword and should not be used as a screen id.
+        id: Unique identifier of the screen which works as a page url. Can only consist of letters and underscores (no digits). ``SUCCESS`` is a reserved keyword and should not be used as a screen id.
         title: Screen level attribute that is rendered in the top navigation bar.
         data: Declaration of dynamic data that this screen should get from the previous screen or from the flow endpoint.
          In the screen children and in :class:`DataExchangeAction` ``.payload``, you can use the :attr:`~ScreenData.ref` or :class:`ScreenDataRef`
@@ -1586,7 +1590,7 @@ class Screen:
         refresh_on_back: Whether to trigger a :class:`FlowRequest` (``action`` will be :class:`FlowRequestActionType.BACK`) with the flow endpoint when the user presses
          the back button while on this screen. The property is useful when you need to reevaluate the screen data when returning to the previous screen (Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#additional-information-on-refresh-on-back>`_).
         layout: Associated screen UI Layout that is shown to the user (Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson#layout>`_).
-        success: Defaults to true. A Flow can have multiple terminal screens with different business outcomes. This property marks whether terminating on a terminal screen should be considered a successful business outcome.
+        success: Defaults to true. A Flow can have multiple terminal screens with different business outcomes. This property marks whether terminating on a terminal screen should be considered a successful business outcome. Can only be set on a terminal screen, and at least one terminal screen must be successful.
         sensitive: This array contains the names of the fields in the screen that contain sensitive data, and should be hidden in the response summary displayed to the user. (added in v5.1)
     """
 
@@ -2639,7 +2643,7 @@ class TextInput(TextEntryComponent):
         label: The label of the text input. Limited to 20 characters.
         input_type: The input type of the text input (for keyboard layout and validation rules).
         label_variant: Display the label in a more prominent style and allow it to be displayed across multiple lines if needed. Added in v7.0.
-        pattern: The regex pattern to validate the text input. Added in v6.2.
+        pattern: The regex pattern to validate the text input. Added in v6.2. Requires ``helper_text`` (it is shown when the input does not match) and works only with ``input_type`` ``TEXT``, ``NUMBER``, ``PASSWORD`` or ``PASSCODE``.
         required: Whether the text input is required or not.
         min_chars: The minimum number of characters allowed in the text input.
         max_chars: The maximum number of characters allowed in the text input.
@@ -2647,7 +2651,7 @@ class TextInput(TextEntryComponent):
         enabled: Whether the text input is enabled or not. Default to ``True``.
         visible: Whether the text input is visible or not. Default to ``True``.
         init_value: The default value of the text input.
-        error_message: The error message of the text input.
+        error_message: The error message of the text input. Limited to 30 characters.
     """
 
     type: FlowComponentType = dataclasses.field(
@@ -2761,11 +2765,11 @@ class CheckboxGroup(FormComponent[list[str]]):
 
     Attributes:
         name: The unique name (id) for this component.
-        data_source: The data source of the checkbox group.
+        data_source: The data source of the checkbox group. Minimum 1 and maximum 20 items. Option IDs must be unique.
         label: The label of the checkbox group. Limited to 30 characters. Required starting from v4.0.
         description: The description of the checkbox group. Limited to 300 characters. Added in v4.0.
-        min_selected_items: The minimum number of items that can be selected. Minimum value is 1.
-        max_selected_items: The maximum number of items that can be selected. Maximum value is 20.
+        min_selected_items: The minimum number of items that can be selected. Minimum value is 0, and it cannot exceed ``max_selected_items``.
+        max_selected_items: The maximum number of items that can be selected. Minimum value is 2 and maximum value is 20 (the data source limit).
         required: Whether the checkbox group is required or not.
         visible: Whether the checkbox group is visible or not. Default to ``True``.
         enabled: Whether the checkbox group is enabled or not. Default to ``True``.
@@ -2817,7 +2821,7 @@ class RadioButtonsGroup(FormComponent[str]):
 
     Attributes:
         name: The unique name (id) for this component.
-        data_source: The data source of the radio buttons group.
+        data_source: The data source of the radio buttons group. Minimum 1 and maximum 20 items. Option IDs must be unique.
         label: The label of the radio buttons group. Limited to 30 characters. Required starting from v4.0.
         description: The description of the radio buttons group. Limited to 300 characters. Added in v4.0.
         required: Whether the radio buttons group is required or not.
@@ -2869,8 +2873,8 @@ class Dropdown(FormComponent[str]):
 
     Attributes:
         name: The unique name (id) for this component.
-        label: The label of the dropdown. Limited to 30 characters.
-        data_source: The data source of the dropdown. minimum 1 and maximum 200 items.
+        label: The label of the dropdown. Limited to 20 characters.
+        data_source: The data source of the dropdown. Minimum 1 and maximum 200 items (maximum 100 if the options have images). Option IDs must be unique.
         enabled: Whether the dropdown is enabled or not. Default to ``True``.
         required: Whether the dropdown is required or not.
         visible: Whether the dropdown is visible or not. Default to ``True``.
@@ -2919,11 +2923,11 @@ class ChipsSelector(FormComponent[list[str]]):
 
     Attributes:
         name: The unique name (id) for this component.
-        data_source: The data source of the chips selector.
+        data_source: The data source of the chips selector. Minimum 2 and maximum 20 items. Options take only ``id``, ``title`` and ``enabled`` (and actions), no description, metadata, image, alt text or color. Option IDs must be unique.
         label: The label of the chips selector. Limited to 80 characters.
         description: The description of the chips selector. Limited to 300 characters
-        min_selected_items: The minimum number of items that can be selected. Minimum value is 1.
-        max_selected_items: The maximum number of items that can be selected. Maximum value is 20.
+        min_selected_items: The minimum number of items that can be selected. Minimum value is 0, and it cannot exceed ``max_selected_items``.
+        max_selected_items: The maximum number of items that can be selected. Minimum value is 1 and maximum value is 20 (the data source limit).
         required: Whether the chips selector is required or not.
         visible: Whether the chips selector is visible or not. Default to ``True``.
         enabled: Whether the chips selector is enabled or not. Default to ``True``.
@@ -2954,12 +2958,13 @@ class Footer(Component):
     """
     Footer component allows users to navigate to other screens or submit the flow.
 
+    - Only one :class:`Footer` is allowed per screen (a :class:`Footer` inside :class:`If` counts once, and must exist in both branches).
     - Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#foot>`_.
 
     Attributes:
         label: The label of the footer. Limited to 35 characters.
         on_click_action: The action to perform when the footer is clicked. Required.
-        left_caption: Can set left_caption and right_caption or only center_caption, but not all 3 at once. Limited to 15 characters.
+        left_caption: Can set left_caption and right_caption (always together) or only center_caption, but not all 3 at once. Limited to 15 characters.
         center_caption: Can set center-caption or left-caption and right-caption, but not all 3 at once. Limited to 15 characters.
         right_caption: Can set right-caption and left-caption or only center-caption, but not all 3 at once. Limited to 15 characters.
         enabled: Whether the footer is enabled or not. Default to ``True``.
@@ -2997,7 +3002,7 @@ class OptIn(FormComponent[bool]):
 
     Attributes:
         name: The unique name (id) for this component.
-        label: The label of the opt in. Limited to 30 characters.
+        label: The label of the opt in. Limited to 120 characters.
         required: Whether the opt in is required or not.
         visible: Whether the opt in is visible or not. Default to ``True``.
         init_value: The default value of the opt in.
@@ -3063,6 +3068,7 @@ class NavigationList(Component):
     - The on_click_action is required for this component and can be defined either at the component level or in each :class:`NavigationItem`.
     - There can be at most 2 :class:`NavigationList` components per screen.
     - The :class:`NavigationList` components cannot be used in combination with any other components in the same screen.
+    - Item IDs must be unique.
 
     Example:
 
@@ -3181,8 +3187,8 @@ class NavigationItemEnd:
 
     Attributes:
         title: The title of the end content. Limited to 10 characters.
-        description: The description of the end content. Limited to 20 characters.
-        metadata: The metadata of the end content. Limited to 80 characters.
+        description: The description of the end content. Limited to 10 characters.
+        metadata: The metadata of the end content. Limited to 10 characters.
     """
 
     title: str | None = None
@@ -3226,7 +3232,7 @@ class DatePicker(FormComponent[str]):
         required: Whether the date picker is required or not.
         visible: Whether the date picker is visible or not. Default to ``True``.
         init_value: The default value.
-        error_message: The error message of the date picker.
+        error_message: The error message of the date picker. Limited to 80 characters.
         on_select_action: The action to perform when a date is selected.
     """
 
@@ -3365,13 +3371,13 @@ class CalendarPicker(FormComponent[str]):
     Attributes:
         name: The unique name (id) for this component.
         label: The label of the calendar picker. Limited to 40 characters.
-        title: The title of the calendar picker. Only available when mode is ``CalendarMode.RANGE``.
+        title: The title of the calendar picker. Limited to 80 characters. Only available when mode is ``CalendarMode.RANGE``.
         description: The description of the calendar picker. Limited to 300 characters. Only available when mode is ``CalendarMode.RANGE``.
         mode: The mode of the calendar picker. Default to ``CalendarMode.SINGLE``.
         min_date: The minimum date (date/datetime) that can be selected.
         max_date: The maximum date (date/datetime) that can be selected.
         unavailable_dates: The dates (dates/datetimes) that cannot be selected.
-        include_days: The days of the week to include in the calendar picker. Default to all days.
+        include_days: The days of the week to include in the calendar picker (at least one). Default to all days.
         min_days: The minimum number of days that can be selected in the range mode.
         max_days: The maximum number of days that can be selected in the range mode.
         helper_text: The helper text of the calendar picker. Limited to 80 characters.
@@ -3379,7 +3385,7 @@ class CalendarPicker(FormComponent[str]):
         required: Whether the calendar picker is required or not.
         visible: Whether the calendar picker is visible or not. Default to ``True``.
         init_value: The default value. Only available when component is outside Form component.
-        error_message: The error message of the calendar picker. Only available when component is outside Form component.
+        error_message: The error message of the calendar picker. Limited to 80 characters. Only available when component is outside Form component.
         on_select_action: The action to perform when a date is selected.
     """
 
@@ -3506,7 +3512,7 @@ class Image(Component):
         width: The width of the image.
         height: The height of the image.
         scale_type: The scale type of the image. Defaule to ``ScaleType.CONTAIN`` Read more at `developers.facebook.com <https://developers.facebook.com/docs/whatsapp/flows/reference/flowjson/components#image-scale-types>`_.
-        aspect_ratio: The aspect ratio of the image. Default to ``1``.
+        aspect_ratio: The aspect ratio of the image (a number, e.g. ``1`` or ``1.5``). Default to ``1``.
         alt_text: Alternative Text is for the accessibility feature, eg. Talkback and Voice over.
         visible: Whether the image is visible or not. Default to ``True``.
     """
@@ -3518,7 +3524,7 @@ class Image(Component):
     width: int | ScreenDataRef[int] | None = None
     height: int | ScreenDataRef[int] | None = None
     scale_type: ScaleType | str | ScreenDataRef[str] | ComponentRef[str] | None = None
-    aspect_ratio: int | ScreenDataRef[int]
+    aspect_ratio: int | float | ScreenDataRef[int] | ScreenDataRef[float] | None = None
     alt_text: str | ScreenDataRef[str] | ComponentRef[str] | None = None
     visible: bool | Condition | ScreenDataRef[bool] | ComponentRef[bool] | None = None
 
@@ -3572,8 +3578,8 @@ class ImageCarousel(Component):
         ... )
 
     Attributes:
-        images: A list of images to display in the carousel. Each image is represented by an :class:`ImageCarouselItem` object.
-        aspect_ratio: The aspect ratio of the images in the carousel. Default to ``4:3``.
+        images: A list of images to display in the carousel. Each image is represented by an :class:`ImageCarouselItem` object. Minimum 1 and maximum 3 items.
+        aspect_ratio: The aspect ratio of the images in the carousel, ``"4:3"`` or ``"16:9"``. Default to ``4:3``.
         scale_type: The scale type of the images in the carousel. Default to ``ScaleType.CONTAIN``.
         visible: Whether the image carousel is visible or not. Default to ``True``.
     """
@@ -3631,12 +3637,12 @@ class PhotoPicker(FormComponent):
 
     Attributes:
         name: The unique name (id) for this component.
-        label: The label of the photo picker. Limited to 30 characters.
+        label: The label of the photo picker. Limited to 80 characters.
         description: The description of the photo picker. Limited to 300 characters.
         photo_source: The source where the image can be selected from. Default to ``PhotoSource.CAMERA_GALLERY``.
-        max_file_size_kb: The maximum file size in KB. Default value: 25600 (25 MiB)
-        min_uploaded_photos: The minimum number of photos that can be uploaded. This property determines whether the component is optional (set to 0) or required (set above 0).
-        max_uploaded_photos: The maximum number of photos that can be uploaded. Default value: 30
+        max_file_size_kb: The maximum file size in KB. Default value: 25600 (25 MiB), which is also the maximum (minimum 1).
+        min_uploaded_photos: The minimum number of photos that can be uploaded (0 to 30). This property determines whether the component is optional (set to 0) or required (set above 0). Cannot exceed ``max_uploaded_photos``.
+        max_uploaded_photos: The maximum number of photos that can be uploaded (1 to 30). Default value: 30
         enabled: Whether the photo picker is enabled or not. Default to ``True``.
         visible: Whether the photo picker is visible or not. Default to ``True``.
         error_message: The error message of the photo picker.
@@ -3687,12 +3693,12 @@ class DocumentPicker(FormComponent):
 
     Attributes:
         name: The unique name (id) for this component.
-        label: The label of the document picker. Limited to 30 characters.
+        label: The label of the document picker. Limited to 80 characters.
         description: The description of the document picker. Limited to 300 characters.
-        max_file_size_kb: The maximum file size in KB. Default value: 25600 (25 MiB)
-        min_uploaded_documents: The minimum number of documents that can be uploaded. This property determines whether the component is optional (set to 0) or required (set above 0).
-        max_uploaded_documents: The maximum number of documents that can be uploaded. Default value: 30
-        allowed_mime_types: Specifies which document mime types can be selected. If it contains “image/jpeg”, picking photos from the gallery will be available as well. Default value: Any document from the supported mime types can be selected.
+        max_file_size_kb: The maximum file size in KB. Default value: 25600 (25 MiB), which is also the maximum (minimum 1).
+        min_uploaded_documents: The minimum number of documents that can be uploaded (0 to 30). This property determines whether the component is optional (set to 0) or required (set above 0). Cannot exceed ``max_uploaded_documents``.
+        max_uploaded_documents: The maximum number of documents that can be uploaded (1 to 30). Default value: 30
+        allowed_mime_types: Specifies which document mime types can be selected (at least one, and only from the supported mime types). If it contains “image/jpeg”, picking photos from the gallery will be available as well. Default value: Any document from the supported mime types can be selected.
         enabled: Whether the document picker is enabled or not. Default to ``True``.
         visible: Whether the document picker is visible or not. Default to ``True``.
         error_message: The error message of the document picker.
