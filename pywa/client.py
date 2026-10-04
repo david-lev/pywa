@@ -2012,8 +2012,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Args:
             media: The media to upload (can be a URL, file path, bytes, bytes generator, file-like object, base64 or a :py:class:`~pywa.types.media.Media` instance).
-            mime_type: The MIME type of the media.
-            filename: The file name of the media.
+            mime_type: The MIME type of the media (optional). If not provided, it is taken from the media itself (file name, ``Content-Type`` header or data URI), then from ``media_type``, then guessed from the ``filename`` and finally from the first bytes of the content (PNG, JPEG, GIF, WebP, PDF, Ogg, MP3, AMR, MP4, M4A and 3GP are recognized).
+            filename: The file name of the media (optional. When not provided, it is taken from the media itself, e.g. the base name of a file or a URL path).
             ttl: Override the default 1-hour TTL for `No Storage-enabled <https://developers.facebook.com/documentation/business-messaging/whatsapp/no-storage>`_ business phone numbers. This value is in minutes from 1 hour (60) to 30 days (43200).
             dl_session: A httpx client to use when downloading the media from a URL (optional, for custom settings like proxies, headers, etc. If not provided, a new client will be created for the download).
             download_chunk_size: The size (in bytes) of each chunk to download when downloading media from a URL (default: ``64KB``). Defines the size of data read into memory at a time.

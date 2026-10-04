@@ -1,9 +1,7 @@
 import asyncio
-import itertools
-import mimetypes
+import contextlib
 import pathlib
 from collections.abc import AsyncIterator, Coroutine, Iterator, Sequence
-from contextlib import _AsyncGeneratorContextManager
 from typing import (
     TYPE_CHECKING,
     BinaryIO,
@@ -18,7 +16,6 @@ from pywa._helpers import BASE64_PATTERN as BASE64_PATTERN
 from pywa._helpers import BSUID_RE as BSUID_RE
 from pywa._helpers import DOWNLOAD_CHUNK_SIZE as DOWNLOAD_CHUNK_SIZE
 from pywa._helpers import FILE_HANDLE_PATTERN as FILE_HANDLE_PATTERN
-from pywa._helpers import USE_FAKE_GEN_STREAM as USE_FAKE_GEN_STREAM
 from pywa._helpers import WA_ID_RE as WA_ID_RE
 from pywa._helpers import WA_MEDIA_PATTERN as WA_MEDIA_PATTERN
 
@@ -38,18 +35,28 @@ from pywa._helpers import MediaInfo as MediaInfo
 from pywa._helpers import MediaSource as MediaSource
 from pywa._helpers import StrEnum as StrEnum
 from pywa._helpers import clean_phone_number as clean_phone_number
+from pywa._helpers import describe_media as describe_media
 from pywa._helpers import detect_media_source as detect_media_source
 from pywa._helpers import filter_not_uploaded_comps as filter_not_uploaded_comps
 from pywa._helpers import filter_not_uploaded_params as filter_not_uploaded_params
 from pywa._helpers import (
+    get_content_length_from_httpx_response_headers as get_content_length_from_httpx_response_headers,
+)
+from pywa._helpers import (
     get_filename_from_httpx_response_headers as get_filename_from_httpx_response_headers,
 )
+from pywa._helpers import get_filename_from_url as get_filename_from_url
 from pywa._helpers import get_flow_metric_field as get_flow_metric_field
 from pywa._helpers import get_interactive_msg as get_interactive_msg
 from pywa._helpers import get_media_from_base64 as get_media_from_base64
 from pywa._helpers import get_media_from_file_like_obj as get_media_from_file_like_obj
 from pywa._helpers import get_media_from_path as get_media_from_path
 from pywa._helpers import get_media_msg as get_media_msg
+from pywa._helpers import (
+    get_mime_type_from_httpx_response_headers as get_mime_type_from_httpx_response_headers,
+)
+from pywa._helpers import get_mime_type_from_url as get_mime_type_from_url
+from pywa._helpers import group_by_media as group_by_media
 from pywa._helpers import header_format_to_media_type as header_format_to_media_type
 from pywa._helpers import is_async_callable as is_async_callable
 from pywa._helpers import is_installed as is_installed
@@ -77,6 +84,9 @@ from pywa._helpers import (
 from pywa._helpers import resolve_callback_data as resolve_callback_data
 from pywa._helpers import resolve_callee as resolve_callee
 from pywa._helpers import resolve_flow_json_param as resolve_flow_json_param
+from pywa._helpers import (
+    resolve_media_name_and_type as resolve_media_name_and_type,
+)
 from pywa._helpers import resolve_recipient as resolve_recipient
 from pywa._helpers import resolve_tracker_param as resolve_tracker_param
 from pywa._helpers import resolve_users as resolve_users
@@ -89,6 +99,7 @@ from pywa._helpers import (
 from pywa._helpers import timestamp_to_datetime as timestamp_to_datetime
 from pywa._helpers import upload_comps_example as upload_comps_example
 from pywa._helpers import upload_params_media as upload_params_media
+from pywa.errors import WhatsAppError
 from pywa.types.media import Media
 from pywa.types.templates import (
     BaseParams,
@@ -125,7 +136,12 @@ async def resolve_media_param(
     source = detect_media_source(media)
     match source:
         case MediaSource.EXTERNAL_URL:
-            return True, False, str(media), filename or pathlib.Path(str(media)).name
+            return (
+                True,
+                False,
+                str(media),
+                filename or get_filename_from_url(str(media)),
+            )
         case MediaSource.MEDIA_ID:
             return False, False, str(media), filename
         case MediaSource.MEDIA_OBJ:
@@ -143,50 +159,78 @@ async def resolve_media_param(
     return False, True, uploaded_media, filename
 
 
+async def aiter_file(file: BinaryIO, chunk_size: int) -> AsyncIterator[bytes]:
+    """Stream a file-like object (read in a thread, as httpx's async client can't send a blocking file)."""
+    while chunk := await asyncio.to_thread(file.read, chunk_size):
+        yield chunk
+
+
+async def media_info_from_response(
+    res: httpx.Response,
+    *,
+    url: str,
+    download_chunk_size: int | None,
+    stream: bool,
+    mime_type: str | None = None,
+    fallback_filename: str | None = None,
+    fallback_mime_type: str | None = None,
+) -> MediaInfo:
+    try:
+        res.raise_for_status()
+        body = None if stream else await res.aread()
+    except httpx.HTTPError as e:
+        raise ValueError(f"An error occurred while downloading from {url}: {e}") from e
+    if body is None:
+        content = res.aiter_bytes(chunk_size=download_chunk_size)
+        length = get_content_length_from_httpx_response_headers(res.headers)
+    else:
+        content, length = body, len(body)
+    return MediaInfo(
+        content=content,
+        filename=get_filename_from_httpx_response_headers(res.headers)
+        or fallback_filename,
+        mime_type=mime_type
+        or get_mime_type_from_httpx_response_headers(res.headers)
+        or fallback_mime_type,
+        length=length,
+    )
+
+
 async def get_media_from_url(
+    stack: contextlib.AsyncExitStack,
     url: str,
     dl_session: httpx.AsyncClient,
     download_chunk_size: int | None,
     stream: bool,
 ) -> MediaInfo:
-    if stream:
-        res = await (
-            cm := dl_session.stream("GET", url, follow_redirects=True)
-        ).__aenter__()
-
-    else:
-        res, cm = await dl_session.get(url, follow_redirects=True), None
-    try:
-        res.raise_for_status()
-    except httpx.HTTPError as e:
-        if stream:
-            await res.aclose()
-        raise ValueError(f"An error occurred while downloading from {url}") from e
-
-    content_length = int(res.headers.get("Content-Length", "0")) or None
-    return MediaInfo(
-        content=res.aiter_bytes(chunk_size=download_chunk_size)
-        if stream
-        else res.content,
-        filename=get_filename_from_httpx_response_headers(res.headers)
-        or pathlib.Path(url).name,
-        mime_type=res.headers.get("Content-Type") or mimetypes.guess_type(url)[0],
-        length=content_length if stream else (content_length or len(res.content)),
-        cm=cm,
+    res = await stack.enter_async_context(
+        dl_session.stream(
+            "GET",
+            url,
+            follow_redirects=True,
+            headers={"Accept-Encoding": "identity"},
+        )
+    )
+    return await media_info_from_response(
+        res,
+        url=url,
+        download_chunk_size=download_chunk_size,
+        stream=stream,
+        fallback_filename=get_filename_from_url(url),
+        fallback_mime_type=get_mime_type_from_url(url),
     )
 
 
 async def get_media_from_media_id_or_obj_or_url(
+    stack: contextlib.AsyncExitStack,
     wa: "WhatsApp",
     media: str | Media,
     media_source: MediaSource,
     download_chunk_size: int | None,
     stream: bool,
 ) -> MediaInfo:
-    filename: str | None = None
     mime_type: str | None = None
     url: str | None = None
-    cm: _AsyncGeneratorContextManager[httpx.Response] | None = None
     match media_source:
         case MediaSource.MEDIA_ID:
             url_res = await wa.get_media_url(media_id=str(media))
@@ -205,25 +249,87 @@ async def get_media_from_media_id_or_obj_or_url(
                 "media must be MediaSource.MEDIA_ID, MEDIA_OBJ or MEDIA_URL"
             )
     assert url is not None
-    if stream:
-        res = await (cm := wa.api.stream_media_bytes(media_url=url)).__aenter__()
-    else:
-        async with wa.api.stream_media_bytes(media_url=url) as res:
-            cm, _ = None, await res.aread()
-    try:
-        res.raise_for_status()
-    except httpx.HTTPError as e:
-        res.close()
-        raise ValueError(f"An error occurred while downloading from {url}: {e}") from e
-    content_length = int(res.headers.get("Content-Length", "0")) or None
-    return MediaInfo(
-        content=res.aiter_bytes(chunk_size=download_chunk_size)
-        if stream
-        else res.content,
-        filename=filename or get_filename_from_httpx_response_headers(res.headers),
-        mime_type=mime_type or res.headers.get("Content-Type"),
-        length=content_length if stream else (content_length or len(res.content)),
-        cm=cm,
+    res = await stack.enter_async_context(wa.api.stream_media_bytes(media_url=url))
+    return await media_info_from_response(
+        res,
+        url=url,
+        download_chunk_size=download_chunk_size,
+        stream=stream,
+        mime_type=mime_type,
+    )
+
+
+async def open_media(
+    stack: contextlib.AsyncExitStack,
+    *,
+    wa: "WhatsApp",
+    media: str
+    | int
+    | Media
+    | pathlib.Path
+    | bytes
+    | BinaryIO
+    | Iterator[bytes]
+    | AsyncIterator[bytes],
+    source: MediaSource,
+    stream: bool,
+    download_chunk_size: int | None = None,
+    dl_session: httpx.AsyncClient | None = None,
+) -> MediaInfo:
+    """
+    Resolve ``media`` into the ``MediaInfo`` to upload.
+
+    Whatever is opened to read it (download client and response, file) is closed with ``stack``, so keep the
+    stack open until the upload is done.
+
+    Args:
+        stream: An iterator body of a known length (Resumable Upload API) instead of a fully loaded body (multipart upload).
+        dl_session: A client to download with (optional, if not provided a new one is created and closed).
+    """
+    chunk_size = download_chunk_size or DOWNLOAD_CHUNK_SIZE
+    match source:
+        case MediaSource.EXTERNAL_URL:
+            return await get_media_from_url(
+                stack,
+                url=str(media),
+                dl_session=dl_session
+                or await stack.enter_async_context(httpx.AsyncClient()),
+                download_chunk_size=chunk_size,
+                stream=stream,
+            )
+        case MediaSource.PATH:
+            assert isinstance(media, (str, pathlib.Path))
+            return get_media_from_path(stack, path=media)
+        case MediaSource.BYTES:
+            assert isinstance(media, (bytes, bytearray, memoryview))
+            content = bytes(media)
+            return MediaInfo(content, None, None, len(content))
+        case MediaSource.FILE_OBJ:
+            return get_media_from_file_like_obj(file_obj=cast(BinaryIO, media))
+        case MediaSource.MEDIA_ID | MediaSource.MEDIA_OBJ | MediaSource.MEDIA_URL:
+            assert isinstance(media, (str, Media))
+            return await get_media_from_media_id_or_obj_or_url(
+                stack,
+                wa=wa,
+                media=media,
+                media_source=source,
+                download_chunk_size=chunk_size,
+                stream=stream,
+            )
+        case MediaSource.BYTES_GEN:
+            # a sync generator may block while producing chunks: never on the event loop
+            content = await asyncio.to_thread(b"".join, cast("Iterator[bytes]", media))
+            return MediaInfo(content, None, None, len(content))
+        case MediaSource.ASYNC_BYTES_GEN:
+            content = b"".join(
+                [chunk async for chunk in cast("AsyncIterator[bytes]", media)]
+            )
+            return MediaInfo(content, None, None, len(content))
+        case MediaSource.BASE64_DATA_URI | MediaSource.BASE64:
+            assert isinstance(media, str)
+            return get_media_from_base64(base64_str=media)
+    raise ValueError(
+        "Media source must be URL, file path, bytes, bytes generator, file-like object, WhatsApp Media, or base64 string."
     )
 
 
@@ -247,82 +353,23 @@ async def internal_upload_media(
     dl_session: httpx.AsyncClient | None = None,
 ) -> _AsyncMedia:
     """
-    Internal method to upload media to WhatsApp servers. Returns a tuple of (``media_id``, ``filename``).
+    Internal method to upload media to WhatsApp servers. Returns the uploaded ``Media``.
     """
-    media_info: MediaInfo | None = None
-    client, close_client = None, False
-
-    match media_source:
-        case MediaSource.EXTERNAL_URL:
-            client, close_client = (
-                (dl_session, False) if dl_session else (httpx.AsyncClient(), True)
-            )
-            media_info = await get_media_from_url(
-                url=str(media),
-                dl_session=client,
-                download_chunk_size=None,
-                stream=False,
-            )
-        case MediaSource.PATH:
-            assert isinstance(media, (str, pathlib.Path))
-            media_info = get_media_from_path(path=media)
-        case MediaSource.BYTES:
-            assert isinstance(media, bytes)
-            media_info = MediaInfo(
-                content=media, filename=None, mime_type=None, length=len(media)
-            )
-        case MediaSource.FILE_OBJ:
-            media_info = get_media_from_file_like_obj(file_obj=cast(BinaryIO, media))
-        case MediaSource.MEDIA_ID | MediaSource.MEDIA_OBJ | MediaSource.MEDIA_URL:
-            assert isinstance(media, (str, Media))
-            media_info = await get_media_from_media_id_or_obj_or_url(
-                wa=wa,
-                media=media,
-                media_source=media_source,
-                download_chunk_size=None,
-                stream=False,
-            )
-        case MediaSource.BYTES_GEN:
-            media = cast("Iterator[bytes]", media)
-            media_info = MediaInfo(
-                content=(
-                    GeneratorStreamer(generator=media)
-                    if USE_FAKE_GEN_STREAM
-                    else b"".join(media)
-                ),
-                filename=None,
-                mime_type=None,
-                length=None,
-            )
-        case MediaSource.ASYNC_BYTES_GEN:
-            media = cast("AsyncIterator[bytes]", media)
-            content = b"".join([chunk async for chunk in media])
-            media_info = MediaInfo(
-                content=content,
-                filename=None,
-                mime_type=None,
-                length=len(content),
-            )
-        case MediaSource.BASE64_DATA_URI | MediaSource.BASE64:
-            assert isinstance(media, str)
-            media_info = get_media_from_base64(base64_str=media)
-        case _:
-            raise ValueError(
-                "Media source must be URL, file path, bytes, bytes generator, file-like object, WhatsApp Media, or base64 string."
-            )
-    if media_info is None:
-        raise ValueError(f"Failed to get media content from {media}")
-    final_filename = (
-        filename
-        or media_info.filename
-        or media_types_default_filenames.get(media_type, "file.txt")
-    )
-    final_mimetype = (
-        mime_type
-        or media_info.mime_type
-        or media_types_default_mime_types.get(media_type, "text/plain")
-    )
-    try:
+    async with contextlib.AsyncExitStack() as stack:
+        media_info = await open_media(
+            stack,
+            wa=wa,
+            media=media,
+            source=media_source,
+            stream=False,
+            dl_session=dl_session,
+        )
+        final_filename, final_mimetype = resolve_media_name_and_type(
+            media_info=media_info,
+            filename=filename,
+            mime_type=mime_type,
+            media_type=media_type,
+        )
         logger.debug(
             "Uploading media to WhatsApp servers: filename=%s, mime_type=%s, length=%s",
             final_filename,
@@ -355,14 +402,6 @@ async def internal_upload_media(
             uploaded.id,
         )
         return uploaded
-    finally:
-        try:
-            if close_client and client is not None:
-                await client.aclose()
-            if media_source == MediaSource.PATH:
-                media_info.content.close()  # ty: ignore[unresolved-attribute]
-        except Exception:  # noqa: BLE001
-            logger.debug("Failed to close media resource during cleanup", exc_info=True)
 
 
 async def upload_template_media_components(
@@ -386,9 +425,7 @@ async def upload_template_media_components(
                 comps=list(comps),
                 app_id=app_id,
             )
-            for example, comps in itertools.groupby(
-                not_uploaded, key=lambda x: x._example
-            )
+            for example, comps in group_by_media(not_uploaded, lambda x: x._example)
         ]
     )
 
@@ -422,123 +459,58 @@ async def internal_upload_file(
     fallback_mime_type: str,
     fallback_filename: str | None,
 ) -> tuple[str, MediaSource]:
-    media_info: MediaInfo | None = None
-    client = None
-
     source = detect_media_source(file)
-    match source:
-        case MediaSource.EXTERNAL_URL:
-            client = httpx.AsyncClient()
-            media_info = await get_media_from_url(
-                url=str(file),
-                dl_session=client,
-                download_chunk_size=DOWNLOAD_CHUNK_SIZE,
-                stream=True,
-            )
-        case MediaSource.PATH:
-            assert isinstance(file, (str, pathlib.Path))
-            p = pathlib.Path(file)
-            content = await asyncio.to_thread(p.read_bytes)
-            media_info = MediaInfo(
-                content=content,
-                filename=p.name,
-                mime_type=mimetypes.guess_type(p.as_posix())[0],
-                length=len(content),
-            )
-        case MediaSource.MEDIA_ID | MediaSource.MEDIA_OBJ | MediaSource.MEDIA_URL:
-            assert isinstance(file, (str, Media))
-            media_info = await get_media_from_media_id_or_obj_or_url(
-                wa=wa,
-                media=file,
-                media_source=source,
-                download_chunk_size=DOWNLOAD_CHUNK_SIZE,
-                stream=True,
-            )
-        case MediaSource.BYTES:
-            assert isinstance(file, bytes)
-            media_info = MediaInfo(
-                content=file, filename=None, mime_type=None, length=len(file)
-            )
-        case MediaSource.FILE_OBJ:
-            media_info = get_media_from_file_like_obj(cast(BinaryIO, file))
-        case MediaSource.BYTES_GEN:
-            all_bytes = b"".join(cast("Iterator[bytes]", file))
-            media_info = MediaInfo(
-                content=all_bytes,
-                filename=None,
-                mime_type=None,
-                length=len(all_bytes),
-            )
-        case MediaSource.ASYNC_BYTES_GEN:
-            all_bytes = b"".join(
-                [chunk async for chunk in cast("AsyncIterator[bytes]", file)]
-            )
-            media_info = MediaInfo(
-                content=all_bytes,
-                filename=None,
-                mime_type=None,
-                length=len(all_bytes),
-            )
-        case MediaSource.BASE64_DATA_URI | MediaSource.BASE64:
-            assert isinstance(file, str)
-            media_info = get_media_from_base64(base64_str=file)
-        case MediaSource.FILE_HANDLE:
-            return str(file), source
+    if source == MediaSource.FILE_HANDLE:
+        return str(file), source
 
     try:
-        if not media_info:
-            raise ValueError(
-                f"Invalid media example for file upload: {file}. "
-                "It must be a URL, file path, bytes, file-like object, WhatsApp Media, or file handle."
+        async with contextlib.AsyncExitStack() as stack:
+            media_info = await open_media(
+                stack, wa=wa, media=file, source=source, stream=True
             )
-        if media_info.length is None:
-            raise ValueError("Media must have a known length.")
-        final_filename = media_info.filename or fallback_filename
-        if final_filename is None:
-            raise ValueError("Could not determine a filename for the file upload.")
-        final_mimetype = mime_type or media_info.mime_type or fallback_mime_type
-        logger.debug(
-            "Uploading file to Resumable Upload API: filename=%s, mime_type=%s, length=%s",
-            final_filename,
-            final_mimetype,
-            media_info.length,
-        )
-        return (
-            await wa.api.upload_file(
-                upload_session_id=(
-                    await wa.api.create_upload_session(
-                        app_id=resolve_arg(
-                            wa=wa,
-                            value=app_id,
-                            method_arg="app_id",
-                            client_arg="app_id",
-                        ),
-                        file_name=final_filename,
-                        file_length=media_info.length,
-                        file_type=final_mimetype,
-                    )
-                )["id"],
-                file=cast(
-                    "bytes | AsyncIterator[bytes] | BinaryIO",
-                    media_info.content,
-                ),
-                file_offset=0,
-                content_length=media_info.length,
+            if media_info.length is None:
+                raise ValueError("Media must have a known length.")
+            final_filename = media_info.filename or fallback_filename
+            if final_filename is None:
+                raise ValueError("Could not determine a filename for the file upload.")
+            final_mimetype = mime_type or media_info.mime_type or fallback_mime_type
+            logger.debug(
+                "Uploading file to Resumable Upload API: filename=%s, mime_type=%s, length=%s",
+                final_filename,
+                final_mimetype,
+                media_info.length,
             )
-        )["h"], source
+            content = media_info.content
+            if source in (MediaSource.PATH, MediaSource.FILE_OBJ):
+                # httpx's async client can't send a blocking file object
+                content = aiter_file(cast(BinaryIO, content), DOWNLOAD_CHUNK_SIZE)
+            return (
+                await wa.api.upload_file(
+                    upload_session_id=(
+                        await wa.api.create_upload_session(
+                            app_id=resolve_arg(
+                                wa=wa,
+                                value=app_id,
+                                method_arg="app_id",
+                                client_arg="app_id",
+                            ),
+                            file_name=final_filename,
+                            file_length=media_info.length,
+                            file_type=final_mimetype,
+                        )
+                    )["id"],
+                    file=cast("bytes | AsyncIterator[bytes] | BinaryIO", content),
+                    file_offset=0,
+                    content_length=media_info.length,
+                )
+            )["h"], source
 
+    except WhatsAppError:
+        raise
     except Exception as e:
         raise ValueError(
-            f"Failed to upload media for file upload with file: {file if not isinstance(file, bytes) else '<bytes>'}: {e}"
+            f"Failed to upload media for file upload with file: {describe_media(file)}: {e}"
         ) from e
-
-    finally:
-        try:
-            if client:
-                await client.aclose()
-        # best-effort cleanup, never mask the real error
-        except Exception:  # noqa: BLE001
-            logger.debug("Failed to close media resource during cleanup", exc_info=True)
 
 
 async def _upload_comps_example(
@@ -558,7 +530,7 @@ async def _upload_comps_example(
     first_comp = comps[0]
 
     try:
-        handle, source = await internal_upload_file(
+        handle, _ = await internal_upload_file(
             wa=wa,
             file=example,
             app_id=app_id,
@@ -570,24 +542,14 @@ async def _upload_comps_example(
                 first_comp.format, "pywa-template-header"
             ),
         )
-        is_media_obj = source == MediaSource.MEDIA_OBJ
-        is_open_file = source == MediaSource.FILE_OBJ
         for comp in comps:
-            comp._handle = handle
-            if is_media_obj:
-                comp._example = cast(_AsyncMedia, comp._example).id
-                # prevent keeping Media obj in _example
-            if is_open_file:
-                try:
-                    comp._example = cast(
-                        BinaryIO, comp._example
-                    ).name  # prevent keeping file obj in _example
-                except AttributeError:
-                    pass
+            comp._set_uploaded(handle)
 
+    except WhatsAppError:
+        raise
     except Exception as e:
         raise ValueError(
-            f"Failed to upload media for component {first_comp.__class__.__name__} with example: {example if not isinstance(example, bytes) else '<bytes>'}: {e}"
+            f"Failed to upload media for component {first_comp.__class__.__name__} with example: {describe_media(example)}: {e}"
         ) from e
 
 
@@ -613,7 +575,7 @@ async def upload_template_media_params(
                 media=media,
                 params=list(params),
             )
-            for media, params in itertools.groupby(not_uploaded, key=lambda x: x.media)
+            for media, params in group_by_media(not_uploaded, lambda x: x.media)
         ]
     )
 
@@ -650,7 +612,9 @@ async def _upload_params_media(
                 else cast(str, uploaded_media)
             )
             p._fallback_filename = fallback_filename
+    except WhatsAppError:
+        raise
     except Exception as e:
         raise ValueError(
-            f"Failed to upload media for parameter {first_param} with media: {media if not isinstance(media, bytes) else '<bytes>'}: {e}"
+            f"Failed to upload media for parameter {first_param} with media: {describe_media(media)}: {e}"
         ) from e

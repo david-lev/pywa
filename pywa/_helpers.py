@@ -1,6 +1,8 @@
 import base64
+import contextlib
 import dataclasses
 import datetime
+import email.message
 import enum
 import functools
 import importlib.util
@@ -13,8 +15,8 @@ import mimetypes
 import os
 import pathlib
 import re
-import threading
 import types
+import urllib.parse
 import warnings
 from collections.abc import (
     AsyncIterable,
@@ -39,7 +41,7 @@ from typing import (
 
 import httpx
 
-from .errors import PywaUnknownEnumMemberWarning
+from .errors import PywaUnknownEnumMemberWarning, WhatsAppError
 
 if TYPE_CHECKING:
     from pywa import WhatsApp
@@ -245,6 +247,14 @@ WA_MEDIA_PATTERN = re.compile(
 )
 
 
+def is_file(path: str) -> bool:
+    """``Path.is_file`` raises (instead of returning ``False``) for names the OS rejects, e.g. a long base64 string."""
+    try:
+        return pathlib.Path(path).is_file()
+    except (OSError, ValueError):
+        return False
+
+
 def detect_media_source(
     media: str
     | int
@@ -265,7 +275,7 @@ def detect_media_source(
                 source = MediaSource.EXTERNAL_URL
         elif media_str.isdigit():
             source = MediaSource.MEDIA_ID
-        elif pathlib.Path(media_str).is_file():
+        elif is_file(media_str):
             source = MediaSource.PATH
         elif re.match(FILE_HANDLE_PATTERN, media_str):
             source = MediaSource.FILE_HANDLE
@@ -279,7 +289,7 @@ def detect_media_source(
             )
     elif isinstance(media, Media):
         source = MediaSource.MEDIA_OBJ
-    elif isinstance(media, bytes):
+    elif isinstance(media, (bytes, bytearray, memoryview)):
         source = MediaSource.BYTES
     elif isinstance(media, io.IOBase):
         source = MediaSource.FILE_OBJ
@@ -315,7 +325,12 @@ def resolve_media_param(
     source = detect_media_source(media)
     match source:
         case MediaSource.EXTERNAL_URL:
-            return True, False, str(media), filename or pathlib.Path(str(media)).name
+            return (
+                True,
+                False,
+                str(media),
+                filename or get_filename_from_url(str(media)),
+            )
         case MediaSource.MEDIA_ID:
             return False, False, str(media), filename
         case MediaSource.MEDIA_OBJ:
@@ -346,10 +361,13 @@ class GeneratorStreamer(Iterable):
 
     Limitations:
 
-    - read(size) ignores the requested size and returns the next generator chunk.
+    - read(size) ignores the requested size and returns the next non-empty generator chunk
+      (an empty chunk would be read by httpx as the end of the file).
     - seek() only supports seeking to the end to obtain length (offset=0, whence=os.SEEK_END)
       and a zero-offset SEEK_SET which returns the current read position.
     - tell() returns the total bytes read so far.
+    - The generator can only be consumed once: if httpx rewinds after the content was read (a redirect or
+      a retry re-sends the body), the next ``read`` raises instead of silently sending nothing.
 
     Only use this to make httpx accept generator-based uploads that require a file-like object.
     """
@@ -358,17 +376,22 @@ class GeneratorStreamer(Iterable):
         return self
 
     def __init__(self, generator: Iterator[bytes], length: int | None = None):
-        self._iterator = itertools.chain(generator, [b""])
+        self._iterator = iter(generator)
         self._length = length
         self._bytes_read = 0
+        self._rewound = False
 
     def read(self, _) -> bytes:
-        try:
-            chunk = next(self._iterator)
-        except StopIteration:
-            return b""
-        self._bytes_read += len(chunk)
-        return chunk
+        if self._rewound:
+            raise RuntimeError(
+                "The generator was already consumed and can't be sent again (e.g. after a redirect or "
+                "a retry). Pass bytes, a file or a file path instead."
+            )
+        for chunk in self._iterator:
+            if chunk:
+                self._bytes_read += len(chunk)
+                return chunk
+        return b""
 
     def seek(self, offset: int, whence: int = 0) -> int:
         if (
@@ -379,6 +402,9 @@ class GeneratorStreamer(Iterable):
             return self._length
 
         if offset == 0 and whence == os.SEEK_SET:
+            # httpx "rewinds" before sending: nothing to rewind unless the content was already read
+            if self._bytes_read:
+                self._rewound = True
             return self._bytes_read
 
         raise OSError("Cannot seek a streaming object.")
@@ -394,38 +420,148 @@ class MediaInfo(NamedTuple):
     filename: str | None
     mime_type: str | None
     length: int | None
-    client: httpx.Client | None = None
-    cm: Any = None  # context manager to keep alive
+
+
+SNIFF_LENGTH = 16  # bytes `sniff_media_type` needs
+_MAGIC_NUMBERS = {
+    b"\x89PNG\r\n\x1a\n": ("image/png", ".png"),
+    b"\xff\xd8\xff": ("image/jpeg", ".jpg"),
+    b"GIF87a": ("image/gif", ".gif"),
+    b"GIF89a": ("image/gif", ".gif"),
+    b"%PDF-": ("application/pdf", ".pdf"),
+    b"OggS": ("audio/ogg", ".ogg"),
+    b"ID3": ("audio/mpeg", ".mp3"),
+    b"#!AMR\n": ("audio/amr", ".amr"),
+}
+_MP4_BRANDS = (b"isom", b"iso2", b"mp41", b"mp42", b"avc1", b"M4V ")
+
+
+def sniff_media_type(head: bytes) -> tuple[str, str] | None:
+    """The ``(mime_type, extension)`` of a media by its first bytes, or ``None`` if not recognized."""
+    for magic, found in _MAGIC_NUMBERS.items():
+        if head.startswith(magic):
+            return found
+    if head[:4] == b"RIFF" and head[8:12] == b"WEBP":
+        return "image/webp", ".webp"
+    if head[4:8] == b"ftyp":
+        brand = head[8:12]
+        if brand in _MP4_BRANDS:
+            return "video/mp4", ".mp4"
+        if brand == b"M4A ":
+            return "audio/mp4", ".m4a"
+        if brand.startswith(b"3gp"):
+            return "video/3gpp", ".3gp"
+    return None
+
+
+def peek_media_head(content: Any) -> bytes:
+    """The first bytes of ``content`` without consuming it. Only bytes and seekable files can be peeked."""
+    if isinstance(content, (bytes, bytearray)):
+        return bytes(content[:SNIFF_LENGTH])
+    if isinstance(content, io.IOBase) and content.seekable():
+        position = content.tell()
+        try:
+            head = content.read(SNIFF_LENGTH)
+        finally:
+            content.seek(position)
+        return head if isinstance(head, bytes) else b""
+    return b""
+
+
+def get_filename_from_url(url: str) -> str | None:
+    path = urllib.parse.unquote(urllib.parse.urlsplit(url).path)
+    return pathlib.PurePosixPath(path).name or None
+
+
+def get_mime_type_from_url(url: str) -> str | None:
+    return mimetypes.guess_type(urllib.parse.urlsplit(url).path)[0]
+
+
+def get_mime_type_from_httpx_response_headers(headers: httpx.Headers) -> str | None:
+    """The ``Content-Type`` without parameters (``; charset=...``). Generic binary types are ignored."""
+    mime_type = headers.get("Content-Type", "").split(";")[0].strip().lower()
+    if mime_type in ("", "application/octet-stream", "binary/octet-stream"):
+        return None
+    return mime_type
+
+
+def get_content_length_from_httpx_response_headers(
+    headers: httpx.Headers,
+) -> int | None:
+    """``Content-Length`` is the size on the wire, which isn't the size we upload if the body is content-encoded."""
+    if headers.get("Content-Encoding", "identity").lower() != "identity":
+        return None
+    return int(headers.get("Content-Length", 0)) or None
+
+
+def get_filename_from_httpx_response_headers(
+    headers: httpx.Headers,
+) -> str | None:
+    content_disposition = headers.get("Content-Disposition")
+    if not content_disposition:
+        return None
+    msg = email.message.Message()
+    msg["Content-Disposition"] = content_disposition
+    filename = msg.get_filename()
+    return os.path.basename(filename) if filename else None
+
+
+def media_info_from_response(
+    res: httpx.Response,
+    *,
+    url: str,
+    download_chunk_size: int,
+    stream: bool,
+    mime_type: str | None = None,
+    fallback_filename: str | None = None,
+    fallback_mime_type: str | None = None,
+) -> MediaInfo:
+    try:
+        res.raise_for_status()
+    except httpx.HTTPError as e:
+        raise ValueError(f"An error occurred while downloading from {url}: {e}") from e
+    length = get_content_length_from_httpx_response_headers(res.headers)
+    gen = res.iter_bytes(chunk_size=download_chunk_size)
+    return MediaInfo(
+        content=gen
+        if stream
+        else (
+            GeneratorStreamer(generator=gen, length=length)
+            if USE_FAKE_GEN_STREAM
+            else b"".join(gen)
+        ),
+        filename=get_filename_from_httpx_response_headers(res.headers)
+        or fallback_filename,
+        mime_type=mime_type
+        or get_mime_type_from_httpx_response_headers(res.headers)
+        or fallback_mime_type,
+        length=length,
+    )
 
 
 def get_media_from_url(
+    stack: contextlib.ExitStack,
     url: str,
     dl_session: httpx.Client,
     download_chunk_size: int,
     stream: bool,
 ) -> MediaInfo:
-    res = (cm := dl_session.stream("GET", url, follow_redirects=True)).__enter__()
-    try:
-        res.raise_for_status()
-        length: int | None = int(res.headers.get("Content-Length", 0)) or None
-        gen = res.iter_bytes(chunk_size=download_chunk_size)
-        return MediaInfo(
-            content=gen
-            if stream
-            else (
-                GeneratorStreamer(generator=gen, length=length)
-                if USE_FAKE_GEN_STREAM
-                else b"".join(gen)
-            ),
-            filename=get_filename_from_httpx_response_headers(res.headers)
-            or pathlib.Path(url).name,
-            mime_type=res.headers.get("Content-Type") or mimetypes.guess_type(url)[0],
-            length=length,
-            cm=cm,
+    res = stack.enter_context(
+        dl_session.stream(
+            "GET",
+            url,
+            follow_redirects=True,
+            headers={"Accept-Encoding": "identity"},
         )
-    except httpx.HTTPError as e:
-        res.close()
-        raise ValueError(f"An error occurred while downloading from {url}: {e}") from e
+    )
+    return media_info_from_response(
+        res,
+        url=url,
+        download_chunk_size=download_chunk_size,
+        stream=stream,
+        fallback_filename=get_filename_from_url(url),
+        fallback_mime_type=get_mime_type_from_url(url),
+    )
 
 
 def get_media_from_base64(
@@ -450,31 +586,34 @@ def get_media_from_base64(
 
 
 def get_media_from_path(
-    path: pathlib.Path | str,
+    stack: contextlib.ExitStack | contextlib.AsyncExitStack, path: pathlib.Path | str
 ) -> MediaInfo:
     p = pathlib.Path(path)
+    file = stack.enter_context(p.open("rb"))
     return MediaInfo(
-        content=open(p, "rb"),
+        content=file,
         filename=p.name,
         mime_type=mimetypes.guess_type(p)[0],
-        length=p.stat().st_size,
+        length=os.fstat(file.fileno()).st_size,
     )
 
 
 def get_media_from_file_like_obj(
     file_obj: BinaryIO,
 ) -> MediaInfo:
+    length = None
     try:
-        length = os.fstat(file_obj.fileno()).st_size
-    except (AttributeError, OSError):
+        # rewind, like httpx does for multipart uploads, so ``length`` is what is actually sent
+        file_obj.seek(0)
         try:
-            pos = file_obj.tell()
-            file_obj.seek(0, io.SEEK_END)
-            length = file_obj.tell()
-            file_obj.seek(pos)
+            length = os.fstat(file_obj.fileno()).st_size
         except (AttributeError, OSError):
-            length = None
-    filename = getattr(file_obj, "name", None)
+            length = file_obj.seek(0, io.SEEK_END)
+            file_obj.seek(0)
+    except (AttributeError, OSError):  # not seekable
+        pass
+    name = getattr(file_obj, "name", None)
+    filename = os.path.basename(name) if isinstance(name, str) else None
     return MediaInfo(
         content=file_obj,
         filename=filename,
@@ -483,25 +622,14 @@ def get_media_from_file_like_obj(
     )
 
 
-def get_filename_from_httpx_response_headers(
-    headers: httpx.Headers,
-) -> str | None:
-    content_disposition = headers.get("Content-Disposition")
-    if content_disposition:
-        parts = content_disposition.split("filename=")
-        if len(parts) > 1:
-            return parts[1].strip().strip('"').strip("'")
-    return None
-
-
 def get_media_from_media_id_or_obj_or_url(
+    stack: contextlib.ExitStack,
     wa: "WhatsApp",
     media: str | Media,
     media_source: MediaSource,
     download_chunk_size: int,
     stream: bool,
 ) -> MediaInfo:
-    filename: str | None = None
     mime_type: str | None = None
     url: str | None = None
     match media_source:
@@ -523,27 +651,138 @@ def get_media_from_media_id_or_obj_or_url(
             )
     assert url is not None
 
-    res = (cm := wa.api.stream_media_bytes(media_url=url)).__enter__()
-    try:
-        res.raise_for_status()
-    except httpx.HTTPError as e:
-        res.close()
-        raise ValueError(f"An error occurred while downloading from {url}: {e}") from e
-    length: int | None = int(res.headers.get("Content-Length", 0)) or None
-    gen = res.iter_bytes(chunk_size=download_chunk_size)
-    return MediaInfo(
-        content=gen
-        if stream
-        else (
-            GeneratorStreamer(generator=gen, length=length)
-            if USE_FAKE_GEN_STREAM
-            else b"".join(gen)
-        ),
-        filename=filename or get_filename_from_httpx_response_headers(res.headers),
-        mime_type=mime_type or res.headers.get("Content-Type"),
-        length=length,
-        cm=cm,
+    res = stack.enter_context(wa.api.stream_media_bytes(media_url=url))
+    return media_info_from_response(
+        res,
+        url=url,
+        download_chunk_size=download_chunk_size,
+        stream=stream,
+        mime_type=mime_type,
     )
+
+
+def describe_media(media: Any) -> str:
+    """Describes ``media`` for error messages, without its content or the query of a URL."""
+    try:
+        source = detect_media_source(media)
+    except (ValueError, TypeError, OSError):
+        return f"<{type(media).__name__}>"
+    match source:
+        case MediaSource.EXTERNAL_URL | MediaSource.MEDIA_URL:
+            return (
+                urllib.parse.urlsplit(str(media))
+                ._replace(query="", fragment="")
+                .geturl()
+            )
+        case MediaSource.PATH | MediaSource.MEDIA_ID:
+            return str(media)
+        case MediaSource.MEDIA_OBJ:
+            return f"<Media {cast(Media, media).id}>"
+    return f"<{source.name.lower()}>"
+
+
+def open_media(
+    stack: contextlib.ExitStack,
+    *,
+    wa: "WhatsApp",
+    media: str
+    | int
+    | Media
+    | pathlib.Path
+    | bytes
+    | BinaryIO
+    | Iterator[bytes]
+    | AsyncIterator[bytes],
+    source: MediaSource,
+    stream: bool,
+    download_chunk_size: int | None = None,
+    dl_session: httpx.Client | None = None,
+) -> MediaInfo:
+    """
+    Resolve ``media`` into the ``MediaInfo`` to upload.
+
+    Whatever is opened to read it (download client and response, file) is closed with ``stack``, so keep the
+    stack open until the upload is done.
+
+    Args:
+        stream: An iterator body of a known length (Resumable Upload API) instead of a file-like body (multipart upload).
+        dl_session: A client to download with (optional, if not provided a new one is created and closed).
+    """
+    chunk_size = download_chunk_size or DOWNLOAD_CHUNK_SIZE
+    match source:
+        case MediaSource.EXTERNAL_URL:
+            return get_media_from_url(
+                stack,
+                url=str(media),
+                dl_session=dl_session or stack.enter_context(httpx.Client()),
+                download_chunk_size=chunk_size,
+                stream=stream,
+            )
+        case MediaSource.PATH:
+            assert isinstance(media, (str, pathlib.Path))
+            return get_media_from_path(stack, path=media)
+        case MediaSource.BYTES:
+            assert isinstance(media, (bytes, bytearray, memoryview))
+            content = bytes(media)
+            return MediaInfo(content, None, None, len(content))
+        case MediaSource.FILE_OBJ:
+            return get_media_from_file_like_obj(file_obj=cast(BinaryIO, media))
+        case MediaSource.MEDIA_ID | MediaSource.MEDIA_OBJ | MediaSource.MEDIA_URL:
+            assert isinstance(media, (str, Media))
+            return get_media_from_media_id_or_obj_or_url(
+                stack,
+                wa=wa,
+                media=media,
+                media_source=source,
+                download_chunk_size=chunk_size,
+                stream=stream,
+            )
+        case MediaSource.BYTES_GEN:
+            if stream or not USE_FAKE_GEN_STREAM:
+                content = b"".join(cast("Iterator[bytes]", media))
+                return MediaInfo(content, None, None, len(content))
+            return MediaInfo(
+                GeneratorStreamer(generator=cast("Iterator[bytes]", media)),
+                None,
+                None,
+                None,
+            )
+        case MediaSource.BASE64_DATA_URI | MediaSource.BASE64:
+            assert isinstance(media, str)
+            return get_media_from_base64(base64_str=media)
+    raise ValueError(
+        "Media source must be URL, file path, bytes, bytes generator, file-like object, WhatsApp Media, or base64 string."
+    )
+
+
+def resolve_media_name_and_type(
+    *,
+    media_info: MediaInfo,
+    filename: str | None,
+    mime_type: str | None,
+    media_type: str | None,
+) -> tuple[str, str]:
+    """
+    The ``(filename, mime_type)`` to upload with: what was given, what the media says, then the defaults of
+    ``media_type``. Only when still missing, they are guessed from the filename and sniffed from the content
+    before falling back to ``file.txt`` / ``text/plain``.
+    """
+    final_filename = (
+        filename or media_info.filename or media_types_default_filenames.get(media_type)
+    )
+    final_mimetype = (
+        mime_type
+        or media_info.mime_type
+        or media_types_default_mime_types.get(media_type)
+    )
+    if final_mimetype is None and final_filename:
+        final_mimetype = mimetypes.guess_type(final_filename)[0]
+    if not (final_filename and final_mimetype):
+        sniffed = sniff_media_type(peek_media_head(media_info.content))
+        if sniffed:
+            final_mimetype = final_mimetype or sniffed[0]
+            final_filename = final_filename or f"file{sniffed[1]}"
+    return final_filename or "file.txt", final_mimetype or "text/plain"
 
 
 def internal_upload_media(
@@ -567,73 +806,24 @@ def internal_upload_media(
     dl_session: httpx.Client | None = None,
 ) -> Media:
     """
-    Internal method to upload media to WhatsApp servers. Returns a tuple of (``media_id``, ``filename``).
+    Internal method to upload media to WhatsApp servers. Returns the uploaded ``Media``.
     """
-    media_info: MediaInfo | None = None
-    client, close_client = None, False
-
-    match media_source:
-        case MediaSource.EXTERNAL_URL:
-            client, close_client = (
-                (dl_session, False) if dl_session else (httpx.Client(), True)
-            )
-            media_info = get_media_from_url(
-                url=str(media),
-                dl_session=client,
-                download_chunk_size=download_chunk_size or DOWNLOAD_CHUNK_SIZE,
-                stream=False,
-            )
-        case MediaSource.PATH:
-            assert isinstance(media, (str, pathlib.Path))
-            media_info = get_media_from_path(path=media)
-        case MediaSource.BYTES:
-            assert isinstance(media, bytes)
-            media_info = MediaInfo(
-                content=media, filename=None, mime_type=None, length=len(media)
-            )
-        case MediaSource.FILE_OBJ:
-            media_info = get_media_from_file_like_obj(file_obj=cast(BinaryIO, media))
-        case MediaSource.MEDIA_ID | MediaSource.MEDIA_OBJ | MediaSource.MEDIA_URL:
-            assert isinstance(media, (str, Media))
-            media_info = get_media_from_media_id_or_obj_or_url(
-                wa=wa,
-                media=media,
-                media_source=media_source,
-                download_chunk_size=download_chunk_size or DOWNLOAD_CHUNK_SIZE,
-                stream=False,
-            )
-        case MediaSource.BYTES_GEN:
-            media = cast(Iterator[bytes], media)
-            media_info = MediaInfo(
-                content=(
-                    GeneratorStreamer(generator=media)
-                    if USE_FAKE_GEN_STREAM
-                    else b"".join(media)
-                ),
-                filename=None,
-                mime_type=None,
-                length=None,
-            )
-        case MediaSource.BASE64_DATA_URI | MediaSource.BASE64:
-            assert isinstance(media, str)
-            media_info = get_media_from_base64(base64_str=media)
-        case _:
-            raise ValueError(
-                "Media source must be URL, file path, bytes, bytes generator, file-like object, WhatsApp Media, or base64 string."
-            )
-    if media_info is None:
-        raise ValueError(f"Failed to get media content from {media}")
-    final_filename = (
-        filename
-        or media_info.filename
-        or media_types_default_filenames.get(media_type, "file.txt")
-    )
-    final_mimetype = (
-        mime_type
-        or media_info.mime_type
-        or media_types_default_mime_types.get(media_type, "text/plain")
-    )
-    try:
+    with contextlib.ExitStack() as stack:
+        media_info = open_media(
+            stack,
+            wa=wa,
+            media=media,
+            source=media_source,
+            stream=False,
+            download_chunk_size=download_chunk_size,
+            dl_session=dl_session,
+        )
+        final_filename, final_mimetype = resolve_media_name_and_type(
+            media_info=media_info,
+            filename=filename,
+            mime_type=mime_type,
+            media_type=media_type,
+        )
         logger.debug(
             "Uploading media to WhatsApp servers: filename=%s, mime_type=%s, length=%s",
             final_filename,
@@ -665,14 +855,20 @@ def internal_upload_media(
         )
         return uploaded
 
-    finally:
-        try:
-            if close_client and client is not None:
-                client.close()
-            if media_source == MediaSource.PATH:
-                media_info.content.close()  # ty: ignore[unresolved-attribute]
-        except Exception:  # best-effort cleanup, never mask the real error
-            logger.debug("Failed to close media resource during cleanup", exc_info=True)
+
+def group_by_media(
+    items: Iterable[Any], media_of: Callable[[Any], Any]
+) -> list[tuple[Any, list[Any]]]:
+    """
+    Group the ``items`` that share a media, so it is uploaded only once (they don't have to be adjacent).
+    Strings, ints, bytes and paths are compared by value, anything else (a stream can't be read twice) by identity.
+    """
+    groups: dict[Any, tuple[Any, list[Any]]] = {}
+    for item in items:
+        media = media_of(item)
+        key = media if isinstance(media, (str, int, bytes, pathlib.Path)) else id(media)
+        groups.setdefault(key, (media, []))[1].append(item)
+    return list(groups.values())
 
 
 def filter_not_uploaded_comps(
@@ -690,6 +886,21 @@ def filter_not_uploaded_comps(
     return not_uploaded
 
 
+def run_in_threads(
+    thread_name_prefix: str, tasks: Iterable[Callable[[], None]]
+) -> None:
+    """Run ``tasks`` in threads, cancelling the ones that haven't started when one fails."""
+    with futures.ThreadPoolExecutor(thread_name_prefix=thread_name_prefix) as executor:
+        submitted = [executor.submit(task) for task in tasks]
+        try:
+            for future in futures.as_completed(submitted):
+                future.result()
+        except BaseException:
+            for future in submitted:
+                future.cancel()
+            raise
+
+
 def upload_template_media_components(
     *,
     wa: "WhatsApp",
@@ -703,27 +914,19 @@ def upload_template_media_components(
     if not not_uploaded:
         return
 
-    stop_event = threading.Event()
-    with futures.ThreadPoolExecutor(
-        thread_name_prefix="pywa-upload-template-media"
-    ) as executor:
-        tasks = [
-            executor.submit(
+    run_in_threads(
+        "pywa-upload-template-media",
+        [
+            functools.partial(
                 upload_comps_example,
                 wa=wa,
                 example=example,
                 comps=list(comps),
                 app_id=app_id,
-                stop_event=stop_event,
             )
-            for example, comps in itertools.groupby(
-                not_uploaded, key=lambda x: x._example
-            )
-        ]
-        for future in futures.as_completed(tasks):
-            future.result()
-            if stop_event.is_set():
-                break
+            for example, comps in group_by_media(not_uploaded, lambda x: x._example)
+        ],
+    )
 
 
 def internal_upload_file(
@@ -743,103 +946,53 @@ def internal_upload_file(
     fallback_filename: str | None,
 ) -> tuple[str, MediaSource]:
     """Internal method to upload a file to Resumable Upload API. Returns a tuple of (``file_handle``, ``media_source``)."""
-    media_info: MediaInfo | None = None
-    client = None
-
     source = detect_media_source(file)
-    match source:
-        case MediaSource.EXTERNAL_URL:
-            client = httpx.Client()
-            media_info = get_media_from_url(
-                url=str(file),
-                dl_session=client,
-                download_chunk_size=DOWNLOAD_CHUNK_SIZE,
-                stream=True,
-            )
-        case MediaSource.PATH:
-            assert isinstance(file, (str, pathlib.Path))
-            media_info = get_media_from_path(path=file)
-        case MediaSource.MEDIA_ID | MediaSource.MEDIA_OBJ | MediaSource.MEDIA_URL:
-            assert isinstance(file, (str, Media))
-            media_info = get_media_from_media_id_or_obj_or_url(
-                wa=wa,
-                media=file,
-                media_source=source,
-                download_chunk_size=DOWNLOAD_CHUNK_SIZE,
-                stream=True,
-            )
-        case MediaSource.BYTES:
-            assert isinstance(file, bytes)
-            media_info = MediaInfo(
-                content=file, filename=None, mime_type=None, length=len(file)
-            )
-        case MediaSource.FILE_OBJ:
-            media_info = get_media_from_file_like_obj(cast(BinaryIO, file))
-        case MediaSource.BYTES_GEN:
-            all_bytes = b"".join(cast("Iterator[bytes]", file))
-            media_info = MediaInfo(
-                content=all_bytes,
-                filename=None,
-                mime_type=None,
-                length=len(all_bytes),
-            )
-        case MediaSource.BASE64_DATA_URI | MediaSource.BASE64:
-            assert isinstance(file, str)
-            media_info = get_media_from_base64(base64_str=file)
-        case MediaSource.FILE_HANDLE:
-            return str(file), source
+    if source == MediaSource.FILE_HANDLE:
+        return str(file), source
 
     try:
-        if not media_info:
-            raise ValueError(
-                f"Invalid media example for file upload: {file}. "
-                "It must be a URL, file path, bytes, file-like object, WhatsApp Media, or file handle."
+        with contextlib.ExitStack() as stack:
+            media_info = open_media(
+                stack, wa=wa, media=file, source=source, stream=True
             )
-        if media_info.length is None:
-            raise ValueError("Media must have a known length.")
-        final_filename = media_info.filename or fallback_filename
-        if final_filename is None:
-            raise ValueError("Could not determine a filename for the file upload.")
-        final_mimetype = mime_type or media_info.mime_type or fallback_mime_type
-        logger.debug(
-            "Uploading file to Resumable Upload API: filename=%s, mime_type=%s, length=%s",
-            final_filename,
-            final_mimetype,
-            media_info.length,
-        )
-        return wa.api.upload_file(
-            upload_session_id=wa.api.create_upload_session(
-                app_id=resolve_arg(
-                    wa=wa,
-                    value=app_id,
-                    method_arg="app_id",
-                    client_arg="app_id",
+            if media_info.length is None:
+                raise ValueError("Media must have a known length.")
+            final_filename = media_info.filename or fallback_filename
+            if final_filename is None:
+                raise ValueError("Could not determine a filename for the file upload.")
+            final_mimetype = mime_type or media_info.mime_type or fallback_mime_type
+            logger.debug(
+                "Uploading file to Resumable Upload API: filename=%s, mime_type=%s, length=%s",
+                final_filename,
+                final_mimetype,
+                media_info.length,
+            )
+            return wa.api.upload_file(
+                upload_session_id=wa.api.create_upload_session(
+                    app_id=resolve_arg(
+                        wa=wa,
+                        value=app_id,
+                        method_arg="app_id",
+                        client_arg="app_id",
+                    ),
+                    file_name=final_filename,
+                    file_length=media_info.length,
+                    file_type=final_mimetype,
+                )["id"],
+                file=cast(
+                    "bytes | Iterator[bytes] | BinaryIO | GeneratorStreamer",
+                    media_info.content,
                 ),
-                file_name=final_filename,
-                file_length=media_info.length,
-                file_type=final_mimetype,
-            )["id"],
-            file=cast(
-                "bytes | Iterator[bytes] | BinaryIO | GeneratorStreamer",
-                media_info.content,
-            ),
-            file_offset=0,
-            content_length=media_info.length,
-        )["h"], source
+                file_offset=0,
+                content_length=media_info.length,
+            )["h"], source
 
+    except WhatsAppError:
+        raise
     except Exception as e:
         raise ValueError(
-            f"Failed to upload media for file upload with file: {file if not isinstance(file, bytes) else '<bytes>'}: {e}"
+            f"Failed to upload media for file upload with file: {describe_media(file)}: {e}"
         ) from e
-
-    finally:
-        try:
-            if client:
-                client.close()
-            if source == MediaSource.PATH:
-                media_info.content.close()  # ty: ignore[unresolved-attribute]
-        except Exception:  # best-effort cleanup, never mask the real error
-            logger.debug("Failed to close media resource during cleanup", exc_info=True)
 
 
 def upload_comps_example(
@@ -855,14 +1008,11 @@ def upload_comps_example(
     | AsyncIterator[bytes],
     comps: list[_BaseMediaHeaderComponent],
     app_id: int | str | None,
-    stop_event: threading.Event,
 ) -> None:
-    if stop_event.is_set():
-        return
     first_comp = comps[0]
 
     try:
-        handle, source = internal_upload_file(
+        handle, _ = internal_upload_file(
             wa=wa,
             file=example,
             app_id=app_id,
@@ -874,25 +1024,14 @@ def upload_comps_example(
                 first_comp.format, "pywa-template-header"
             ),
         )
-        is_media_obj = source == MediaSource.MEDIA_OBJ
-        is_open_file = source == MediaSource.FILE_OBJ
         for comp in comps:
-            comp._handle = handle
-            if is_media_obj:
-                comp._example = cast(Media, comp._example).id
-                # prevent keeping Media obj in _example
-            if is_open_file:
-                try:
-                    comp._example = cast(
-                        BinaryIO, comp._example
-                    ).name  # prevent keeping file obj in _example
-                except AttributeError:
-                    pass
+            comp._set_uploaded(handle)
 
+    except WhatsAppError:
+        raise
     except Exception as e:
-        stop_event.set()
         raise ValueError(
-            f"Failed to upload media for component {first_comp.__class__.__name__} with example: {example if not isinstance(example, bytes) else '<bytes>'}: {e}"
+            f"Failed to upload media for component {first_comp.__class__.__name__} with example: {describe_media(example)}: {e}"
         ) from e
 
 
@@ -924,21 +1063,19 @@ def upload_template_media_params(
 
     if not not_uploaded:
         return
-    with futures.ThreadPoolExecutor(
-        thread_name_prefix="pywa-upload-template-media-params"
-    ) as executor:
-        tasks = [
-            executor.submit(
+    run_in_threads(
+        "pywa-upload-template-media-params",
+        [
+            functools.partial(
                 upload_params_media,
                 wa=wa,
                 sender=sender,
                 media=media,
                 params=list(params),
             )
-            for media, params in itertools.groupby(not_uploaded, key=lambda x: x.media)
-        ]
-        for task in futures.wait(tasks)[0]:
-            task.result()
+            for media, params in group_by_media(not_uploaded, lambda x: x.media)
+        ],
+    )
 
 
 def upload_params_media(
@@ -973,9 +1110,11 @@ def upload_params_media(
                 else cast(str, uploaded_media)
             )
             p._fallback_filename = fallback_filename
+    except WhatsAppError:
+        raise
     except Exception as e:
         raise ValueError(
-            f"Failed to upload media for parameter {first_param} with media: {media if not isinstance(media, bytes) else '<bytes>'}: {e}"
+            f"Failed to upload media for parameter {first_param} with media: {describe_media(media)}: {e}"
         ) from e
 
 
