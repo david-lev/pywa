@@ -9,6 +9,7 @@ from pywa import _helpers as helpers
 from pywa import types
 from pywa.types import flows
 from pywa.types.templates import *
+from pywa.types.templates import _parse_component
 
 
 def _resolve_example_handles(template: Template):
@@ -1121,3 +1122,52 @@ def test_url_button_comp():
             url="https://example.com",
             example="https://example.com?ref=wa&utm=123",
         )
+
+
+def test_media_header_without_example_from_dict(caplog):
+    """WhatsApp omits the sample media when reading back a template it did not receive one for."""
+    for fmt, cls in (
+        ("IMAGE", HeaderImage),
+        ("VIDEO", HeaderVideo),
+        ("DOCUMENT", HeaderDocument),
+    ):
+        comp = _parse_component({"type": "HEADER", "format": fmt})
+        assert isinstance(comp, cls), (
+            f"A {fmt} header without an example should still be parsed as {cls.__name__}"
+        )
+        assert comp.example is None
+    assert not caplog.records, "Parsing should not log anything"
+
+
+def test_media_header_with_example_from_dict():
+    comp = _parse_component(
+        {
+            "type": "HEADER",
+            "format": "IMAGE",
+            "example": {"header_handle": ["1:imagehandle"]},
+        }
+    )
+    assert isinstance(comp, HeaderImage)
+    assert comp.example == "1:imagehandle"
+
+
+def test_media_header_with_unexpected_example_is_reported(caplog):
+    """Only an absent `example` is benign — a present but unexpected one must not be swallowed."""
+    for example in ({}, {"header_handle": []}, {"header_text": ["x"]}):
+        caplog.clear()
+        comp = _parse_component(
+            {"type": "HEADER", "format": "IMAGE", "example": example}
+        )
+        assert comp == {"type": "HEADER", "format": "IMAGE", "example": example}, (
+            "An unparseable component should fall back to its dict representation"
+        )
+        assert caplog.records, f"{example!r} should have been reported, not accepted"
+
+
+def test_media_header_without_example_cannot_be_submitted():
+    """A header read back without sample media has nothing to upload and cannot be sent back."""
+    without_example = HeaderImage(example=None)
+    with pytest.raises(
+        ValueError, match="^HeaderImage media example not uploaded yet.$"
+    ):
+        without_example.to_dict()
