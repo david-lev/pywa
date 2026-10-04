@@ -73,6 +73,7 @@ import abc
 import dataclasses
 import datetime
 import functools
+import io
 import json
 import logging
 import pathlib
@@ -1584,6 +1585,16 @@ class _BaseMediaHeaderComponent(BaseHeaderComponent, abc.ABC):
         """
         self._example = value
         self._handle, self._mime_type = None, None
+
+    def _set_uploaded(self, handle: str) -> None:
+        """Sets the ``handle`` of the uploaded example. A ``Media`` or an open file is no longer needed, so only its ID or name is kept."""
+        self._handle = handle
+        if isinstance(self._example, Media):
+            self._example = self._example.id
+        elif isinstance(self._example, io.IOBase):
+            name = getattr(self._example, "name", None)
+            if isinstance(name, str):  # an ``int`` is a file descriptor, not a name
+                self._example = name
 
     @classmethod
     def from_dict(cls, data: dict) -> _BaseMediaHeaderComponent:
