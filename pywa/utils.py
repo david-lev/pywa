@@ -357,7 +357,7 @@ class FlowRequestDecryptedMedia:
     def __iter__(self):
         """Allow iteration over the attributes."""
         warnings.warn(
-            "flow_request_media_decryptor() is no longer return (media_id, filename, data) tuple, but FlowRequestDecryptedMedia object.",
+            "`flow_request_media_decryptor()` now returns a `FlowRequestDecryptedMedia` object instead of a (media_id, filename, data) tuple: unpacking it is deprecated, use its attributes instead.",
             PywaDeprecationWarning,
             stacklevel=2,
         )
@@ -516,6 +516,6 @@ def start_ngrok_tunnel(
         **forward_options,
     ).url()
 
-    _logger.info(f"Tunnel established: {public_url} -> {host}:{port}")
+    _logger.info("Tunnel established: %s -> %s:%s", public_url, host, port)
 
     return public_url

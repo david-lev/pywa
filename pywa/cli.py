@@ -10,7 +10,6 @@ from __future__ import annotations
 import argparse
 import importlib
 import itertools
-import logging
 import os
 import pathlib
 import sys
@@ -20,15 +19,13 @@ from typing import TypedDict
 import httpx
 
 from . import __version__ as pywa_version
-from ._logging import ENV_LOG_LEVEL, format_banner, setup_console_logging
+from ._logging import ENV_LOG_LEVEL, emit_banner, setup_console_logging
 from .client import WhatsApp
 from .errors import SendMessageError
 
 GITHUB_REPO = "david-lev/pywa"
 GITHUB_API_BASE = "https://api.github.com/repos"
 GITHUB_RAW_BASE = "https://raw.githubusercontent.com"
-
-_logger = logging.getLogger(__name__)
 
 
 class PywaCLIException(Exception):
@@ -197,8 +194,7 @@ def serve_application(
 
     host = uvicorn_kwargs.get("host", "127.0.0.1")
     port = uvicorn_kwargs.get("port", 8000)
-    default_log_level = "debug" if command == "dev" else "info"
-    log_level = uvicorn_kwargs.pop("log_level", None) or default_log_level
+    log_level = uvicorn_kwargs.pop("log_level", None) or "info"
 
     # `--reload`/multi-worker runs spawn a subprocess that re-imports the app fresh, so
     # the env var is what actually reaches the worker; this direct call only styles the
@@ -216,7 +212,7 @@ def serve_application(
     ]
     if command == "dev":
         banner_lines.append("⚠️  Auto-reload:  Enabled (Use 'pywa run' for production)")
-    _logger.info(format_banner(banner_lines))
+    emit_banner(banner_lines)
 
     clean_kwargs = {k: v for k, v in uvicorn_kwargs.items() if v is not None}
 
@@ -495,7 +491,7 @@ def main() -> None:
         "--log-level",
         type=str,
         choices=["critical", "error", "warning", "info", "debug", "trace"],
-        help="Log level. Default: info for `run`, debug for `dev`.",
+        help="Log level. Default: info. `debug` and `trace` may include personal data from your users.",
     )
     serve_parser.add_argument("--ssl-keyfile", type=str, help="SSL key file.")
     serve_parser.add_argument(

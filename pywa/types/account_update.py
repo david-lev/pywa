@@ -387,6 +387,7 @@ class AccountUpdate(BaseUpdate):
     volume_tier_info: VolumeTierInfo | None
 
     _webhook_field = "account_update"
+    _log_attr = "event"
 
     @classmethod
     def from_update(cls, client: WhatsApp, update: RawUpdate) -> BaseUpdate:

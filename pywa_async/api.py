@@ -2,10 +2,17 @@
 
 from __future__ import annotations
 
+import logging
+import time
 from collections.abc import AsyncIterator
 from contextlib import _AsyncGeneratorContextManager
 from typing import TYPE_CHECKING
 
+from pywa._logging import (
+    describe_request,
+    describe_request_kwargs,
+    log_api_response,
+)
 from pywa.api import *
 from pywa.api import (
     _logger,
@@ -56,28 +63,34 @@ class GraphAPIAsync(GraphAPI):
         kwargs.pop(
             "log_kwargs", None
         )  # backwards compatibility for old versions of pywa
-        _logger.debug(
-            "Making %s request to %s with kwargs: %s",
-            method,
-            endpoint,
-            {k: v if k != "files" else "<files>" for k, v in kwargs.items()},
-        )
+        if _logger.isEnabledFor(logging.DEBUG):
+            _logger.debug(
+                "%s request: %s",
+                describe_request(method, endpoint),
+                describe_request_kwargs(kwargs),
+            )
+        started = time.perf_counter()
         try:
             res = await self._session.request(method=method, url=endpoint, **kwargs)
-        except (httpx.TimeoutException, httpx.ConnectError, httpx.ProxyError):
+        except (httpx.TimeoutException, httpx.ConnectError, httpx.ProxyError) as e:
             _logger.warning(
-                "You may want to provide your own `httpx.Client` instance. e.g. `WhatsApp(session=httpx.Client(timeout=..., proxies=...))`. See https://www.python-httpx.org/api/#client for more information."
+                "%s failed after %.0fms: %s: %s. You may want to provide your own `httpx.Client` instance, "
+                "e.g. `WhatsApp(session=httpx.Client(timeout=...))`. See https://www.python-httpx.org/api/#client",
+                describe_request(method, endpoint),
+                (time.perf_counter() - started) * 1000,
+                type(e).__name__,
+                e,
             )
             raise
         except httpx.RequestError as e:
-            _logger.debug("%s Request to %s failed: %s", method, endpoint, e)
+            _logger.warning(
+                "%s failed: %s: %s",
+                describe_request(method, endpoint),
+                type(e).__name__,
+                e,
+            )
             raise
-        _logger.debug(
-            "Response code %d from %s: %s",
-            res.status_code,
-            endpoint,
-            res.text,
-        )
+        log_api_response(_logger, method, endpoint, res, started)
         if res.status_code >= 400:
             raise WhatsAppError.from_dict(error=self._extract_error(res), response=res)
         return res.json()

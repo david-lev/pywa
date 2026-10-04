@@ -3,6 +3,7 @@ import dataclasses
 import datetime
 import importlib
 import json
+import logging
 import pathlib
 import re
 from collections.abc import Callable
@@ -743,3 +744,50 @@ def test_flow_preview_with_params():
         )
         == "https://business.facebook.com/wa/manage/flows/1460367762010364/preview/?token=fihsufcisd-09ad-4b88-b6aa-hdiewfcw&flow_token=flow_token_example&interactive=true&flow_action=navigate&flow_action_payload=%7B%22screen%22%3A%22START%22%2C%22is_new_user%22%3Atrue%2C%22welcome_msg%22%3A%22Welcome+to+our+service%21%22%7D&phone_number=1234567890&debug=true"
     )
+
+
+def test_flow_decryption_failure_is_logged(caplog):
+    def bad_decryptor(*_):
+        raise ValueError("bad key")
+
+    wa = WhatsApp(
+        token="xxx", server=None, verify_token="fdfd", business_private_key="xxx"
+    )
+    wrapper = wa.get_flow_request_handler(
+        endpoint="/flow",
+        callback=lambda _, __: ...,
+        request_decryptor=bad_decryptor,
+        response_encryptor=...,
+    )
+    caplog.set_level(logging.INFO, logger="pywa")
+    _, status = wrapper.handle(
+        {"encrypted_flow_data": "a", "encrypted_aes_key": "b", "initial_vector": "c"}
+    )
+    assert status == 421
+    assert "Failed to decrypt Flow request (ValueError)" in caplog.text
+    assert "[/flow]" in caplog.text
+
+
+def test_flow_request_logs_summary(caplog):
+    wa = WhatsApp(
+        token="xxx", server=None, verify_token="fdfd", business_private_key="xxx"
+    )
+    payload = {
+        "encrypted_flow_data": "a",
+        "encrypted_aes_key": "b",
+        "initial_vector": "c",
+    }
+    wrapper = wa.get_flow_request_handler(
+        endpoint="/flow",
+        callback=lambda _, __: {"screen": "X"},
+        request_decryptor=lambda *_: (
+            {"version": "3.0", "action": "INIT", "flow_token": "t"},
+            b"k",
+            b"i",
+        ),
+        response_encryptor=lambda res, *_: "enc",
+    )
+    caplog.set_level(logging.INFO, logger="pywa")
+    assert wrapper.handle(payload) == ("enc", 200)
+    assert "Flow INIT" in caplog.text
+    assert "<lambda>" in caplog.text

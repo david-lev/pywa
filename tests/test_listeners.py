@@ -1,16 +1,19 @@
 import asyncio
+import logging
 import threading
 import time
 
 import pytest
 
 from pywa import WhatsApp as WhatsAppSync
-from pywa import filters
+from pywa import filters, server, utils
 from pywa.listeners import (
+    Listener,
     ListenerCanceled,
     ListenerStopped,
     ListenerTimeout,
     UserUpdateListenerIdentifier,
+    _warn_anyio_thread_limit,
 )
 from pywa_async import WhatsApp as WhatsAppAsync
 
@@ -154,3 +157,33 @@ async def test_listener_stopped_async(wa_async: WhatsAppAsync):
             to=first_id, filters=filters.true, cancelers=filters.false, timeout=0.3
         )
     assert exc_info.value.reason == "manual"
+
+
+def test_listener_timeout_is_logged_at_info(wa_sync: WhatsAppSync, caplog):
+    caplog.set_level(logging.INFO, logger="pywa")
+    first_id = next(DummyUpdate().listener_identifiers)
+    with pytest.raises(ListenerTimeout):
+        wa_sync.listen(to=first_id, filters=filters.true, timeout=0.000001)
+    assert "Listener timed out after" in caplog.text
+
+
+def test_anyio_thread_limit_warns_once_per_spike(wa_sync: WhatsAppSync, caplog):
+    wa_sync._server_type = utils.CustomServerType.STARLETTE
+    caplog.set_level(logging.WARNING, logger="pywa")
+    old = server.ANYIO_THREADS_LIMIT
+    server.ANYIO_THREADS_LIMIT = 10
+    try:
+        for i in range(9):
+            wa_sync._listeners[i] = Listener(filters=None, cancelers=None)
+        _warn_anyio_thread_limit(wa_sync)
+        _warn_anyio_thread_limit(wa_sync)  # same spike: no second warning
+        assert caplog.text.count("close to the AnyIO thread limit") == 1
+        wa_sync._listeners.clear()
+        _warn_anyio_thread_limit(wa_sync)  # back under the threshold: re-arms
+        for i in range(9):
+            wa_sync._listeners[i] = Listener(filters=None, cancelers=None)
+        _warn_anyio_thread_limit(wa_sync)
+        assert caplog.text.count("close to the AnyIO thread limit") == 2
+    finally:
+        server.ANYIO_THREADS_LIMIT = old
+        wa_sync._listeners.clear()

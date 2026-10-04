@@ -78,7 +78,7 @@ class _CallShortcuts:
         Deprecated. Use ``call.from_user.wa_id`` instead.
         """
         warnings.warn(
-            "Deprecated. Use `call.chat.id` instead.",
+            "`call.caller` is deprecated, use `call.chat.id` instead.",
             PywaDeprecationWarning,
             stacklevel=2,
         )
@@ -92,7 +92,7 @@ class _CallShortcuts:
         Deprecated. Use ``call.metadata.phone_number_id`` instead.
         """
         warnings.warn(
-            "Deprecated. Use `call.metadata.phone_number_id` instead.",
+            "`call.callee` is deprecated, use `call.metadata.phone_number_id` instead.",
             PywaDeprecationWarning,
             stacklevel=2,
         )
@@ -196,6 +196,7 @@ class CallConnect(BaseUserUpdate, _CallShortcuts):
     session: SessionDescription | None
 
     _webhook_field = "calls"
+    _log_attr = None
 
     @classmethod
     def from_update(cls, client: WhatsApp, update: RawUpdate) -> CallConnect:
@@ -244,6 +245,7 @@ class CallPermissionUpdate(BaseUserUpdate):
     expiration_timestamp: datetime.datetime | None = None
 
     _webhook_field = "messages"
+    _log_attr = "response"
 
     def __bool__(self):
         """
@@ -411,6 +413,7 @@ class CallTerminate(BaseUserUpdate, _CallShortcuts, Generic[_CallbackDataT]):
     tracker: _CallbackDataT | None
 
     _webhook_field = "calls"
+    _log_attr = "status"
 
     @property
     def message_id_to_reply(self) -> str:
@@ -510,6 +513,7 @@ class CallStatus(BaseUserUpdate, _CallShortcuts, Generic[_CallbackDataT]):
     tracker: _CallbackDataT | None = None
 
     _webhook_field = "calls"
+    _log_attr = "status"
 
     @classmethod
     def from_update(cls, client: WhatsApp, update: RawUpdate) -> CallStatus:

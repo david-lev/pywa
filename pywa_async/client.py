@@ -24,6 +24,7 @@ import httpx
 from pywa.client import (
     _DEFAULT_VERIFY_DELAY_SEC,
     _AuthenticationTemplates,
+    _logger,
     _TemplateUpdate,
 )
 from pywa.client import (
@@ -1913,6 +1914,12 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             with path.open("wb") as f:
                 async for chunk in res.aiter_bytes(chunk_size=chunk_size):
                     f.write(chunk)
+            _logger.info(
+                "Downloaded media to %s (%d bytes, %s)",
+                path,
+                path.stat().st_size,
+                mimetype,
+            )
             return path
 
     async def get_media_bytes(self, url: str, **httpx_kwargs: Any) -> bytes:

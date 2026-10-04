@@ -28,7 +28,7 @@ import httpx
 from . import _helpers as helpers
 from . import utils
 from .api import GraphAPI
-from .errors import PywaDeprecationWarning
+from .errors import PywaDeprecationWarning, PywaWarning
 from .filters import Filter
 from .handlers import (
     AccountUpdateHandler,
@@ -332,8 +332,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             warnings.warn(
                 message=f"PyWa officially supports WhatsApp Cloud API version {utils.Version.GRAPH_API.min} and up. "
                 f"Using version {api_version} is not officially supported and may cause unexpected behavior.",
-                category=RuntimeWarning,
-                stacklevel=2,
+                category=PywaWarning,
+                stacklevel=3 if self._async_allowed else 2,
             )
 
         self.phone_id = str(phone_id) if phone_id is not None else None
@@ -397,8 +397,23 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         self._continue_handling = continue_handling
         self._skip_duplicate_updates = skip_duplicate_updates
         self._uvicorn_workers = 0
+        self._listeners_near_thread_limit = False
 
         super().__init__()
+
+        _logger.debug(
+            "Initialized %s client: phone_id=%s waba_id=%s api=%s token=%s server=%s webhook_endpoint=%s "
+            "validate_updates=%s filter_updates=%s",
+            type(self).__module__.split(".")[0],
+            self.phone_id,
+            self.waba_id,
+            self._api._session.base_url if self._api else None,
+            "set" if token else "missing",
+            self._server_type.name if self._server_type else None,
+            webhook_endpoint,
+            validate_updates,
+            filter_updates,
+        )
 
         if handlers_modules:
             self.load_handlers_modules(*handlers_modules)
@@ -580,6 +595,13 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             self._check_for_async_filters(handler._filters)
             bisect.insort(
                 self._handlers[handler.__class__], handler, key=lambda x: -x._priority
+            )
+            _logger.debug(
+                "Added %s for '%s' (priority=%s, filters=%s)",
+                handler.__class__.__name__,
+                getattr(handler._callback, "__name__", repr(handler._callback)),
+                handler._priority,
+                handler._filters,
             )
 
     def remove_handlers(self, *handlers: Handler[Any], silent: bool = False) -> None:
@@ -2112,6 +2134,12 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             with path.open("wb") as f:
                 for chunk in res.iter_bytes(chunk_size=chunk_size):
                     f.write(chunk)
+            _logger.info(
+                "Downloaded media to %s (%d bytes, %s)",
+                path,
+                path.stat().st_size,
+                mimetype,
+            )
             return path
 
     def get_media_bytes(self, url: str, **httpx_kwargs: Any) -> bytes:

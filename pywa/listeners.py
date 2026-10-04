@@ -9,6 +9,7 @@ __all__ = [
 ]
 
 import dataclasses
+import logging
 import threading
 import warnings
 from typing import TYPE_CHECKING, Any, TypeVar, cast
@@ -132,6 +133,8 @@ class ListenerStopped(Exception):
         )
 
 
+_logger = logging.getLogger(__name__)
+
 _UpdateT = TypeVar("_UpdateT", bound="BaseUpdate")
 
 
@@ -183,22 +186,23 @@ def _warn_anyio_thread_limit(wa: WhatsApp) -> None:
         current_active = len(wa._listeners)
         warning_threshold = max(1, int((server.ANYIO_THREADS_LIMIT or 40) * 0.90))
 
-        if current_active >= warning_threshold:
-            starlette_instructions = "Increase the AnyIO thread limit by setting the `pywa.server.ANYIO_THREADS_LIMIT` variable to a higher value (e.g., 100), but be cautious as this may impact server performance.\n\n"
-            fastapi_instructions = "Increase the AnyIO thread limit in your app (See: https://anyio.readthedocs.io/en/stable/threads.html#adjusting-the-default-maximum-worker-thread-count) and let pywa know by setting the `pywa.server.ANYIO_THREADS_LIMIT` variable to the same value, but be cautious as this may impact server performance.\n\n"
+        if current_active < warning_threshold:
+            wa._listeners_near_thread_limit = False
+            return
+        if wa._listeners_near_thread_limit:
+            return
+        wa._listeners_near_thread_limit = True
 
-            warnings.warn(
-                f"\n\n"
-                f"⚠️ ⚠️ CRITICAL SERVER THREAT ⚠️ ⚠️\n"
-                f"Active listeners ({current_active}) are approaching the assumed AnyIO thread limit ({server.ANYIO_THREADS_LIMIT or 40}).\n"
-                f"If this limit is reached, YOUR SERVER WILL COMPLETELY FREEZE and drop incoming webhooks.\n\n"
-                f"IMMEDIATE ACTION REQUIRED (Choose one):\n"
-                f"  1. [RECOMMENDED] Migrate to `pywa_async` for fully non-blocking asynchronous listeners.\n"
-                f"  2. Enforce strict, shorter `timeout` values on all `.wait_for_...` calls to free up threads faster.\n"
-                f"  3. {starlette_instructions if wa._server_type == utils.CustomServerType.STARLETTE else fastapi_instructions}\n",
-                PywaWarning,
-                stacklevel=3,
-            )
+        _logger.warning(
+            "%d active listeners are close to the AnyIO thread limit (%d): if it is reached the server "
+            "will freeze and drop webhooks. Use `pywa_async`, set shorter `timeout`s on `.wait_for_...` "
+            "calls, or raise the limit (%s).",
+            current_active,
+            server.ANYIO_THREADS_LIMIT or 40,
+            "`pywa.server.ANYIO_THREADS_LIMIT`"
+            if wa._server_type == utils.CustomServerType.STARLETTE
+            else "in your app, then set `pywa.server.ANYIO_THREADS_LIMIT` to the same value",
+        )
 
 
 class _Listeners:
@@ -282,9 +286,20 @@ class _Listeners:
             cancelers=cancelers,
         )
         self._listeners[to] = listener
+        _logger.debug(
+            "Listening for %r (timeout=%s, active listeners=%d)",
+            to,
+            timeout,
+            len(self._listeners),
+        )
         try:
             if not listener.event.wait(timeout):
                 assert timeout is not None  # `.wait(None)` never times out
+                _logger.info(
+                    "Listener timed out after %ss (active listeners=%d)",
+                    timeout,
+                    len(self._listeners) - 1,
+                )
                 raise ListenerTimeout(timeout) from None
 
             if listener.exception:
@@ -319,6 +334,7 @@ class _Listeners:
         except KeyError:
             raise ValueError("Listener does not exist") from None
         listener.stop(reason)
+        _logger.debug("Stopped listener %r (reason=%s)", to, reason)
         self._remove_listener(identifier=to)
 
     def _remove_listener(self: WhatsApp, identifier: BaseListenerIdentifier) -> None:

@@ -161,6 +161,7 @@ class FlowCompletion(BaseUserUpdate):
 
     _txt_fields = ("token", "body")
     _webhook_field = "messages"
+    _log_attr = None
 
     @classmethod
     def from_update(cls, client: WhatsApp, update: RawUpdate) -> FlowCompletion:
@@ -172,8 +173,8 @@ class FlowCompletion(BaseUserUpdate):
             flow_token = response.pop("flow_token")
         except KeyError:
             flow_token = None
-            _logger.warning(
-                "A flow completion message without flow token is received, This is a known issue on iOS devices."
+            _logger.debug(
+                "Flow completion received without a flow token (known issue on iOS devices)"
             )
 
         return cls(
@@ -639,7 +640,7 @@ class FlowJSONUpdateResult(SuccessResult):
 
     def __iter__(self):
         warnings.warn(
-            "WhatsApp.update_flow_json() is no longer return (success, validation_errors) tuple, but FlowJSONUpdateResult object.",
+            "`WhatsApp.update_flow_json()` now returns a `FlowJSONUpdateResult` object instead of a (success, validation_errors) tuple: unpacking it is deprecated, use its attributes instead.",
             PywaDeprecationWarning,
             stacklevel=2,
         )

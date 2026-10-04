@@ -82,13 +82,10 @@ class StrEnum(str, enum.Enum):
 
         warnings.warn(
             message=(
-                f"Unknown {cls.__name__} value: '{value}'"
-                f"Defaulting to {cls.__name__}.UNKNOWN.\n"
-                "This usually means the WhatsApp API introduced a new value "
-                "that your current version of pywa doesn't recognize.\n"
-                "Please upgrade to the latest version (`pip install -U pywa`).\n"
-                "If you are already on the latest version, please report this at:\n"
-                "https://github.com/david-lev/pywa/issues"
+                f"Unknown {cls.__name__} value: '{value}'. Defaulting to {cls.__name__}.UNKNOWN. "
+                "This usually means the WhatsApp API introduced a new value that your version of "
+                "pywa doesn't recognize: upgrade with `pip install -U pywa`, and if you are already "
+                "on the latest version, please report it at https://github.com/david-lev/pywa/issues"
             ),
             category=PywaUnknownEnumMemberWarning,
             stacklevel=4,
@@ -293,19 +290,6 @@ def detect_media_source(
     else:
         raise TypeError(f"Invalid media type: {type(media)}")
 
-    logger.debug(
-        "Detected media source for %s: %s",
-        media
-        if source
-        not in {
-            MediaSource.BYTES,
-            MediaSource.FILE_OBJ,
-            MediaSource.BYTES_GEN,
-            MediaSource.ASYNC_BYTES_GEN,
-        }
-        else type(media),
-        source.name,
-    )
     return source
 
 
@@ -656,7 +640,7 @@ def internal_upload_media(
             final_mimetype,
             media_info.length,
         )
-        return Media(
+        uploaded = Media(
             _client=wa,
             _id=wa.api.upload_media(
                 phone_id=phone_id,
@@ -672,6 +656,14 @@ def internal_upload_media(
             filename=final_filename,
             ttl_minutes=ttl_minutes,
         )
+        logger.info(
+            "Uploaded media %s (%s, %s bytes) -> %s",
+            final_filename,
+            final_mimetype,
+            media_info.length,
+            uploaded.id,
+        )
+        return uploaded
 
     finally:
         try:
@@ -1011,7 +1003,6 @@ def resolve_recipient(to: str | int) -> tuple[_RecipientDict, RecipientType]:
     if not to:
         raise ValueError(f"Recipient cannot be empty. got: {to!r}")
     recipient_type = RecipientType.from_recipient(to)
-    logger.debug(f"Resolved recipient {to} to type {recipient_type}")
     to = str(to)
     match recipient_type:
         case RecipientType.WA_ID | RecipientType.PHONE_NUMBER:

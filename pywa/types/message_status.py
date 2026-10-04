@@ -177,6 +177,7 @@ class MessageStatus(BaseUserUpdate, Generic[_CallbackDataT]):
 
     _txt_fields = ("tracker",)
     _webhook_field = "messages"
+    _log_attr = "status"
     _is_user_action = False
     _usr_cls = User
 

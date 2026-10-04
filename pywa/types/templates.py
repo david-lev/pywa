@@ -242,6 +242,7 @@ class TemplateStatusUpdate(BaseTemplateUpdate):
     rejection_info: RejectionInfo | None = None
 
     _webhook_field = "message_template_status_update"
+    _log_attr = "new_status"
 
     @classmethod
     def from_update(cls, client: WhatsApp, update: RawUpdate) -> TemplateStatusUpdate:
@@ -412,6 +413,7 @@ class TemplateCategoryUpdate(BaseTemplateUpdate):
     correct_category: TemplateCategory | None = None
 
     _webhook_field = "template_category_update"
+    _log_attr = "new_category"
 
     @classmethod
     def from_update(cls, client: WhatsApp, update: RawUpdate) -> TemplateCategoryUpdate:
@@ -463,6 +465,7 @@ class TemplateComponentsUpdate(BaseTemplateUpdate):
     template_buttons: list[dict[str, str]] | None = None
 
     _webhook_field = "message_template_components_update"
+    _log_attr = None
 
     @classmethod
     def from_update(
@@ -509,6 +512,7 @@ class TemplateQualityUpdate(BaseTemplateUpdate):
     previous_quality_score: QualityScoreType
 
     _webhook_field = "message_template_quality_update"
+    _log_attr = "new_quality_score"
 
     @classmethod
     def from_update(cls, client: WhatsApp, update: RawUpdate) -> TemplateQualityUpdate:
@@ -4050,11 +4054,12 @@ _otp_types_to_component: dict[OtpType, type[BaseOTPButton]] = {
 
 def _unknown_comp_warning(comp: dict, unknown: str, template_id: str | None) -> None:
     _logger.warning(
-        "%sUnknown %s: %s. Defaulting to raw dictionary representation. Please update pywa or report this issue.",
+        "%sUnknown %s (%s). Defaulting to raw dictionary representation. Please update pywa or report this issue.",
         f"Template {template_id}: " if template_id else "",
         unknown,
-        comp,
+        comp.get("format") or comp.get("type"),
     )
+    _logger.debug("Unknown %s payload: %s", unknown, comp)
 
 
 def _parse_component(
@@ -4112,10 +4117,11 @@ def _parse_component(
         return component_cls.from_dict(component)
     except Exception:
         _logger.exception(
-            "%sFailed to parse component: %s. Defaulting to raw dictionary representation. Please update pywa or report this issue.",
+            "%sFailed to parse a %s component. Defaulting to raw dictionary representation. Please update pywa or report this issue.",
             f"Template {template_id}: " if template_id else "",
-            component,
+            component.get("type"),
         )
+        _logger.debug("Component that failed to parse: %s", component)
         return component
 
 

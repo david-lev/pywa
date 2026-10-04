@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, TypeVar, cast
 from pywa.listeners import *
 from pywa.listeners import (
     BaseListenerIdentifier,
+    _logger,
 )
 from pywa.listeners import (
     Listener as _Listener,
@@ -166,10 +167,21 @@ class _AsyncListeners:
             cancelers=cancelers,
         )
         self._listeners[to] = listener
+        _logger.debug(
+            "Listening for %r (timeout=%s, active listeners=%d)",
+            to,
+            timeout,
+            len(self._listeners),
+        )
         try:
             return cast(
                 "_UpdateT", await asyncio.wait_for(listener.future, timeout=timeout)
             )
         except asyncio.TimeoutError:
             assert timeout is not None  # `asyncio.wait_for(..., None)` never times out
+            _logger.info(
+                "Listener timed out after %ss (active listeners=%d)",
+                timeout,
+                len(self._listeners) - 1,
+            )
             raise ListenerTimeout(timeout) from None

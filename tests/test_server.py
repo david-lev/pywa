@@ -1,10 +1,14 @@
+import base64
 import io
 import json
 import logging
 import pathlib
 import re
+import warnings
 
+import httpx
 import pytest
+from starlette.applications import Starlette
 
 from pywa import WhatsApp
 from pywa import utils as pywa_utils
@@ -12,12 +16,16 @@ from pywa._logging import (
     ColorFormatter,
     _color_enabled,
     bind_update_logger,
+    emit_banner,
     get_update_hash,
     resolve_log_level,
     setup_console_logging,
 )
-from pywa.errors import PywaWarning
+from pywa.api import GraphAPI
+from pywa.errors import PywaWarning, WhatsAppError
+from pywa.types import MessageType
 from pywa.types.base_update import RawUpdate
+from pywa_async import WhatsApp as WhatsAppAsync
 
 
 def test_webhook_updates_validator():
@@ -214,13 +222,25 @@ def clean_logging():
     ]
     original_handlers = root.handlers[:]
     original_levels = {name: logging.getLogger(name).level for name in affected_loggers}
+    # pytest's own capture handlers live on root; start from a root nobody configured
+    root.handlers[:] = []
+    if hasattr(logging.getLogger("pywa"), "_pywa_configured_level"):
+        del logging.getLogger("pywa")._pywa_configured_level
     yield
     root.handlers[:] = original_handlers
+    if hasattr(logging.getLogger("pywa"), "_pywa_configured_level"):
+        del logging.getLogger("pywa")._pywa_configured_level
     for name, level in original_levels.items():
         logging.getLogger(name).setLevel(level)
 
 
+def _drop_pytest_root_handlers():
+    # pytest re-attaches its capture handler to root for the `call` phase, after fixtures ran
+    logging.getLogger().handlers.clear()
+
+
 def test_setup_console_logging_idempotent(clean_logging):
+    _drop_pytest_root_handlers()
     setup_console_logging("info", stream=io.StringIO())
     setup_console_logging("info", stream=io.StringIO())
     root = logging.getLogger()
@@ -232,36 +252,58 @@ def test_setup_console_logging_idempotent(clean_logging):
 
 def test_setup_console_logging_sets_pywa_level_not_root(clean_logging):
     root_level_before = logging.getLogger().level
-    with pytest.warns(PywaWarning):
-        setup_console_logging("debug", stream=io.StringIO())
+    setup_console_logging("debug", stream=io.StringIO())
     assert logging.getLogger("pywa").getEffectiveLevel() == logging.DEBUG
     assert logging.getLogger().level == root_level_before
 
 
 def test_setup_console_logging_warns_on_debug(clean_logging):
-    with pytest.warns(PywaWarning):
-        setup_console_logging("debug", stream=io.StringIO())
+    _drop_pytest_root_handlers()
+    stream = io.StringIO()
+    setup_console_logging("debug", stream=stream)
+    out = stream.getvalue()
+    assert "personal data" in out
+    assert "py.warnings" not in out  # a plain log line, not a captured `warnings.warn`
 
 
-def test_setup_console_logging_no_warning_on_info(clean_logging, recwarn):
-    setup_console_logging("info", stream=io.StringIO())
-    assert not any(issubclass(w.category, PywaWarning) for w in recwarn.list)
+def test_setup_console_logging_no_warning_on_info(clean_logging):
+    stream = io.StringIO()
+    setup_console_logging("info", stream=stream)
+    assert "personal data" not in stream.getvalue()
 
 
-def test_setup_console_logging_no_duplicate_warning_for_same_level(
-    clean_logging, recwarn
-):
-    setup_console_logging("debug", stream=io.StringIO())
-    recwarn.clear()
-    setup_console_logging("debug", stream=io.StringIO())
-    assert not any(issubclass(w.category, PywaWarning) for w in recwarn.list)
+def test_setup_console_logging_no_duplicate_warning_for_same_level(clean_logging):
+    _drop_pytest_root_handlers()
+    stream = io.StringIO()
+    setup_console_logging("debug", stream=stream)
+    setup_console_logging("debug", stream=stream)
+    assert stream.getvalue().count("personal data") == 1
+
+
+def test_setup_console_logging_respects_host_configured_root(clean_logging):
+    host_stream = io.StringIO()
+    host_handler = logging.StreamHandler(host_stream)
+    logging.getLogger().addHandler(host_handler)
+    ours = io.StringIO()
+    setup_console_logging("info", stream=ours)
+    logging.getLogger("pywa.test_host").info("hello")
+    assert host_stream.getvalue().count("hello") == 1
+    assert ours.getvalue() == ""  # no second handler, so no duplicate output
+    assert logging.getLogger("pywa").getEffectiveLevel() == logging.INFO
+
+
+def test_emit_banner_is_plain_stderr_text():
+    stream = io.StringIO()
+    emit_banner(["Title", "a: 1"], stream=stream)
+    out = stream.getvalue()
+    assert "Title" in out and "a: 1" in out
+    assert "INFO" not in out and "pywa." not in out
 
 
 def test_setup_console_logging_keeps_uvicorn_chatter_quiet_regardless_of_level(
     clean_logging,
 ):
-    with pytest.warns(PywaWarning):
-        setup_console_logging("debug", stream=io.StringIO())
+    setup_console_logging("debug", stream=io.StringIO())
     assert logging.getLogger("uvicorn.error").getEffectiveLevel() == logging.WARNING
     assert logging.getLogger("uvicorn.asgi").getEffectiveLevel() == logging.WARNING
 
@@ -269,11 +311,6 @@ def test_setup_console_logging_keeps_uvicorn_chatter_quiet_regardless_of_level(
 def test_setup_console_logging_keeps_uvicorn_access_at_info(clean_logging):
     setup_console_logging("warning", stream=io.StringIO())
     assert logging.getLogger("uvicorn.access").getEffectiveLevel() == logging.INFO
-
-
-def test_setup_console_logging_pins_cli_banner_to_info(clean_logging):
-    setup_console_logging("warning", stream=io.StringIO())
-    assert logging.getLogger("pywa.cli").getEffectiveLevel() == logging.INFO
 
 
 _MESSAGE_UPDATE = json.loads(
@@ -352,6 +389,264 @@ def test_call_handlers_summary_line(caplog):
     caplog.set_level(logging.INFO, logger="pywa")
     wa.webhook_update_handler(json.dumps(_MESSAGE_UPDATE).encode())
     assert any(
-        re.search(r"\[.{8}] \[.+] Finished processing update", r.getMessage())
+        re.search(r"\[.{8}] Message\(text\) wamid\.\S+ -> ", r.getMessage())
         for r in caplog.records
     )
+
+
+def test_info_summary_names_update_and_callback_without_pii(caplog):
+    wa = _make_client()
+    caplog.set_level(logging.INFO, logger="pywa")
+
+    @wa.on_message
+    def my_callback(_, __): ...
+
+    wa.webhook_update_handler(json.dumps(_MESSAGE_UPDATE).encode())
+    summary = [r.getMessage() for r in caplog.records if "->" in r.getMessage()]
+    assert len(summary) == 1
+    assert "Message(text) wamid." in summary[0]
+    assert "my_callback" in summary[0]
+    assert _PHONE_NUMBER not in summary[0]
+
+
+def test_info_summary_when_no_handler_matched(caplog):
+    wa = _make_client()
+    caplog.set_level(logging.INFO, logger="pywa")
+    wa.webhook_update_handler(json.dumps(_MESSAGE_UPDATE).encode())
+    assert any("no handler matched" in r.getMessage() for r in caplog.records)
+
+
+def test_debug_does_not_dump_raw_payload_but_trace_does(caplog):
+    wa = _make_client()
+    caplog.set_level(logging.DEBUG, logger="pywa")
+    wa.webhook_update_handler(json.dumps(_MESSAGE_UPDATE).encode())
+    assert "Raw payload" not in caplog.text
+    assert "=None" not in caplog.text
+    caplog.clear()
+    caplog.set_level(5, logger="pywa")
+    wa.webhook_update_handler(json.dumps(_MESSAGE_UPDATE).encode() + b" ")
+    assert "Raw payload" in caplog.text
+
+
+def test_unexpected_update_error_path_survives_missing_entry(caplog):
+    wa = _make_client()
+    caplog.set_level(logging.DEBUG, logger="pywa")
+    wa.webhook_update_handler(b"{}")  # must not raise from the logging itself
+
+
+def _api_client(handler):
+    return GraphAPI(
+        token="SECRET-TOKEN",
+        session=httpx.Client(transport=httpx.MockTransport(handler)),
+        api_version=26.0,
+    )
+
+
+def test_api_request_success_never_logs_token(caplog):
+    api = _api_client(lambda _: httpx.Response(200, json={"ok": 1}))
+    caplog.set_level(logging.DEBUG, logger="pywa")
+    api._request("POST", "/123/messages", json={"to": _PHONE_NUMBER})
+    assert "POST /123/messages -> 200" in caplog.text
+    assert "SECRET-TOKEN" not in caplog.text
+
+
+def test_api_request_logs_error_code_and_trace_id(caplog):
+    err = {"error": {"code": 131009, "message": "bad param", "fbtrace_id": "AbC"}}
+    api = _api_client(lambda _: httpx.Response(400, json=err))
+    caplog.set_level(logging.INFO, logger="pywa")
+    with pytest.raises(WhatsAppError):
+        api._request("GET", "/x?access_token=LEAK")
+    rec = next(r for r in caplog.records if r.levelno == logging.WARNING)
+    assert "code=131009" in rec.getMessage()
+    assert "fbtrace_id=AbC" in rec.getMessage()
+    assert "LEAK" not in caplog.text
+
+
+def test_api_request_debug_shows_payload_and_truncated_response(caplog):
+    api = _api_client(lambda _: httpx.Response(200, json={"data": "x" * 2000}))
+    caplog.set_level(logging.DEBUG, logger="pywa")
+    api._request("POST", "/1/messages", json={"to": _PHONE_NUMBER})
+    assert _PHONE_NUMBER in caplog.text
+    assert "chars)" in caplog.text
+
+
+def test_signature_mismatch_does_not_log_the_signature(caplog):
+    wa = WhatsApp(
+        phone_id="1",
+        token="x",
+        server=None,
+        verify_token="v",
+        app_secret="s",
+        validate_updates=True,
+    )
+    caplog.set_level(logging.WARNING, logger="pywa")
+    res = wa.webhook_update_validator(b"{}", "sha256=deadbeef")
+    assert res == ("Forbidden", 403)
+    assert "mismatching signature" in caplog.text
+    assert "deadbeef" not in caplog.text
+
+
+def test_successful_challenge_logs_at_info(caplog):
+    wa = WhatsApp(phone_id="1", token="x", server=None, verify_token="v")
+    caplog.set_level(logging.INFO, logger="pywa")
+    assert wa.webhook_challenge_handler("v", "c") == ("c", 200)
+    assert "Webhook verified by WhatsApp" in caplog.text
+
+
+def test_api_rate_limit_error_has_hint(caplog):
+    err = {"error": {"code": 130429, "message": "Rate limit hit"}}
+    api = _api_client(lambda _: httpx.Response(400, json=err))
+    caplog.set_level(logging.INFO, logger="pywa")
+    with pytest.raises(WhatsAppError):
+        api._request("POST", "/1/messages")
+    assert "rate limit hit" in caplog.text
+
+
+def test_api_success_is_silent_at_info(caplog):
+    api = _api_client(lambda _: httpx.Response(200, json={}))
+    caplog.set_level(logging.INFO, logger="pywa")
+    api._request("POST", "/123/messages")
+    assert not caplog.records
+
+
+def test_malformed_body_is_rejected_with_hash_context(caplog):
+    wa = _make_client()
+    caplog.set_level(logging.DEBUG, logger="pywa")
+    assert wa.webhook_update_handler(b"not json") == ("Bad Request", 400)
+    assert "Rejected a malformed (non-JSON) update body (8 bytes)" in caplog.text
+    assert "preview" in caplog.text
+
+
+def test_unrecognized_shape_warns_with_keys_not_values(caplog):
+    wa = _make_client()
+    caplog.set_level(logging.DEBUG, logger="pywa")
+    encoded = json.dumps(_UNKNOWN_SHAPE_UPDATE).encode()
+    raw = RawUpdate(encoded, hmac_header=None, update_hash=get_update_hash(encoded))
+    wa._get_handler_type(raw)
+    assert "unrecognized shape" in caplog.text
+    assert _CONTACT_NAME not in caplog.text
+
+
+def test_warnings_are_logged_as_one_clean_line(clean_logging):
+    _drop_pytest_root_handlers()
+    stream = io.StringIO()
+    original = warnings.showwarning
+    try:
+        setup_console_logging("info", stream=stream)
+        with warnings.catch_warnings():
+            warnings.simplefilter("always")
+            warnings.showwarning = warnings.showwarning  # keep our hook installed
+            warnings.warn("be careful", PywaWarning, stacklevel=1)
+        out = stream.getvalue()
+    finally:
+        warnings.showwarning = original
+    assert "PywaWarning: be careful (test_server.py:" in out
+    assert "warnings.warn(" not in out  # the source line is not echoed
+
+
+def test_missing_app_secret_warning_points_at_user_code():
+    with pytest.warns(PywaWarning, match="No `app_secret`") as record:
+        _make_client_with_server()
+    assert record[0].filename == __file__
+
+
+def _make_client_with_server():
+    return WhatsApp(
+        phone_id="1",
+        token="x",
+        server=Starlette(),
+        verify_token="v",
+        validate_updates=True,
+    )
+
+
+def test_unknown_enum_warning_message_is_well_formed():
+    with pytest.warns(Warning) as record:
+        MessageType("brand_new_type")
+    msg = str(record[0].message)
+    assert "'brand_new_type'. Defaulting to MessageType.UNKNOWN." in msg
+
+
+def test_async_warnings_point_at_user_code():
+    with pytest.warns(PywaWarning) as record:
+        WhatsAppAsync(phone_id="1", token="x", api_version="16.0")
+    assert record[0].filename == __file__
+    with pytest.warns(PywaWarning, match="No `app_secret`") as record:
+        WhatsAppAsync(phone_id="1", token="x", server=Starlette(), verify_token="v")
+    assert record[0].filename == __file__
+
+
+def test_info_summary_does_not_leak_phone_number_embedded_in_wamid(caplog):
+
+    wa = _make_client()
+    caplog.set_level(logging.INFO, logger="pywa")
+    # real `wamid`s start with base64 of the user's phone number (or BSUID)
+    embedded = base64.b64encode(b"\x1c\x18\x0b" + _PHONE_NUMBER.encode()).decode()
+    update = json.loads(json.dumps(_MESSAGE_UPDATE))
+    update["entry"][0]["changes"][0]["value"]["messages"][0]["id"] = (
+        f"wamid.{embedded}FQIAEhgUM0FBREY4NDQxMzQ3RTg1NzFDMTAA"
+    )
+    wa.webhook_update_handler(json.dumps(update).encode())
+    assert embedded not in caplog.text
+    assert _PHONE_NUMBER not in caplog.text
+    assert "Message(text) wamid.…" in caplog.text
+
+
+_ALL_UPDATES = [
+    pytest.param(payload, id=f"{f.stem}:{name}")
+    for f in sorted(pathlib.Path("tests/data/updates").glob("*.json"))
+    for name, payload in json.loads(f.read_text()).items()
+]
+
+
+def _summary_for(payload: dict, caplog) -> str:
+    wa = _make_client()
+    caplog.set_level(logging.INFO, logger="pywa")
+    wa.webhook_update_handler(json.dumps(payload).encode())
+    (record,) = [r for r in caplog.records if "->" in r.getMessage()]
+    return record.getMessage()
+
+
+@pytest.mark.parametrize("payload", _ALL_UPDATES)
+def test_every_fixture_update_gets_one_clean_summary(payload, caplog):
+    summary = _summary_for(payload, caplog)
+    assert re.match(r"\[\w{8}] [A-Z]\w+(\([a-z_]+\))?( wamid\.\S+)? -> ", summary)
+    assert _PHONE_NUMBER not in summary
+    assert not any(r.levelno >= logging.WARNING for r in caplog.records)
+
+
+@pytest.mark.parametrize(
+    ("fixture", "name", "label"),
+    [
+        ("account_update", "account_deleted", "AccountUpdate(account_deleted)"),
+        ("message_status", "failed", "MessageStatus(failed)"),
+        ("call_permission_update", "accept", "CallPermissionUpdate(accept)"),
+        ("call_permission_update", "reject", "CallPermissionUpdate(reject)"),
+        ("call_status", "call_status", "CallStatus(ringing)"),
+        ("template_status_update", "approved", "TemplateStatusUpdate(approved)"),
+        ("template_category_update", "marketing", "TemplateCategoryUpdate(marketing)"),
+        ("template_quality_update", "yellow", "TemplateQualityUpdate(yellow)"),
+        ("user_marketing_preferences", "resume", "UserMarketingPreferences(resume)"),
+        ("message", "image", "Message(image)"),
+        ("callback_button", "button", "CallbackButton(button)"),
+        ("callback_button", "quick_reply", "CallbackButton(quick_reply)"),
+        ("flow_completion", "completion", "FlowCompletion"),
+        ("system", "phone_number_change", "PhoneNumberChange"),
+    ],
+)
+def test_update_summary_labels(fixture, name, label, caplog):
+    payload = json.loads(
+        pathlib.Path(f"tests/data/updates/{fixture}.json").read_text()
+    )[name]
+    assert _summary_for(payload, caplog).split("] ", 1)[1].startswith(f"{label} ")
+
+
+def test_debug_parsed_update_keeps_false_but_drops_none(caplog):
+    wa = _make_client()
+    caplog.set_level(logging.DEBUG, logger="pywa")
+    wa.webhook_update_handler(json.dumps(_MESSAGE_UPDATE).encode())
+    parsed = next(
+        r.getMessage() for r in caplog.records if "Parsed update" in r.getMessage()
+    )
+    assert "forwarded=False" in parsed
+    assert "=None" not in parsed

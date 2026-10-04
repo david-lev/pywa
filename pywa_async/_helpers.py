@@ -329,7 +329,7 @@ async def internal_upload_media(
             final_mimetype,
             media_info.length,
         )
-        return _AsyncMedia(
+        uploaded = _AsyncMedia(
             _client=wa,
             _id=(
                 await wa.api.upload_media(
@@ -347,6 +347,14 @@ async def internal_upload_media(
             filename=final_filename,
             ttl_minutes=ttl_minutes,
         )
+        logger.info(
+            "Uploaded media %s (%s, %s bytes) -> %s",
+            final_filename,
+            final_mimetype,
+            media_info.length,
+            uploaded.id,
+        )
+        return uploaded
     finally:
         try:
             if close_client and client is not None:
