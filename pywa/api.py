@@ -2180,7 +2180,12 @@ class GraphAPI:
         """
         return self._request(
             method="POST",
-            endpoint=f"/{app_id}/uploads?file_name={file_name}&file_length={file_length}&file_type={file_type}",
+            endpoint=f"/{app_id}/uploads",
+            params={
+                "file_name": file_name,
+                "file_length": file_length,
+                "file_type": file_type,
+            },
         )
 
     def upload_file(

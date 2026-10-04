@@ -962,7 +962,8 @@ async def test_create_upload_session(api, req):
     )
     req.assert_called_once_with(
         method="POST",
-        endpoint="/a1/uploads?file_name=f.png&file_length=10&file_type=image/png",
+        endpoint="/a1/uploads",
+        params={"file_name": "f.png", "file_length": 10, "file_type": "image/png"},
     )
 
 
