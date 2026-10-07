@@ -216,16 +216,22 @@ class Server:
         Returns:
             A tuple containing the challenge and the status code.
         """
-        if vt == self._verify_token:
+        if self._verify_token and vt == self._verify_token:
             _logger.info(
                 "[%s] Webhook verified by WhatsApp (verification challenge passed)",
                 self._webhook_endpoint,
             )
             return ch, 200
-        _logger.warning(
-            "[%s] Failed verification challenge: invalid verify token",
-            self._webhook_endpoint,
-        )
+        if self._verify_token:
+            _logger.warning(
+                "[%s] Failed verification challenge: invalid verify token",
+                self._webhook_endpoint,
+            )
+        else:
+            _logger.info(
+                "[%s] Verification challenge rejected: no `verify_token` configured",
+                self._webhook_endpoint,
+            )
         return "Forbidden", 403
 
     def webhook_update_validator(
@@ -332,9 +338,9 @@ class Server:
         return "ok", 200
 
     def _register_routes(self: "WhatsApp") -> None:
-        if not self._verify_token:
+        if self._callback_url is not None and not self._verify_token:
             raise ValueError(
-                "When listening for incoming updates, a `verify_token` must be provided.\n>> The verify token can "
+                "When registering a `callback_url`, a `verify_token` must be provided.\n>> The verify token can "
                 "be any string. It is used to challenge the webhook endpoint to verify that the endpoint is valid."
             )
         if self._validate_updates and not self._app_secret:
