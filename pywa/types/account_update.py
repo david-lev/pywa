@@ -150,6 +150,52 @@ class WABABanState(helpers.StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
+class CertificationStatus(helpers.StrEnum):
+    """
+    Status of the partner-led business verification submission.
+
+    Attributes:
+        APPROVED: Submission has been reviewed and approved.
+        DISCARDED: Submission has been discarded due to technical issues or has not made progress for a while.
+        FAILED: Submission has been reviewed and rejected. See ``rejection_reasons`` for details.
+        PENDING: Submission is pending review.
+        REVOKED: Submission has been revoked.
+    """
+
+    APPROVED = "APPROVED"
+    DISCARDED = "DISCARDED"
+    FAILED = "FAILED"
+    PENDING = "PENDING"
+    REVOKED = "REVOKED"
+
+    UNKNOWN = "UNKNOWN"
+
+
+class CertificationRejectionReason(helpers.StrEnum):
+    """
+    Rejection reason of the partner-led business verification submission.
+
+    Attributes:
+        ADDRESS_NOT_MATCHING: The country in the submitted address does not match the country on the client's business profile.
+        BUSINESS_NOT_ELIGIBLE: Your client is not eligible for verification via partner-provided information. The client can still apply for Meta business verification directly.
+        LEGAL_NAME_NOT_MATCHING: The legal name in the submission does not match the legal name or business name on the client's business profile.
+        LEGAL_NAME_NOT_FOUND_IN_DOCUMENTS: The automated document review could not locate the business legal name in the uploaded documents.
+        MALFORMED_DOCUMENTS: The uploaded documents could not be processed. The files may be corrupted, password protected, or in an unsupported format.
+        NONE: Indicates the submission was not rejected.
+        WEBSITE_NOT_MATCHING: The website domain in the submission does not match the website domain on the client's business profile.
+    """
+
+    ADDRESS_NOT_MATCHING = "ADDRESS NOT MATCHING"
+    BUSINESS_NOT_ELIGIBLE = "BUSINESS NOT ELIGIBLE"
+    LEGAL_NAME_NOT_MATCHING = "LEGAL NAME NOT MATCHING"
+    LEGAL_NAME_NOT_FOUND_IN_DOCUMENTS = "LEGAL NAME NOT FOUND IN DOCUMENTS"
+    MALFORMED_DOCUMENTS = "MALFORMED DOCUMENTS"
+    NONE = "NONE"
+    WEBSITE_NOT_MATCHING = "WEBSITE NOT MATCHING"
+
+    UNKNOWN = "UNKNOWN"
+
+
 @dataclasses.dataclass(frozen=True, slots=True)
 class ViolationInfo:
     """
@@ -358,6 +404,33 @@ class VolumeTierInfo:
         )
 
 
+@dataclasses.dataclass(frozen=True, slots=True)
+class PartnerClientCertificationInfo:
+    """
+    Partner-led business verification submission info.
+
+    Attributes:
+        client_business_id: Business customer's business portfolio ID.
+        status: Status of the partner-led business verification submission.
+        rejection_reasons: Rejection reasons of the submission.
+    """
+
+    client_business_id: str
+    status: CertificationStatus
+    rejection_reasons: tuple[CertificationRejectionReason, ...]
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        return cls(
+            client_business_id=data["client_business_id"],
+            status=CertificationStatus(data["status"]),
+            rejection_reasons=tuple(
+                CertificationRejectionReason(r)
+                for r in data.get("rejection_reasons", [])
+            ),
+        )
+
+
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class AccountUpdate(BaseUpdate):
     """
@@ -374,6 +447,9 @@ class AccountUpdate(BaseUpdate):
         disconnection_info: Disconnection info for WABA ban state. Only included for ``PARTNER_REMOVED`` events where the business was using both the WhatsApp Business app and Cloud API.
         auth_international_rate_eligibility: Authentication-international rate eligibility info. Only included for ``AUTH_INTL_PRICE_ELIGIBILITY_UPDATE`` event.
         volume_tier_info: Volume tier info. Only included for ``VOLUME_BASED_PRICING_TIER_UPDATE`` event.
+        partner_client_certification_info: Partner-led business verification submission info. Only included for ``PARTNER_CLIENT_CERTIFICATION_STATUS_UPDATE`` event.
+        country: ISO 3166-1 alpha-2 country code of the business primary location. Only included for ``BUSINESS_PRIMARY_LOCATION_COUNTRY_UPDATE`` event.
+        phone_number: The business phone number the event is about. Only included for events about a single business phone number, such as ``ACCOUNT_VIOLATION`` and ``ACCOUNT_RESTRICTION`` events for calling.
         shared_data: Shared data between handlers.
     """
 
@@ -385,6 +461,9 @@ class AccountUpdate(BaseUpdate):
     disconnection_info: DisconnectionInfo | None
     auth_international_rate_eligibility: AuthInternationalRateEligibility | None
     volume_tier_info: VolumeTierInfo | None
+    partner_client_certification_info: PartnerClientCertificationInfo | None
+    country: str | None
+    phone_number: str | None
 
     _webhook_field = "account_update"
     _log_attr = "event"
@@ -423,4 +502,11 @@ class AccountUpdate(BaseUpdate):
             volume_tier_info=VolumeTierInfo.from_dict(value["volume_tier_info"])
             if "volume_tier_info" in value
             else None,
+            partner_client_certification_info=PartnerClientCertificationInfo.from_dict(
+                value["partner_client_certification_info"]
+            )
+            if "partner_client_certification_info" in value
+            else None,
+            country=value.get("country"),
+            phone_number=value.get("phone_number"),
         )

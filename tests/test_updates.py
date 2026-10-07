@@ -6,6 +6,10 @@ from pywa.types import (
     MessageStatusType,
     MessageType,
 )
+from pywa.types.account_update import (
+    CertificationRejectionReason,
+    CertificationStatus,
+)
 from pywa.types.calls import (
     CallDirection,
     CallEvent,
@@ -191,10 +195,19 @@ TESTS: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
         "partner_added": [],
         "partner_app_installed": [],
         "partner_app_uninstalled": [],
-        "partner_led_business_verification_status": [],
+        "partner_led_business_verification_status": [
+            lambda u: (
+                u.partner_client_certification_info.client_business_id
+                == "2729063490586005"
+                and u.partner_client_certification_info.status
+                == CertificationStatus.APPROVED
+                and u.partner_client_certification_info.rejection_reasons
+                == (CertificationRejectionReason.NONE,)
+            ),
+        ],
         "partner_removed": [],
         "partner_removed_wa_app_disconnection": [],
-        "primary_business_location_set": [],
+        "primary_business_location_set": [lambda u: u.country == "IN"],
         "pricing_tiering_update": [],
         "account_offboarded": [],
         "account_reconnected": [],

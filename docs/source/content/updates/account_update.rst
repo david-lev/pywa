@@ -26,3 +26,9 @@ Account Update
 .. autoclass:: DisconnectionInitiatedBy()
 
 .. autoclass:: WABAInfo()
+
+.. autoclass:: PartnerClientCertificationInfo()
+
+.. autoclass:: CertificationStatus()
+
+.. autoclass:: CertificationRejectionReason()
