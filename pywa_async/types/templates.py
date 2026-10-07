@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import datetime
 import functools
-from typing import TYPE_CHECKING, overload
+from typing import TYPE_CHECKING, cast, overload
 
 from pywa.listeners import TemplateStatusUpdateListenerIdentifier
 from pywa.types.templates import *
@@ -455,11 +455,14 @@ class _CreatedAndUpdatedTemplateActionsAsync:
             cancelers = (
                 cancelers or pywa_filters.false | pywa_filters.template_status_rejected
             )
-        return await self._client.listen(
-            to=TemplateStatusUpdateListenerIdentifier(template_id=self.id),
-            filters=pywa_filters.template_status_approved,
-            cancelers=cancelers,
-            timeout=timeout,
+        return cast(
+            TemplateStatusUpdate,
+            await self._client.listen(
+                to=TemplateStatusUpdateListenerIdentifier(template_id=self.id),
+                filters=pywa_filters.template_status_approved,
+                cancelers=cancelers,
+                timeout=timeout,
+            ),
         )
 
 

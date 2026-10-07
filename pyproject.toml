@@ -134,7 +134,7 @@ extend-select = [
 "examples/**" = ["T201"]
 
 [tool.ty.src]
-include = ["pywa*"]
+include = ["pywa*", "tests/static_typing"]
 
 [[tool.ty.overrides]]
 # `pywa_async` mirrors `pywa` but overrides every networking method as `async def`,

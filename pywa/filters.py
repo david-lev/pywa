@@ -135,6 +135,7 @@ if TYPE_CHECKING:
     from pywa.client import WhatsApp
 
 _T_contra = TypeVar("_T_contra", contravariant=True)
+_T = TypeVar("_T")
 _V = TypeVar("_V")
 
 
@@ -150,16 +151,16 @@ class Filter(Generic[_T_contra]):
     def has_async(self) -> bool:
         raise NotImplementedError
 
-    def __and__(self, other: Filter[_T_contra]) -> Filter[_T_contra]:
+    def __and__(self: Filter[_T], other: Filter[_T]) -> Filter[_T]:
         return AndFilter(self, other)
 
-    def __rand__(self, other: Filter[_T_contra]) -> Filter[_T_contra]:
+    def __rand__(self: Filter[_T], other: Filter[_T]) -> Filter[_T]:
         return AndFilter(other, self)
 
-    def __or__(self, other: Filter[_T_contra]) -> Filter[_T_contra]:
+    def __or__(self: Filter[_T], other: Filter[_T]) -> Filter[_T]:
         return OrFilter(self, other)
 
-    def __ror__(self, other: Filter[_T_contra]) -> Filter[_T_contra]:
+    def __ror__(self: Filter[_T], other: Filter[_T]) -> Filter[_T]:
         return OrFilter(other, self)
 
     def __invert__(self) -> Filter[_T_contra]:

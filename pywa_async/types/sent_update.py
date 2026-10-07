@@ -129,11 +129,14 @@ class SentMessage(_ClientShortcutsAsync, _PinUnpinActionsAsync, _SentMessage):
                 else ignore_updates_canceler
             )
 
-        return await self._client.listen(
-            to=self.listener_identifier,
-            filters=filters,
-            cancelers=cancelers,
-            timeout=timeout,
+        return cast(
+            Message,
+            await self._client.listen(
+                to=self.listener_identifier,
+                filters=filters,
+                cancelers=cancelers,
+                timeout=timeout,
+            ),
         )
 
     async def wait_until_read(
@@ -586,13 +589,16 @@ class SentMessage(_ClientShortcutsAsync, _PinUnpinActionsAsync, _SentMessage):
                 if cancelers
                 else ignore_updates_canceler
             )
-        return await self._client.listen(
-            to=self.listener_identifier,
-            filters=pywa_filters.call_connect
-            & pywa_filters.incoming_call
-            & (filters or pywa_filters.true),
-            cancelers=cancelers,
-            timeout=timeout,
+        return cast(
+            CallConnect,
+            await self._client.listen(
+                to=self.listener_identifier,
+                filters=pywa_filters.call_connect
+                & pywa_filters.incoming_call
+                & (filters or pywa_filters.true),
+                cancelers=cancelers,
+                timeout=timeout,
+            ),
         )
 
 
