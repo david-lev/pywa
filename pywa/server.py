@@ -363,7 +363,7 @@ class Server:
                 raise ValueError(
                     f"The `server` must be one of {utils.CustomServerType.protocols_names()}, but got {type(self._server)}"
                 )
-        _logger.info(
+        _logger.debug(
             "Webhook routes registered at %s (%s)",
             self._webhook_endpoint,
             self._server_type.name.lower(),
