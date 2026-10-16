@@ -1596,7 +1596,7 @@ class Screen:
     """
 
     id: str
-    title: str | None = None
+    title: str | ScreenDataRef[str] | ComponentRef[str] | None = None
     data: list[ScreenData] | dict[str, dict] | _ScreenDatasContainer | None = None
     terminal: bool | None = None
     success: bool | None = None
