@@ -2943,6 +2943,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         add_security_recommendation: bool | None = None,
         code_expiration_minutes: int | None = None,
         message_send_ttl_seconds: int | None = None,
+        is_primary_device_delivery_only: bool | None = None,
         waba_id: str | int | None = None,
     ) -> CreatedTemplates:
         """
@@ -2981,6 +2982,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             add_security_recommendation: Boolean value to add information to the template about not sharing authentication codes with anyone.
             code_expiration_minutes: Integer value to add information to the template on when the code will expire.
             message_send_ttl_seconds: The time-to-live (TTL) for the template message in seconds. (See `Time-to-live (TTL) <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates#time-to-live--ttl---customization--defaults--min-max-values--and-compatibility>`_).
+            is_primary_device_delivery_only: Deliver the template only to the user's primary device.
             waba_id: The WhatsApp Business account ID (Overrides the client's business account ID, optional).
 
         Returns:
@@ -2997,6 +2999,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 template=_AuthenticationTemplates(
                     name=name,
                     languages=list(languages),
+                    message_send_ttl_seconds=message_send_ttl_seconds,
+                    is_primary_device_delivery_only=is_primary_device_delivery_only,
                     components=[
                         AuthenticationBody(
                             add_security_recommendation=add_security_recommendation
