@@ -27,6 +27,7 @@ import httpx
 
 from . import _helpers as helpers
 from . import utils
+from ._logging import get_context_logger
 from .api import GraphAPI
 from .errors import PywaDeprecationWarning, PywaWarning
 from .filters import Filter
@@ -194,7 +195,8 @@ from .types.templates import (
 from .types.user import BaseUser
 from .utils import FastAPI, Flask, UserIdentifier
 
-_logger = logging.getLogger(__name__)
+_logger = get_context_logger(__name__)
+_app_logger = get_context_logger("pywa.app")
 
 _DEFAULT_VERIFY_DELAY_SEC = 3
 
@@ -491,6 +493,24 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 "To access the WhatsApp Cloud API, you must provide a `token` when initializing the WhatsApp client."
             )
         return self._api
+
+    @property
+    def logger(self) -> logging.LoggerAdapter:
+        """
+        A logger for your own code inside handlers.
+
+        - Lines logged while a handler (or a Flow request callback) is running are tagged with the same
+          ``[hash] [endpoint]`` prefix as pywa's lines.
+        - It lives under the ``pywa`` logger, so it follows ``log_level`` / ``--log-level``. For other modules
+          use :func:`pywa.utils.get_logger`.
+
+        Example:
+
+            >>> @wa.on_message
+            ... def on_message(_: WhatsApp, msg: types.Message):
+            ...     wa.logger.info("got a message")  # -> [b49a799b] got a message
+        """
+        return _app_logger
 
     def __repr__(self) -> str:
         return f"WhatsApp(phone_id={self.phone_id!r})"
@@ -2134,7 +2154,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             with path.open("wb") as f:
                 for chunk in res.iter_bytes(chunk_size=chunk_size):
                     f.write(chunk)
-            _logger.info(
+            _logger.debug(
                 "Downloaded media to %s (%d bytes, %s)",
                 path,
                 path.stat().st_size,

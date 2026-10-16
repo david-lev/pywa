@@ -41,13 +41,14 @@ from typing import (
 
 import httpx
 
+from ._logging import get_context_logger
 from .errors import PywaUnknownEnumMemberWarning, WhatsAppError
 
 if TYPE_CHECKING:
     from pywa import WhatsApp
 
 
-logger = logging.getLogger("pywa.helpers")
+logger = get_context_logger("pywa.helpers")
 
 DOWNLOAD_CHUNK_SIZE = 64 * 1024
 USE_FAKE_GEN_STREAM = True
@@ -846,7 +847,7 @@ def internal_upload_media(
             filename=final_filename,
             ttl_minutes=ttl_minutes,
         )
-        logger.info(
+        logger.debug(
             "Uploaded media %s (%s, %s bytes) -> %s",
             final_filename,
             final_mimetype,

@@ -81,6 +81,8 @@ Both ``pywa dev`` and ``pywa run`` share the following options:
 * ``--app <str>``: Specify the variable name of the ``WhatsApp`` client instance within the script (e.g., if you set ``my_wa_client = WhatsApp(...)``, pass ``--app my_wa_client``). By default, Pywa auto-detects ``WhatsApp`` instances in the script. If multiple instances exist, you must specify which one to use with this option - otherwise, the first instance found will be used.
 * ``--entrypoint <str>``: Explicit entrypoint string (e.g., ``main:wa``). This overrides ``path`` and ``--app``.
 * ``--log-level <level>``: Set the logging level (choices: ``critical``, ``error``, ``warning``, ``info``, ``debug``, ``trace``).
+* ``--access-log`` / ``--no-access-log``: Enable/Disable pywa's access log - one line per handled update or Flow request (e.g. ``Message(text) wamid.X -> callback (0.5ms)``). Default: enabled. The lines are logged by the ``pywa.access`` logger.
+* ``--http-log`` / ``--no-http-log``: Enable/Disable uvicorn's raw HTTP request log (e.g. ``POST /webhook 200``), which also shows requests that never become updates. Default: disabled.
 * ``--ssl-keyfile <path>``: Path to an SSL key file.
 * ``--ssl-certfile <path>``: Path to an SSL certificate file.
 
@@ -98,6 +100,25 @@ Development-only Options (``pywa dev``)
 * ``--no-reload``: Disable auto-reload.
 * ``--reload-dir <path>``: Directory to watch for changes (can be specified multiple times).
 * ``--reload-delay <float>``: Delay between checks for code modifications.
+
+Logging in your own handlers
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Use ``wa.logger`` for your own log lines inside handlers. They get the same ``[hash]`` tag as pywa's lines, so you can match them to the access log line of that update, and they follow ``--log-level``:
+
+.. code-block:: python
+
+    from pywa import WhatsApp, types
+
+    wa = WhatsApp(...)
+
+    @wa.on_message
+    def on_message(_: WhatsApp, msg: types.Message):
+        wa.logger.info("handling a message")  # -> [b49a799b] handling a message
+
+.. note::
+
+    In modules that don't have the client, use :func:`pywa.utils.get_logger` (``log = utils.get_logger(__name__)``) to get the same tagging. Such a logger inherits the root logger's level (``WARNING`` by default), not ``--log-level``, so set it yourself (e.g. ``logging.getLogger(__name__).setLevel(logging.INFO)``) to see its ``.info()`` lines.
 
 --------------------
 

@@ -394,7 +394,7 @@ async def internal_upload_media(
             filename=final_filename,
             ttl_minutes=ttl_minutes,
         )
-        logger.info(
+        logger.debug(
             "Uploaded media %s (%s, %s bytes) -> %s",
             final_filename,
             final_mimetype,

@@ -87,7 +87,12 @@ from typing import (
 
 from . import _helpers as helpers
 from . import utils
-from ._logging import bind_update_logger, get_update_hash
+from ._logging import (
+    access_logger,
+    bind_update_logger,
+    get_update_hash,
+    update_context,
+)
 from .filters import Filter
 from .filters import new as new_filter
 from .types import (
@@ -3484,18 +3489,37 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
         self._wa.add_handlers(handler)
         return self
 
-    def _bind_log(self, payload: Any) -> logging.LoggerAdapter:
-        """A logger tagged with ``[hash] [endpoint]`` so every line of one Flow request can be correlated."""
+    @staticmethod
+    def _request_hash(payload: Any) -> str:
         try:
             key = str(payload["encrypted_flow_data"]).encode()
         except (KeyError, TypeError):
             key = repr(payload).encode()
-        return bind_update_logger(_logger, get_update_hash(key), self._endpoint)
+        return get_update_hash(key)
+
+    def _bind_log(
+        self, request_hash: str, logger: logging.Logger = _logger
+    ) -> logging.LoggerAdapter:
+        """A logger tagged with ``[hash] [endpoint]`` so every line of one Flow request can be correlated."""
+        return bind_update_logger(logger, request_hash, self._endpoint)
 
     @staticmethod
     def _describe_request(req: FlowRequest) -> str:
         screen = f" screen={req.screen}" if req.screen else ""
         return f"Flow {req.action.value}{screen}"
+
+    @staticmethod
+    def _describe_response(body: dict) -> str:
+        """Summarize a response body for logging: where the user goes next, never the data itself."""
+        next_screen = body.get("screen")
+        if next_screen == "SUCCESS":
+            return "closes flow"
+        if not next_screen:
+            return "responded"
+        has_error = (
+            isinstance(body.get("data"), dict) and "error_message" in body["data"]
+        )
+        return f"screen={next_screen}{' (with error_message)' if has_error else ''}"
 
     def _get_callback(self, req: FlowRequest) -> _FlowRequestCallback:
         """Resolve the callback to use for the incoming request."""
@@ -3527,7 +3551,7 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
         Returns:
             A tuple containing the response data (json string) and the status code.
         """
-        log = self._bind_log(payload)
+        log = self._bind_log(self._request_hash(payload))
         try:
             decrypted_request, aes_key, iv = self._decrypt_request(payload)
         # untrusted webhook payload: never crash on malformed/tampered input
@@ -3571,7 +3595,7 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
         Returns:
             A tuple containing the response data (json string) and the status code.
         """
-        log = self._bind_log(payload)
+        log = self._bind_log(self._request_hash(payload))
         try:
             decrypted_request, aes_key, iv = self._decrypt_request(payload)
         # untrusted webhook payload: never crash on malformed/tampered input
@@ -3626,18 +3650,21 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
     def _execute_callback(
         self, req: FlowRequest, aes_key: bytes, iv: bytes
     ) -> tuple[str, int]:
-        log = self._bind_log(req.raw_encrypted)
+        request_hash = self._request_hash(req.raw_encrypted)
+        log = self._bind_log(request_hash)
+        access = self._bind_log(request_hash, access_logger)
         desc = self._describe_request(req)
         start = time.perf_counter()
         callback = self._get_callback(req)
         try:
-            res = callback(self._wa, req)
+            with update_context(request_hash, self._endpoint):
+                res = callback(self._wa, req)
             if isinstance(
                 res, FlowResponseError
             ):  # typing backward compatibility. error should be raised, not returned
                 raise res
         except FlowResponseError as e:
-            log.info(
+            access.info(
                 "%s -> %s raised %s (status %d) (%.0fms)",
                 desc,
                 getattr(callback, "__name__", repr(callback)),
@@ -3659,7 +3686,7 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
             return "An error occurred", 500
 
         if self._acknowledge_errors and req.has_error:
-            log.info("%s -> error from WhatsApp acknowledged", desc)
+            access.info("%s -> error from WhatsApp acknowledged", desc)
             return self._encrypt_response(
                 {
                     "version": req.version,
@@ -3675,40 +3702,41 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
                 f"Flow endpoint ('{self._endpoint}') callback ('{getattr(callback, '__name__', repr(callback))}') must return a `FlowResponse`"
                 f" or `dict`, not {type(res)}"
             )
-        log.info(
-            "%s -> %s (%.0fms)",
+        body = res.to_dict() if isinstance(res, FlowResponse) else res
+        access.info(
+            "%s -> %s -> %s (%.0fms)",
             desc,
             getattr(callback, "__name__", repr(callback)),
+            self._describe_response(body),
             (time.perf_counter() - start) * 1000,
         )
-        return self._encrypt_response(
-            res.to_dict() if isinstance(res, FlowResponse) else res,
-            aes_key,
-            iv,
-        ), 200
+        return self._encrypt_response(body, aes_key, iv), 200
 
     async def _execute_callback_async(
         self, req: FlowRequest, aes_key: bytes, iv: bytes
     ) -> tuple[str, int]:
-        log = self._bind_log(req.raw_encrypted)
+        request_hash = self._request_hash(req.raw_encrypted)
+        log = self._bind_log(request_hash)
+        access = self._bind_log(request_hash, access_logger)
         desc = self._describe_request(req)
         start = time.perf_counter()
         callback = await self._get_callback_async(req)
         try:
-            res = (
-                await cast(
-                    "Callable[[WhatsApp, FlowRequest], Awaitable[FlowResponse | dict | None]]",
-                    callback,
-                )(self._wa, req)
-                if helpers.is_async_callable(callback)
-                else callback(self._wa, req)
-            )
+            with update_context(request_hash, self._endpoint):
+                res = (
+                    await cast(
+                        "Callable[[WhatsApp, FlowRequest], Awaitable[FlowResponse | dict | None]]",
+                        callback,
+                    )(self._wa, req)
+                    if helpers.is_async_callable(callback)
+                    else callback(self._wa, req)
+                )
             if isinstance(
                 res, FlowResponseError
             ):  # typing backward compatibility. error should be raised, not returned
                 raise res
         except FlowResponseError as e:
-            log.info(
+            access.info(
                 "%s -> %s raised %s (status %d) (%.0fms)",
                 desc,
                 getattr(callback, "__name__", repr(callback)),
@@ -3730,7 +3758,7 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
             return "An error occurred", 500
 
         if self._acknowledge_errors and req.has_error:
-            log.info("%s -> error from WhatsApp acknowledged", desc)
+            access.info("%s -> error from WhatsApp acknowledged", desc)
             return self._encrypt_response(
                 {
                     "version": req.version,
@@ -3746,14 +3774,12 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
                 f"Flow endpoint ('{self._endpoint}') callback ('{getattr(callback, '__name__', repr(callback))}') must return a `FlowResponse`"
                 f" or `dict`, not {type(res)}"
             )
-        log.info(
-            "%s -> %s (%.0fms)",
+        body = res.to_dict() if isinstance(res, FlowResponse) else res
+        access.info(
+            "%s -> %s -> %s (%.0fms)",
             desc,
             getattr(callback, "__name__", repr(callback)),
+            self._describe_response(body),
             (time.perf_counter() - start) * 1000,
         )
-        return self._encrypt_response(
-            res.to_dict() if isinstance(res, FlowResponse) else res,
-            aes_key,
-            iv,
-        ), 200
+        return self._encrypt_response(body, aes_key, iv), 200

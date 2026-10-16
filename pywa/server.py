@@ -15,6 +15,8 @@ from . import errors, handlers, utils
 from ._logging import (
     ENV_LOG_LEVEL,
     TRACE,
+    access_log_from_env,
+    access_logger,
     bind_update_logger,
     compact_repr,
     describe_raw_update,
@@ -22,6 +24,7 @@ from ._logging import (
     emit_banner,
     get_update_hash,
     setup_console_logging,
+    update_context,
 )
 from .errors import PywaDeprecationWarning, PywaWarning
 from .types import AccountUpdate, MessageType, RawUpdate, UserPreferenceCategory
@@ -100,7 +103,9 @@ class Server:
         # multiple workers. Configuring logging here (rather than only where `run()`/the
         # CLI are invoked) guarantees it's applied in the process that actually handles
         # requests, not just in a parent/reloader process that never sees any traffic.
-        setup_console_logging(os.environ.get(ENV_LOG_LEVEL, "info"))
+        setup_console_logging(
+            os.environ.get(ENV_LOG_LEVEL, "info"), access_log=access_log_from_env()
+        )
         if self._server_type is not None:
             raise ValueError(
                 "When providing a custom `server` instance to the WhatsApp client, pywa assumes you will handle the webhook routes and server setup yourself. "
@@ -228,8 +233,9 @@ class Server:
                 self._webhook_endpoint,
             )
         else:
-            _logger.info(
-                "[%s] Verification challenge rejected: no `verify_token` configured",
+            _logger.warning(
+                "[%s] Verification challenge rejected: no `verify_token` configured. Pass the token set in "
+                "the app dashboard as `verify_token` to `WhatsApp(...)`",
                 self._webhook_endpoint,
             )
         return "Forbidden", 403
@@ -302,6 +308,7 @@ class Server:
 
         update_hash = get_update_hash(update)
         log = bind_update_logger(_logger, update_hash, self._webhook_endpoint)
+        access = bind_update_logger(access_logger, update_hash, self._webhook_endpoint)
         try:
             raw_update = RawUpdate(
                 update, hmac_header=hmac_header, update_hash=update_hash
@@ -325,7 +332,7 @@ class Server:
         if self._skip_duplicate_updates:
             with self._cache_lock:
                 if update_hash in self._processed_updates:
-                    log.info("Skipped duplicate update")
+                    access.info("Skipped duplicate update")
                     return "ok", 200
 
                 self._processed_updates[update_hash] = None
@@ -333,7 +340,8 @@ class Server:
                 if len(self._processed_updates) > MAX_PROCESSED_UPDATES:
                     self._processed_updates.popitem(last=False)
 
-        self._call_handlers(raw_update)
+        with update_context(update_hash, self._webhook_endpoint):
+            self._call_handlers(raw_update)
 
         return "ok", 200
 
@@ -383,6 +391,9 @@ class Server:
         """Call the handlers for the given update."""
         log = bind_update_logger(
             _logger, raw_update._update_hash, self._webhook_endpoint
+        )
+        access = bind_update_logger(
+            access_logger, raw_update._update_hash, self._webhook_endpoint
         )
         start = time.perf_counter()
         handler_type: type[handlers.Handler] | None = None
@@ -434,9 +445,9 @@ class Server:
             )
             elapsed = (time.perf_counter() - start) * 1000
             if called:
-                log.info("%s -> %s (%.1fms)", what, ", ".join(called), elapsed)
+                access.info("%s -> %s (%.1fms)", what, ", ".join(called), elapsed)
             else:
-                log.info("%s -> no handler matched (%.1fms)", what, elapsed)
+                access.info("%s -> no handler matched (%.1fms)", what, elapsed)
 
     def _call_raw_update_handler(self: "WhatsApp", update: RawUpdate) -> list[str]:
         """Invoke the raw update handler."""
@@ -769,7 +780,10 @@ def _handle_calls_field(
     if "calls" in value:
         if (handler := _CALL_EVENTS.get(value["calls"][0]["event"])) is not None:
             return handler
-        log.warning("Unknown call event: %s.", value["calls"][0]["event"])
+        log.warning(
+            "Unknown call event: %s. Ignoring it. Please update pywa or report this issue.",
+            value["calls"][0]["event"],
+        )
     elif "statuses" in value:
         return handlers.CallStatusHandler
     return None
@@ -787,7 +801,7 @@ def _handle_user_preferences_field(
         return handlers.UserMarketingPreferencesHandler
     log = bind_update_logger(_logger, update._update_hash, wa._webhook_endpoint)
     log.warning(
-        "Unknown user preference category: %s.",
+        "Unknown user preference category: %s. Ignoring it. Please update pywa or report this issue.",
         value["user_preferences"][0]["category"],
     )
     return None

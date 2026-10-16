@@ -791,3 +791,30 @@ def test_flow_request_logs_summary(caplog):
     assert wrapper.handle(payload) == ("enc", 200)
     assert "Flow INIT" in caplog.text
     assert "<lambda>" in caplog.text
+    assert "-> screen=X" in caplog.text
+
+
+def test_flow_request_logs_close_flow(caplog):
+    wa = WhatsApp(
+        token="xxx", server=None, verify_token="fdfd", business_private_key="xxx"
+    )
+    payload = {
+        "encrypted_flow_data": "a",
+        "encrypted_aes_key": "b",
+        "initial_vector": "c",
+    }
+    wrapper = wa.get_flow_request_handler(
+        endpoint="/flow",
+        callback=lambda _, __: FlowResponse(
+            version="3.0", close_flow=True, flow_token="t"
+        ),
+        request_decryptor=lambda *_: (
+            {"version": "3.0", "action": "INIT", "flow_token": "t"},
+            b"k",
+            b"i",
+        ),
+        response_encryptor=lambda res, *_: "enc",
+    )
+    caplog.set_level(logging.INFO, logger="pywa")
+    assert wrapper.handle(payload) == ("enc", 200)
+    assert "-> closes flow" in caplog.text

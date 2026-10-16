@@ -1,3 +1,4 @@
+import os
 import pathlib
 import runpy
 import shutil
@@ -906,3 +907,24 @@ def test_example_main_is_importable(example_main, tmp_path, monkeypatch):
     finally:
         # Avoid leaking a stale `flow_json` module into other parametrizations/tests.
         sys.modules.pop("flow_json", None)
+
+
+def test_serve_application_access_and_http_log_flags(mocker, tmp_path, monkeypatch):
+    target = tmp_path / "main.py"
+    target.write_text("")
+    fake_client = mocker.Mock(_server=None, _server_type=None, _uvicorn_workers=0)
+    mocker.patch("pywa.cli.discover_app_instance", return_value=("wa", fake_client))
+    setup_mock = mocker.patch("pywa.cli.setup_console_logging")
+    run_mock = mocker.patch("uvicorn.run")
+    monkeypatch.delenv("PYWA_ACCESS_LOG", raising=False)
+
+    cli.serve_application(command="run", path=target)
+    assert setup_mock.call_args.kwargs["access_log"] is True
+    assert run_mock.call_args.kwargs["access_log"] is False  # uvicorn HTTP log: off
+    assert os.environ["PYWA_ACCESS_LOG"] == "1"
+
+    cli.serve_application(command="run", path=target, access_log=False, http_log=True)
+    assert setup_mock.call_args.kwargs["access_log"] is False
+    assert run_mock.call_args.kwargs["access_log"] is True  # uvicorn HTTP log: on
+    assert "http_log" not in run_mock.call_args.kwargs
+    assert os.environ["PYWA_ACCESS_LOG"] == "0"

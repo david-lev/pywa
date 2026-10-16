@@ -159,8 +159,8 @@ async def test_listener_stopped_async(wa_async: WhatsAppAsync):
     assert exc_info.value.reason == "manual"
 
 
-def test_listener_timeout_is_logged_at_info(wa_sync: WhatsAppSync, caplog):
-    caplog.set_level(logging.INFO, logger="pywa")
+def test_listener_timeout_is_logged_at_debug(wa_sync: WhatsAppSync, caplog):
+    caplog.set_level(logging.DEBUG, logger="pywa")
     first_id = next(DummyUpdate().listener_identifiers)
     with pytest.raises(ListenerTimeout):
         wa_sync.listen(to=first_id, filters=filters.true, timeout=0.000001)

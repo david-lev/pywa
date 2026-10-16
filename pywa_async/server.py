@@ -7,11 +7,13 @@ from typing import TYPE_CHECKING
 
 from pywa._logging import (
     TRACE,
+    access_logger,
     bind_update_logger,
     compact_repr,
     describe_raw_update,
     describe_update,
     get_update_hash,
+    update_context,
 )
 from pywa.server import _logger, _update_hash_of
 from pywa.types.base_update import BaseUpdate
@@ -95,6 +97,7 @@ class Server:
 
         update_hash = get_update_hash(update)
         log = bind_update_logger(_logger, update_hash, self._webhook_endpoint)
+        access = bind_update_logger(access_logger, update_hash, self._webhook_endpoint)
         try:
             raw_update = RawUpdate(
                 update, hmac_header=hmac_header, update_hash=update_hash
@@ -117,7 +120,7 @@ class Server:
 
         if self._skip_duplicate_updates:
             if update_hash in self._processed_updates:
-                log.info("Skipped duplicate update")
+                access.info("Skipped duplicate update")
                 return "ok", 200
 
             self._processed_updates[update_hash] = None
@@ -125,7 +128,8 @@ class Server:
             if len(self._processed_updates) > MAX_PROCESSED_UPDATES:
                 self._processed_updates.popitem(last=False)
 
-        await self._call_handlers(raw_update)
+        with update_context(update_hash, self._webhook_endpoint):
+            await self._call_handlers(raw_update)
 
         return "ok", 200
 
@@ -133,6 +137,9 @@ class Server:
         """Call the handlers for the given update."""
         log = bind_update_logger(
             _logger, raw_update._update_hash, self._webhook_endpoint
+        )
+        access = bind_update_logger(
+            access_logger, raw_update._update_hash, self._webhook_endpoint
         )
         start = time.perf_counter()
         handler_type: type[Handler] | None = None
@@ -184,9 +191,9 @@ class Server:
             )
             elapsed = (time.perf_counter() - start) * 1000
             if called:
-                log.info("%s -> %s (%.1fms)", what, ", ".join(called), elapsed)
+                access.info("%s -> %s (%.1fms)", what, ", ".join(called), elapsed)
             else:
-                log.info("%s -> no handler matched (%.1fms)", what, elapsed)
+                access.info("%s -> no handler matched (%.1fms)", what, elapsed)
 
     async def _call_raw_update_handler(
         self: "WhatsApp", update: RawUpdate

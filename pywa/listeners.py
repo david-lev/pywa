@@ -15,6 +15,7 @@ import warnings
 from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 from . import utils
+from ._logging import get_context_logger
 from .errors import PywaWarning
 
 if TYPE_CHECKING:
@@ -133,7 +134,7 @@ class ListenerStopped(Exception):
         )
 
 
-_logger = logging.getLogger(__name__)
+_logger = get_context_logger(__name__)
 
 _UpdateT = TypeVar("_UpdateT", bound="BaseUpdate")
 
@@ -295,7 +296,7 @@ class _Listeners:
         try:
             if not listener.event.wait(timeout):
                 assert timeout is not None  # `.wait(None)` never times out
-                _logger.info(
+                _logger.debug(
                     "Listener timed out after %ss (active listeners=%d)",
                     timeout,
                     len(self._listeners) - 1,

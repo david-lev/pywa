@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING, Any, Protocol, TypeAlias
 
 import httpx
 
+from ._logging import get_context_logger
 from .errors import PywaDeprecationWarning
 
 if TYPE_CHECKING:
@@ -24,6 +25,31 @@ if TYPE_CHECKING:
 is_cryptography_installed = importlib.util.find_spec("cryptography") is not None
 
 _logger = logging.getLogger(__name__)
+
+
+def get_logger(name: str) -> logging.LoggerAdapter:
+    """
+    Get a logger for code outside the client that runs inside handlers.
+
+    - Lines logged while a handler (or a Flow request callback) is running are tagged with the same
+      ``[hash] [endpoint]`` prefix as pywa's own lines. Outside a handler it's a regular logger.
+    - It inherits the root logger's level (``WARNING`` by default), not pywa's ``log_level``, so set the level
+      yourself to see ``.info()`` lines (e.g. ``logging.getLogger(__name__).setLevel(logging.INFO)``).
+      Where the client is at hand, prefer :attr:`WhatsApp.logger`.
+
+    Example:
+
+        >>> log = utils.get_logger(__name__)
+        >>> log.warning("got a message")  # -> [b49a799b] got a message
+
+    Args:
+        name: The logger name (usually ``__name__``).
+
+    Returns:
+        A logger that tags its lines with the update being handled.
+    """
+    return get_context_logger(name)
+
 
 HUB_VT = "hub.verify_token"
 """The key for the verify token in the query parameters of the webhook get request."""

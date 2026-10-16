@@ -179,7 +179,7 @@ class _AsyncListeners:
             )
         except asyncio.TimeoutError:
             assert timeout is not None  # `asyncio.wait_for(..., None)` never times out
-            _logger.info(
+            _logger.debug(
                 "Listener timed out after %ss (active listeners=%d)",
                 timeout,
                 len(self._listeners) - 1,

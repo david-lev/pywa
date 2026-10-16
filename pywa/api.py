@@ -13,13 +13,18 @@ import httpx
 
 import pywa
 
-from ._logging import describe_request, describe_request_kwargs, log_api_response
+from ._logging import (
+    describe_request,
+    describe_request_kwargs,
+    get_context_logger,
+    log_api_response,
+)
 from .errors import WhatsAppError
 
 if TYPE_CHECKING:
     from ._helpers import GeneratorStreamer
 
-_logger = logging.getLogger(__name__)
+_logger = get_context_logger(__name__)
 
 
 class _UnpauseTemplateResult(TypedDict):

@@ -1914,7 +1914,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             with path.open("wb") as f:
                 async for chunk in res.aiter_bytes(chunk_size=chunk_size):
                     f.write(chunk)
-            _logger.info(
+            _logger.debug(
                 "Downloaded media to %s (%d bytes, %s)",
                 path,
                 path.stat().st_size,

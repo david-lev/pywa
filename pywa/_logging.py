@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import contextlib
+import contextvars
 import dataclasses
 import datetime
 import enum
@@ -11,6 +13,7 @@ import os
 import sys
 import time
 import warnings
+from collections.abc import Iterator
 from typing import TYPE_CHECKING, TextIO, cast
 
 from .errors import ThrottlingError
@@ -26,6 +29,15 @@ ENV_LOG_LEVEL = "PYWA_LOG_LEVEL"
 Environment variable used to pass the resolved log level across a process boundary
 - e.g. to a uvicorn ``--reload``/multi-worker subprocess that re-imports the app fresh
 and would otherwise never see the level chosen in the parent process.
+"""
+
+ENV_ACCESS_LOG = "PYWA_ACCESS_LOG"
+"""Same as :data:`ENV_LOG_LEVEL`, for the ``--access-log`` flag (``"1"``/``"0"``)."""
+
+access_logger = logging.getLogger("pywa.access")
+"""
+pywa's access log: one INFO line per handled update or Flow request. Silence it with
+``logging.getLogger("pywa.access").setLevel(logging.WARNING)``.
 """
 
 _LEVEL_NAMES: dict[str, int] = {
@@ -72,14 +84,22 @@ def _context_prefix(update_hash: str | None, endpoint: str | None) -> str:
     return f"{tag} "
 
 
+def _tag(msg, kwargs, update_hash: str | None, endpoint: str | None):
+    extra = kwargs.setdefault("extra", {})
+    extra.setdefault("update_hash", update_hash)
+    extra.setdefault("endpoint", endpoint)
+    return f"{_context_prefix(update_hash, endpoint)}{msg}", kwargs
+
+
 class _UpdateLoggerAdapter(logging.LoggerAdapter):
     def process(self, msg, kwargs):
-        extra = kwargs.setdefault("extra", {})
-        update_hash = cast("str | None", (self.extra or {}).get("update_hash"))
-        endpoint = cast("str | None", (self.extra or {}).get("endpoint"))
-        extra.setdefault("update_hash", update_hash)
-        extra.setdefault("endpoint", endpoint)
-        return f"{_context_prefix(update_hash, endpoint)}{msg}", kwargs
+        extra = self.extra or {}
+        return _tag(
+            msg,
+            kwargs,
+            cast("str | None", extra.get("update_hash")),
+            cast("str | None", extra.get("endpoint")),
+        )
 
 
 def bind_update_logger(
@@ -88,6 +108,39 @@ def bind_update_logger(
     return _UpdateLoggerAdapter(
         logger, {"update_hash": update_hash, "endpoint": endpoint}
     )
+
+
+_current_update: contextvars.ContextVar[tuple[str, str | None] | None] = (
+    contextvars.ContextVar("pywa_current_update", default=None)
+)
+
+
+@contextlib.contextmanager
+def update_context(update_hash: str, endpoint: str | None) -> Iterator[None]:
+    """Tag the lines of :func:`get_context_logger` loggers with this update while inside (per thread/task)."""
+    token = _current_update.set((update_hash, endpoint))
+    try:
+        yield
+    finally:
+        _current_update.reset(token)
+
+
+class _ContextLoggerAdapter(logging.LoggerAdapter):
+    def process(self, msg, kwargs):
+        current = _current_update.get()
+        if current is None:
+            return msg, kwargs
+        return _tag(msg, kwargs, *current)
+
+
+def get_context_logger(name: str) -> logging.LoggerAdapter:
+    """A logger that tags its lines with the update being handled, if any."""
+    return _ContextLoggerAdapter(logging.getLogger(name), {})
+
+
+def access_log_from_env() -> bool:
+    """Whether :data:`ENV_ACCESS_LOG` leaves the access log enabled (the default)."""
+    return os.environ.get(ENV_ACCESS_LOG, "1") != "0"
 
 
 def describe_raw_update(raw: dict) -> str:
@@ -171,7 +224,7 @@ def _is_throttling_code(code: object) -> bool:
 
 
 def log_api_response(
-    logger: logging.Logger,
+    logger: logging.Logger | logging.LoggerAdapter,
     method: str,
     endpoint: str,
     response: httpx.Response,
@@ -307,7 +360,10 @@ def _log_warning(
 
 
 def setup_console_logging(
-    level: str | int = "info", *, stream: TextIO | None = None
+    level: str | int = "info",
+    *,
+    stream: TextIO | None = None,
+    access_log: bool | None = None,
 ) -> None:
     """
     Configure console logging for the processes that own the application (``Server.run``,
@@ -320,6 +376,7 @@ def setup_console_logging(
         - If the root logger already has handlers (the host application configured
           logging itself), no handler is added - only the levels are applied - so
           every record isn't printed twice and the host's format is respected.
+        - ``access_log`` turns the ``pywa.access`` logger on/off (``None`` leaves it as is).
     """
     resolved = resolve_log_level(level)
     stream = stream or sys.stderr
@@ -343,6 +400,8 @@ def setup_console_logging(
     previous_level = getattr(pywa_logger, _LEVEL_ATTR, None)
     setattr(pywa_logger, _LEVEL_ATTR, resolved)
     pywa_logger.setLevel(resolved)
+    if access_log is not None:
+        access_logger.setLevel(logging.NOTSET if access_log else logging.CRITICAL + 1)
     logging.getLogger("uvicorn.error").setLevel(logging.WARNING)
     logging.getLogger("uvicorn.access").setLevel(logging.INFO)
 

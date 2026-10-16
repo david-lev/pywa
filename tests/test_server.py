@@ -10,13 +10,16 @@ import httpx
 import pytest
 from starlette.applications import Starlette
 
-from pywa import WhatsApp
+import pywa_async.utils
+from pywa import WhatsApp, filters
 from pywa import utils as pywa_utils
 from pywa._logging import (
     ColorFormatter,
     _color_enabled,
+    access_logger,
     bind_update_logger,
     emit_banner,
+    get_context_logger,
     get_update_hash,
     resolve_log_level,
     setup_console_logging,
@@ -650,3 +653,92 @@ def test_debug_parsed_update_keeps_false_but_drops_none(caplog):
     )
     assert "forwarded=False" in parsed
     assert "=None" not in parsed
+
+
+def test_access_log_toggle_silences_only_the_access_logger(caplog):
+    try:
+        setup_console_logging("info", access_log=False)
+        caplog.set_level(logging.INFO, logger="pywa")
+        access_logger.info("access line")
+        logging.getLogger("pywa.server").info("other line")
+        assert "access line" not in caplog.text
+        assert "other line" in caplog.text
+
+        setup_console_logging("info", access_log=True)
+        access_logger.info("access line")
+        assert "access line" in caplog.text
+    finally:
+        access_logger.setLevel(logging.NOTSET)
+
+
+def test_context_logger_tags_lines_logged_inside_a_handler(caplog):
+    ctx_log = get_context_logger("pywa.test_ctx")
+    wa = _make_client()
+
+    @wa.on_message(filters.true)
+    def cb(_, __):
+        ctx_log.warning("inside handler")
+
+    caplog.set_level(logging.DEBUG, logger="pywa")
+    wa.webhook_update_handler(json.dumps(_MESSAGE_UPDATE).encode())
+    ctx_log.warning("outside handler")
+
+    inside = next(r for r in caplog.records if "inside handler" in r.getMessage())
+    outside = next(r for r in caplog.records if "outside handler" in r.getMessage())
+    assert re.match(r"\[[0-9a-f]{8}\] inside handler", inside.getMessage())
+    assert outside.getMessage() == "outside handler"
+
+
+@pytest.mark.asyncio
+async def test_context_logger_tags_lines_logged_inside_an_async_handler(caplog):
+    ctx_log = get_context_logger("pywa.test_ctx")
+    wa = WhatsAppAsync(phone_id="1122334455667", token="xyz", filter_updates=False)
+
+    @wa.on_message(filters.true)
+    async def cb(_, __):
+        ctx_log.warning("inside handler")
+
+    caplog.set_level(logging.DEBUG, logger="pywa")
+    await wa.webhook_update_handler(json.dumps(_MESSAGE_UPDATE).encode())
+    ctx_log.warning("outside handler")
+
+    inside = next(r for r in caplog.records if "inside handler" in r.getMessage())
+    outside = next(r for r in caplog.records if "outside handler" in r.getMessage())
+    assert re.match(r"\[[0-9a-f]{8}\] inside handler", inside.getMessage())
+    assert outside.getMessage() == "outside handler"
+
+
+def test_utils_get_logger_is_public_and_tags_lines_inside_a_handler(caplog):
+    assert pywa_async.utils.get_logger is pywa_utils.get_logger
+    log = pywa_utils.get_logger("pywa.test_public")
+    wa = _make_client()
+
+    @wa.on_message(filters.true)
+    def cb(_, __):
+        log.warning("user line")
+
+    caplog.set_level(logging.DEBUG, logger="pywa")
+    wa.webhook_update_handler(json.dumps(_MESSAGE_UPDATE).encode())
+    rec = next(r for r in caplog.records if "user line" in r.getMessage())
+    assert re.match(r"\[[0-9a-f]{8}\] user line", rec.getMessage())
+
+
+def test_wa_logger_follows_pywa_level_and_tags_lines_inside_a_handler(caplog):
+    wa = _make_client()
+    wa_async = WhatsAppAsync(phone_id="1122334455667", token="xyz")
+    assert wa_async.logger is wa.logger
+
+    @wa.on_message(filters.true)
+    def cb(_, __):
+        wa.logger.info("user info")
+
+    try:
+        setup_console_logging("info")
+        assert logging.getLogger().level != logging.INFO
+        caplog.set_level(logging.INFO, logger="pywa")
+        wa.webhook_update_handler(json.dumps(_MESSAGE_UPDATE).encode())
+        rec = next(r for r in caplog.records if "user info" in r.getMessage())
+        assert re.match(r"\[[0-9a-f]{8}\] user info", rec.getMessage())
+        assert wa.logger.isEnabledFor(logging.INFO)
+    finally:
+        logging.getLogger("pywa").setLevel(logging.NOTSET)
