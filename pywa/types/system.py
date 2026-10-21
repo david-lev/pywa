@@ -32,7 +32,7 @@ class PhoneNumberChange(BaseUserUpdate):
         sys_type: The type of the system message (always ``SystemType.USER_CHANGED_NUMBER``).
         from_user: The user who changed their phone number. The user will contain the old phone number in the ``wa_id`` field.
         timestamp: The timestamp when the message was arrived to WhatsApp servers (in UTC).
-        old_wa_id: The old WhatsApp ID of the user.
+        old_wa_id: The old WhatsApp ID of the user (``None`` when the update is a user ID change that carries no phone number).
         new_wa_id: The new WhatsApp ID of the user.
         new_parent_id: he user’s new parent BSUID, if you have enabled parent BSUIDs
         body: The body of the system message (e.g., `John changed their phone number`).
@@ -40,7 +40,7 @@ class PhoneNumberChange(BaseUserUpdate):
 
     type: MessageType
     sys_type: SystemType
-    old_wa_id: str
+    old_wa_id: str | None
     new_wa_id: str | None
     new_user_id: str | None
     new_parent_id: str | None
@@ -69,13 +69,13 @@ class PhoneNumberChange(BaseUserUpdate):
             from_user=client._usr_cls(
                 _client=client,
                 bsuid=sys.get("user_id"),
-                wa_id=msg["from"],
+                wa_id=msg.get("from"),
                 parent_bsuid=sys.get("parent_user_id"),
                 name=None,
                 username=None,
                 identity_key_hash=None,
             ),
-            old_wa_id=sys.get("customer") or msg["from"],  # v12^ from
+            old_wa_id=sys.get("customer") or msg.get("from"),  # v12^ from
             new_wa_id=sys.get("wa_id") or sys.get("new_wa_id"),  # v12^ wa_id
             new_user_id=sys.get("user_id"),
             new_parent_id=sys.get("parent_user_id"),
