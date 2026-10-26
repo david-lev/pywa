@@ -102,7 +102,7 @@ class Server:
             raw_update = RawUpdate(
                 update, hmac_header=hmac_header, update_hash=update_hash
             )
-        except (TypeError, ValueError):
+        except (TypeError, ValueError, RecursionError):
             log.warning(
                 "Rejected a malformed (non-JSON) update body (%d bytes)",
                 len(update) if hasattr(update, "__len__") else -1,

@@ -3564,7 +3564,11 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
             log.debug("Decryption failure details", exc_info=True)
             return "Decryption failed", FlowRequestCannotBeDecrypted.status_code
 
-        if decrypted_request["action"] == "ping":
+        if not isinstance(decrypted_request, dict):
+            log.warning("Rejected a Flow request that is not a JSON object")
+            return "Bad Request", 400
+
+        if decrypted_request.get("action") == "ping":
             log.debug("Received a health check request")
             return self._encrypt_response(
                 {
@@ -3608,7 +3612,11 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
             log.debug("Decryption failure details", exc_info=True)
             return "Decryption failed", FlowRequestCannotBeDecrypted.status_code
 
-        if decrypted_request["action"] == "ping":
+        if not isinstance(decrypted_request, dict):
+            log.warning("Rejected a Flow request that is not a JSON object")
+            return "Bad Request", 400
+
+        if decrypted_request.get("action") == "ping":
             log.debug("Received a health check request")
             return self._encrypt_response(
                 {
