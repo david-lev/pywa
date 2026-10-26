@@ -277,6 +277,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             UserIdentifier.PARENT_BSUID,
         ),
         business_account_id: None = None,
+        max_download_size: int | None = helpers.DEFAULT_MAX_DOWNLOAD_SIZE,
     ) -> None:
         """
         The WhatsApp client.
@@ -327,6 +328,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             handlers_modules: Python modules from which handlers should be automatically loaded. A convenient way to organize handlers in separate files without having to import and register them manually (default: ``None``).
             user_identifier_priority: The priority order of user identifiers to use when replying to messages, blocking users, etc (default: ``bsuid`` > ``wa_id`` > ``parent_bsuid``).
             business_account_id: Deprecated alias for ``waba_id`` (the WhatsApp Business Account ID that owns the ``phone_id``).
+            max_download_size: The largest media (in bytes) a download may be, bigger ones raise ``ValueError`` instead of filling the memory or disk (default: ``100MB``, the largest media WhatsApp accepts; ``None`` to disable).
         """
         try:
             utils.Version.GRAPH_API.validate_min_version(str(api_version))
@@ -396,6 +398,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         self._app_secret = app_secret
         self._flows_response_encryptor = flows_response_encryptor
         self._validate_updates = validate_updates
+        self._max_download_size = max_download_size
         self._continue_handling = continue_handling
         self._skip_duplicate_updates = skip_duplicate_updates
         self._uvicorn_workers = 0
@@ -2151,9 +2154,16 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                         or ".bin"
                     )
             path = pathlib.Path(path) / (helpers.safe_filename(filename) or "media.bin")
-            with path.open("wb") as f:
-                for chunk in res.iter_bytes(chunk_size=chunk_size):
-                    f.write(chunk)
+            helpers.check_declared_size(res.headers, self._max_download_size)
+            try:
+                with path.open("wb") as f:
+                    for chunk in helpers.iter_limited(
+                        res.iter_bytes(chunk_size=chunk_size), self._max_download_size
+                    ):
+                        f.write(chunk)
+            except ValueError:
+                path.unlink(missing_ok=True)  # don't leave a truncated file behind
+                raise
             _logger.debug(
                 "Downloaded media to %s (%d bytes, %s)",
                 path,
@@ -2189,7 +2199,10 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         """
         with self.api.stream_media_bytes(media_url=url, **httpx_kwargs) as res:
             res.raise_for_status()
-            return res.read()
+            helpers.check_declared_size(res.headers, self._max_download_size)
+            return b"".join(
+                helpers.iter_limited(res.iter_bytes(), self._max_download_size)
+            )
 
     def stream_media(
         self,
@@ -2220,7 +2233,10 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         """
         with self.api.stream_media_bytes(media_url=url, **httpx_kwargs) as res:
             res.raise_for_status()
-            yield from res.iter_bytes(chunk_size=chunk_size)
+            helpers.check_declared_size(res.headers, self._max_download_size)
+            yield from helpers.iter_limited(
+                res.iter_bytes(chunk_size=chunk_size), self._max_download_size
+            )
 
     def delete_media(
         self,

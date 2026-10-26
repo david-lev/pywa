@@ -51,6 +51,52 @@ if TYPE_CHECKING:
 logger = get_context_logger("pywa.helpers")
 
 DOWNLOAD_CHUNK_SIZE = 64 * 1024
+DEFAULT_MAX_DOWNLOAD_SIZE = (
+    100 * 1024 * 1024
+)  # the largest media WhatsApp accepts (documents)
+
+
+def _too_large(max_size: int) -> ValueError:
+    return ValueError(
+        f"The media is larger than the allowed download size ({max_size} bytes). "
+        "Raise it with `WhatsApp(max_download_size=...)` (or `None` to disable the limit)"
+    )
+
+
+def check_declared_size(headers: httpx.Headers, max_size: int | None) -> None:
+    """Fail fast when the ``Content-Length`` already exceeds ``max_size``."""
+    if max_size is None:
+        return
+    try:
+        declared = int(headers.get("Content-Length", 0))
+    except ValueError:
+        return
+    if declared > max_size:
+        raise _too_large(max_size)
+
+
+def iter_limited(chunks: Iterable[bytes], max_size: int | None) -> Iterator[bytes]:
+    """Yield ``chunks``, raising ``ValueError`` once more than ``max_size`` bytes were yielded."""
+    total = 0
+    for chunk in chunks:
+        total += len(chunk)
+        if max_size is not None and total > max_size:
+            raise _too_large(max_size)
+        yield chunk
+
+
+async def aiter_limited(
+    chunks: AsyncIterator[bytes], max_size: int | None
+) -> AsyncIterator[bytes]:
+    """Async version of :func:`iter_limited`."""
+    total = 0
+    async for chunk in chunks:
+        total += len(chunk)
+        if max_size is not None and total > max_size:
+            raise _too_large(max_size)
+        yield chunk
+
+
 USE_FAKE_GEN_STREAM = True
 
 
@@ -526,13 +572,15 @@ def media_info_from_response(
     mime_type: str | None = None,
     fallback_filename: str | None = None,
     fallback_mime_type: str | None = None,
+    max_size: int | None = None,
 ) -> MediaInfo:
     try:
         res.raise_for_status()
     except httpx.HTTPError as e:
         raise ValueError(f"An error occurred while downloading from {url}: {e}") from e
+    check_declared_size(res.headers, max_size)
     length = get_content_length_from_httpx_response_headers(res.headers)
-    gen = res.iter_bytes(chunk_size=download_chunk_size)
+    gen = iter_limited(res.iter_bytes(chunk_size=download_chunk_size), max_size)
     return MediaInfo(
         content=gen
         if stream
@@ -556,6 +604,7 @@ def get_media_from_url(
     dl_session: httpx.Client,
     download_chunk_size: int,
     stream: bool,
+    max_size: int | None = None,
 ) -> MediaInfo:
     res = stack.enter_context(
         dl_session.stream(
@@ -572,6 +621,7 @@ def get_media_from_url(
         stream=stream,
         fallback_filename=get_filename_from_url(url),
         fallback_mime_type=get_mime_type_from_url(url),
+        max_size=max_size,
     )
 
 
@@ -669,6 +719,7 @@ def get_media_from_media_id_or_obj_or_url(
         download_chunk_size=download_chunk_size,
         stream=stream,
         mime_type=mime_type,
+        max_size=wa._max_download_size,
     )
 
 
@@ -728,6 +779,7 @@ def open_media(
                 dl_session=dl_session or stack.enter_context(httpx.Client()),
                 download_chunk_size=chunk_size,
                 stream=stream,
+                max_size=wa._max_download_size,
             )
         case MediaSource.PATH:
             assert isinstance(media, (str, pathlib.Path))

@@ -265,6 +265,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             UserIdentifier.PARENT_BSUID,
         ),
         business_account_id: None = None,
+        max_download_size: int | None = helpers.DEFAULT_MAX_DOWNLOAD_SIZE,
     ) -> None:
         """
         The WhatsApp client.
@@ -315,6 +316,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             handlers_modules: Python modules from which handlers should be automatically loaded. A convenient way to organize handlers in separate files without having to import and register them manually (default: ``None``).
             user_identifier_priority: The priority order of user identifiers to use when replying to messages, blocking users, etc (default: ``bsuid`` > ``wa_id`` > ``parent_bsuid``).
             business_account_id: Deprecated alias for ``waba_id`` (the WhatsApp Business Account ID that owns the ``phone_id``).
+            max_download_size: The largest media (in bytes) a download may be, bigger ones raise ``ValueError`` instead of filling the memory or disk (default: ``100MB``, the largest media WhatsApp accepts; ``None`` to disable).
         """
         super().__init__(
             phone_id=phone_id,
@@ -343,6 +345,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
             handlers_modules=handlers_modules,
             user_identifier_priority=user_identifier_priority,
             business_account_id=business_account_id,
+            max_download_size=max_download_size,
         )
 
     def __repr__(self):
@@ -1911,9 +1914,16 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                         or ".bin"
                     )
             path = pathlib.Path(path) / (helpers.safe_filename(filename) or "media.bin")
-            with path.open("wb") as f:
-                async for chunk in res.aiter_bytes(chunk_size=chunk_size):
-                    f.write(chunk)
+            helpers.check_declared_size(res.headers, self._max_download_size)
+            try:
+                with path.open("wb") as f:
+                    async for chunk in helpers.aiter_limited(
+                        res.aiter_bytes(chunk_size=chunk_size), self._max_download_size
+                    ):
+                        f.write(chunk)
+            except ValueError:
+                path.unlink(missing_ok=True)  # don't leave a truncated file behind
+                raise
             _logger.debug(
                 "Downloaded media to %s (%d bytes, %s)",
                 path,
@@ -1949,7 +1959,15 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         """
         async with self.api.stream_media_bytes(media_url=url, **httpx_kwargs) as res:
             res.raise_for_status()
-            return await res.aread()
+            helpers.check_declared_size(res.headers, self._max_download_size)
+            return b"".join(
+                [
+                    c
+                    async for c in helpers.aiter_limited(
+                        res.aiter_bytes(), self._max_download_size
+                    )
+                ]
+            )
 
     async def stream_media(
         self,
@@ -1980,7 +1998,10 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
         """
         async with self.api.stream_media_bytes(media_url=url, **httpx_kwargs) as res:
             res.raise_for_status()
-            async for chunk in res.aiter_bytes(chunk_size=chunk_size):
+            helpers.check_declared_size(res.headers, self._max_download_size)
+            async for chunk in helpers.aiter_limited(
+                res.aiter_bytes(chunk_size=chunk_size), self._max_download_size
+            ):
                 yield chunk
 
     async def delete_media(

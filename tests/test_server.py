@@ -807,3 +807,64 @@ def test_flow_endpoint_requires_valid_signature():
     sig = "sha256=" + hmac.new(b"secret", bad, hashlib.sha256).hexdigest()
     res = client.post("/flow", data=bad, headers={"X-Hub-Signature-256": sig})
     assert res.status_code == 400
+
+
+_MEDIA_URL = "https://lookaside.fbsbx.com/whatsapp_business/attachments/?mid=1"
+
+
+def _download_clients(handler, max_size):
+    sync = WhatsApp(
+        phone_id="1",
+        token="t",
+        session=httpx.Client(transport=httpx.MockTransport(handler)),
+        max_download_size=max_size,
+    )
+    asyn = WhatsAppAsync(
+        phone_id="1",
+        token="t",
+        session=httpx.AsyncClient(transport=httpx.MockTransport(handler)),
+        max_download_size=max_size,
+    )
+    return sync, asyn
+
+
+def test_download_size_limit_declared_and_actual(tmp_path):
+    # `Content-Length` over the limit is rejected, and so is a body that lies about (or omits) it
+    responses = (
+        lambda: httpx.Response(
+            200, content=b"x" * 100, headers={"Content-Length": "100"}
+        ),
+        lambda: httpx.Response(200, stream=httpx.ByteStream(b"x" * 100)),
+    )
+    for make in responses:
+        wa, _ = _download_clients(lambda _, m=make: m(), max_size=50)
+        with pytest.raises(ValueError, match="larger than the allowed"):
+            wa.get_media_bytes(_MEDIA_URL)
+        with pytest.raises(ValueError, match="larger than the allowed"):
+            b"".join(wa.stream_media(_MEDIA_URL))
+        with pytest.raises(ValueError, match="larger than the allowed"):
+            wa.download_media(url=_MEDIA_URL, path=tmp_path, filename="f.bin")
+        assert not (tmp_path / "f.bin").exists()
+
+
+def test_download_size_limit_allows_small_and_disabled(tmp_path):
+    handler = lambda _: httpx.Response(200, content=b"x" * 100)
+    wa, _ = _download_clients(handler, max_size=100)
+    assert wa.get_media_bytes(_MEDIA_URL) == b"x" * 100
+    wa, _ = _download_clients(handler, max_size=None)
+    assert wa.get_media_bytes(_MEDIA_URL) == b"x" * 100
+
+
+@pytest.mark.asyncio
+async def test_download_size_limit_async(tmp_path):
+    handler = lambda _: httpx.Response(200, content=b"x" * 100)
+    _, wa = _download_clients(handler, max_size=50)
+    with pytest.raises(ValueError, match="larger than the allowed"):
+        await wa.get_media_bytes(_MEDIA_URL)
+    with pytest.raises(ValueError, match="larger than the allowed"):
+        [c async for c in wa.stream_media(_MEDIA_URL)]
+    with pytest.raises(ValueError, match="larger than the allowed"):
+        await wa.download_media(url=_MEDIA_URL, path=tmp_path, filename="f.bin")
+    assert not (tmp_path / "f.bin").exists()
+    _, wa = _download_clients(handler, max_size=100)
+    assert await wa.get_media_bytes(_MEDIA_URL) == b"x" * 100

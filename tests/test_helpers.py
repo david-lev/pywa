@@ -362,7 +362,7 @@ def _stream_cm(status_code=200, headers=None, chunks=(b"data",)):
 
 
 def test_get_media_from_media_id_or_obj_or_url_media_id():
-    wa = mock.Mock()
+    wa = mock.Mock(_max_download_size=None)
     wa.get_media_url.return_value = mock.Mock(
         url="https://media.example/1", mime_type="image/png"
     )
@@ -383,7 +383,7 @@ def test_get_media_from_media_id_or_obj_or_url_media_id():
 
 
 def test_get_media_from_media_id_or_obj_or_url_media_url():
-    wa = mock.Mock()
+    wa = mock.Mock(_max_download_size=None)
     wa.api.stream_media_bytes.return_value = _stream_cm()
     with contextlib.ExitStack() as stack:
         info = helpers.get_media_from_media_id_or_obj_or_url(
@@ -398,7 +398,7 @@ def test_get_media_from_media_id_or_obj_or_url_media_url():
 
 
 def test_get_media_from_media_id_or_obj_or_url_invalid_source_raises():
-    wa = mock.Mock()
+    wa = mock.Mock(_max_download_size=None)
     with pytest.raises(ValueError), contextlib.ExitStack() as stack:
         helpers.get_media_from_media_id_or_obj_or_url(
             stack,
@@ -411,7 +411,7 @@ def test_get_media_from_media_id_or_obj_or_url_invalid_source_raises():
 
 
 def test_get_media_from_media_id_or_obj_or_url_http_error_raises():
-    wa = mock.Mock()
+    wa = mock.Mock(_max_download_size=None)
     wa.get_media_url.return_value = mock.Mock(
         url="https://media.example/1", mime_type=None
     )
@@ -431,7 +431,7 @@ def test_get_media_from_media_id_or_obj_or_url_http_error_raises():
 
 
 def test_internal_upload_media_bytes():
-    wa = mock.Mock()
+    wa = mock.Mock(_max_download_size=None)
     wa.api.upload_media.return_value = {"id": "media-id-1"}
     media = helpers.internal_upload_media(
         media=b"filebytes",
@@ -452,7 +452,7 @@ def test_internal_upload_media_bytes():
 
 
 def test_internal_upload_media_unsupported_source_raises():
-    wa = mock.Mock()
+    wa = mock.Mock(_max_download_size=None)
     with pytest.raises(ValueError):
         helpers.internal_upload_media(
             media="x",
@@ -470,7 +470,7 @@ def test_internal_upload_media_unsupported_source_raises():
 
 
 def test_internal_upload_file_file_handle_shortcircuits():
-    wa = mock.Mock()
+    wa = mock.Mock(_max_download_size=None)
     handle, source = helpers.internal_upload_file(
         wa=wa,
         file="2:c2FtcGxl...",
@@ -485,7 +485,7 @@ def test_internal_upload_file_file_handle_shortcircuits():
 
 
 def test_internal_upload_file_bytes():
-    wa = mock.Mock()
+    wa = mock.Mock(_max_download_size=None)
     wa.api.create_upload_session.return_value = {"id": "session-1"}
     wa.api.upload_file.return_value = {"h": "handle-1"}
     wa.app_id = "app-1"
@@ -508,7 +508,7 @@ def test_internal_upload_file_bytes():
 
 
 def test_internal_upload_file_wraps_errors():
-    wa = mock.Mock()
+    wa = mock.Mock(_max_download_size=None)
     wa.api.create_upload_session.side_effect = RuntimeError("boom")
     wa.app_id = "app-1"
     with pytest.raises(ValueError):
@@ -526,7 +526,7 @@ def test_internal_upload_file_wraps_errors():
 
 
 def test_internal_upload_media_external_url(mocker):
-    wa = mock.Mock()
+    wa = mock.Mock(_max_download_size=None)
     wa.api.upload_media.return_value = {"id": "media-id-1"}
     mocker.patch(
         "pywa._helpers.get_media_from_url",
@@ -548,7 +548,7 @@ def test_internal_upload_media_external_url(mocker):
 
 
 def test_internal_upload_media_path(tmp_path):
-    wa = mock.Mock()
+    wa = mock.Mock(_max_download_size=None)
     wa.api.upload_media.return_value = {"id": "media-id-1"}
     p = tmp_path / "a.jpg"
     p.write_bytes(b"data")
@@ -567,7 +567,7 @@ def test_internal_upload_media_path(tmp_path):
 
 
 def test_internal_upload_media_file_obj():
-    wa = mock.Mock()
+    wa = mock.Mock(_max_download_size=None)
     wa.api.upload_media.return_value = {"id": "media-id-1"}
     media = helpers.internal_upload_media(
         media=io.BytesIO(b"data"),
@@ -583,7 +583,7 @@ def test_internal_upload_media_file_obj():
 
 
 def test_internal_upload_media_bytes_gen():
-    wa = mock.Mock()
+    wa = mock.Mock(_max_download_size=None)
     wa.api.upload_media.return_value = {"id": "media-id-1"}
     media = helpers.internal_upload_media(
         media=iter([b"a", b"b"]),
@@ -599,7 +599,7 @@ def test_internal_upload_media_bytes_gen():
 
 
 def test_internal_upload_media_base64():
-    wa = mock.Mock()
+    wa = mock.Mock(_max_download_size=None)
     wa.api.upload_media.return_value = {"id": "media-id-1"}
     media = helpers.internal_upload_media(
         media="aGVsbG8=",
@@ -615,7 +615,7 @@ def test_internal_upload_media_base64():
 
 
 def test_internal_upload_media_media_obj():
-    wa = mock.Mock()
+    wa = mock.Mock(_max_download_size=None)
     wa.get_media_url.return_value = mock.Mock(
         url="https://media.example/1", mime_type=None
     )
@@ -639,7 +639,7 @@ def test_internal_upload_media_media_obj():
 
 
 def test_internal_upload_file_external_url(mocker):
-    wa = mock.Mock()
+    wa = mock.Mock(_max_download_size=None)
     wa.api.create_upload_session.return_value = {"id": "session-1"}
     wa.api.upload_file.return_value = {"h": "handle-1"}
     wa.app_id = "app-1"
@@ -662,7 +662,7 @@ def test_internal_upload_file_external_url(mocker):
 
 
 def test_internal_upload_file_path(tmp_path):
-    wa = mock.Mock()
+    wa = mock.Mock(_max_download_size=None)
     wa.api.create_upload_session.return_value = {"id": "session-1"}
     wa.api.upload_file.return_value = {"h": "handle-1"}
     wa.app_id = "app-1"
@@ -681,7 +681,7 @@ def test_internal_upload_file_path(tmp_path):
 
 
 def test_internal_upload_file_media_obj():
-    wa = mock.Mock()
+    wa = mock.Mock(_max_download_size=None)
     wa.get_media_url.return_value = mock.Mock(
         url="https://media.example/1", mime_type=None
     )
@@ -703,7 +703,7 @@ def test_internal_upload_file_media_obj():
 
 
 def test_internal_upload_file_bytes_gen():
-    wa = mock.Mock()
+    wa = mock.Mock(_max_download_size=None)
     wa.api.create_upload_session.return_value = {"id": "session-1"}
     wa.api.upload_file.return_value = {"h": "handle-1"}
     wa.app_id = "app-1"
@@ -720,7 +720,7 @@ def test_internal_upload_file_bytes_gen():
 
 
 def test_internal_upload_file_base64():
-    wa = mock.Mock()
+    wa = mock.Mock(_max_download_size=None)
     wa.api.create_upload_session.return_value = {"id": "session-1"}
     wa.api.upload_file.return_value = {"h": "handle-1"}
     wa.app_id = "app-1"
@@ -737,7 +737,7 @@ def test_internal_upload_file_base64():
 
 
 def test_internal_upload_file_unknown_filename_raises():
-    wa = mock.Mock()
+    wa = mock.Mock(_max_download_size=None)
     with pytest.raises(ValueError):
         helpers.internal_upload_file(
             wa=wa,
@@ -775,7 +775,7 @@ async def _async_gen():
 
 
 def test_internal_upload_file_async_bytes_gen_unsupported_raises():
-    wa = mock.Mock()
+    wa = mock.Mock(_max_download_size=None)
     with pytest.raises(ValueError):
         helpers.internal_upload_file(
             wa=wa,
@@ -788,7 +788,7 @@ def test_internal_upload_file_async_bytes_gen_unsupported_raises():
 
 
 def test_internal_upload_file_file_obj():
-    wa = mock.Mock()
+    wa = mock.Mock(_max_download_size=None)
     wa.api.create_upload_session.return_value = {"id": "session-1"}
     wa.api.upload_file.return_value = {"h": "handle-1"}
     wa.app_id = "app-1"
@@ -805,7 +805,7 @@ def test_internal_upload_file_file_obj():
 
 
 def test_internal_upload_file_unknown_length_raises():
-    wa = mock.Mock()
+    wa = mock.Mock(_max_download_size=None)
     wa.get_media_url.return_value = mock.Mock(
         url="https://media.example/1", mime_type=None
     )
@@ -975,7 +975,7 @@ def test_internal_upload_media_keeps_callers_download_session_open(mocker):
 
 def test_internal_upload_media_exits_streaming_response_when_upload_fails():
     cm = _stream_cm(headers={"Content-Length": "4"})
-    wa = mock.Mock()
+    wa = mock.Mock(_max_download_size=None)
     wa.get_media_url.return_value = mock.Mock(
         url="https://media.example/1", mime_type=None
     )
@@ -1014,7 +1014,7 @@ def test_internal_upload_file_closes_download_client_when_download_fails(mocker)
 def test_internal_upload_file_closes_opened_path_when_upload_fails(tmp_path):
     p = tmp_path / "a.png"
     p.write_bytes(b"data")
-    wa = mock.Mock()
+    wa = mock.Mock(_max_download_size=None)
     wa.api.create_upload_session.side_effect = RuntimeError("boom")
     opened = []
     real_open = helpers.get_media_from_path
@@ -1041,7 +1041,7 @@ def test_internal_upload_file_closes_opened_path_when_upload_fails(tmp_path):
 
 def test_internal_upload_file_error_message_has_no_payload():
     secret = base64.b64encode(b"private document").decode()
-    wa = mock.Mock()
+    wa = mock.Mock(_max_download_size=None)
     wa.api.create_upload_session.side_effect = RuntimeError("boom")
     with pytest.raises(ValueError) as exc:
         helpers.internal_upload_file(
@@ -1057,7 +1057,7 @@ def test_internal_upload_file_error_message_has_no_payload():
 
 def test_upload_helpers_do_not_wrap_whatsapp_errors():
     err = WhatsAppError.from_dict({"code": 190, "message": "bad token"})
-    wa = mock.Mock()
+    wa = mock.Mock(_max_download_size=None)
     wa.api.create_upload_session.side_effect = err
     with pytest.raises(WhatsAppError) as exc:
         helpers.internal_upload_file(
@@ -1279,7 +1279,7 @@ def _upload_media(media, **kwargs):
         sent.update(mime_type=mime_type, filename=filename, body=body)
         return {"id": "m"}
 
-    wa = mock.Mock()
+    wa = mock.Mock(_max_download_size=None)
     wa.api.upload_media = upload_media
     helpers.internal_upload_media(
         media=media,

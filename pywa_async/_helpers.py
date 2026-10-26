@@ -14,6 +14,7 @@ import httpx
 from pywa._helpers import BASE64_DATA_URI_PATTERN as BASE64_DATA_URI_PATTERN
 from pywa._helpers import BASE64_PATTERN as BASE64_PATTERN
 from pywa._helpers import BSUID_RE as BSUID_RE
+from pywa._helpers import DEFAULT_MAX_DOWNLOAD_SIZE as DEFAULT_MAX_DOWNLOAD_SIZE
 from pywa._helpers import DOWNLOAD_CHUNK_SIZE as DOWNLOAD_CHUNK_SIZE
 from pywa._helpers import FILE_HANDLE_PATTERN as FILE_HANDLE_PATTERN
 from pywa._helpers import WA_ID_RE as WA_ID_RE
@@ -34,6 +35,7 @@ from pywa._helpers import GeneratorStreamer as GeneratorStreamer
 from pywa._helpers import MediaInfo as MediaInfo
 from pywa._helpers import MediaSource as MediaSource
 from pywa._helpers import StrEnum as StrEnum
+from pywa._helpers import aiter_limited, check_declared_size, safe_filename
 from pywa._helpers import clean_phone_number as clean_phone_number
 from pywa._helpers import describe_media as describe_media
 from pywa._helpers import detect_media_source as detect_media_source
@@ -90,7 +92,6 @@ from pywa._helpers import (
 from pywa._helpers import resolve_recipient as resolve_recipient
 from pywa._helpers import resolve_tracker_param as resolve_tracker_param
 from pywa._helpers import resolve_users as resolve_users
-from pywa._helpers import safe_filename as safe_filename
 from pywa._helpers import (
     template_header_formats_default_mime_types as template_header_formats_default_mime_types,
 )
@@ -175,14 +176,19 @@ async def media_info_from_response(
     mime_type: str | None = None,
     fallback_filename: str | None = None,
     fallback_mime_type: str | None = None,
+    max_size: int | None = None,
 ) -> MediaInfo:
     try:
         res.raise_for_status()
-        body = None if stream else await res.aread()
+        check_declared_size(res.headers, max_size)
+        limited = aiter_limited(
+            res.aiter_bytes(chunk_size=download_chunk_size), max_size
+        )
+        body = None if stream else b"".join([c async for c in limited])
     except httpx.HTTPError as e:
         raise ValueError(f"An error occurred while downloading from {url}: {e}") from e
     if body is None:
-        content = res.aiter_bytes(chunk_size=download_chunk_size)
+        content = limited
         length = get_content_length_from_httpx_response_headers(res.headers)
     else:
         content, length = body, len(body)
@@ -203,6 +209,7 @@ async def get_media_from_url(
     dl_session: httpx.AsyncClient,
     download_chunk_size: int | None,
     stream: bool,
+    max_size: int | None = None,
 ) -> MediaInfo:
     res = await stack.enter_async_context(
         dl_session.stream(
@@ -219,6 +226,7 @@ async def get_media_from_url(
         stream=stream,
         fallback_filename=get_filename_from_url(url),
         fallback_mime_type=get_mime_type_from_url(url),
+        max_size=max_size,
     )
 
 
@@ -257,6 +265,7 @@ async def get_media_from_media_id_or_obj_or_url(
         download_chunk_size=download_chunk_size,
         stream=stream,
         mime_type=mime_type,
+        max_size=wa._max_download_size,
     )
 
 
@@ -297,6 +306,7 @@ async def open_media(
                 or await stack.enter_async_context(httpx.AsyncClient()),
                 download_chunk_size=chunk_size,
                 stream=stream,
+                max_size=wa._max_download_size,
             )
         case MediaSource.PATH:
             assert isinstance(media, (str, pathlib.Path))

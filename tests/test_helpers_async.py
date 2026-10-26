@@ -18,7 +18,7 @@ pytestmark = pytest.mark.asyncio
 
 
 def _wa() -> mock.Mock:
-    wa = mock.Mock()
+    wa = mock.Mock(_max_download_size=None)
     wa.api.create_upload_session = mock.AsyncMock(return_value={"id": "session-1"})
     wa.api.upload_file = mock.AsyncMock(return_value={"h": "handle-1"})
     wa.api.upload_media = mock.AsyncMock(return_value={"id": "media-1"})
@@ -77,7 +77,7 @@ async def test_get_media_from_url_http_error_raises_value_error():
 async def test_get_media_from_media_url_http_error_raises_value_error_not_runtime_error():
     # `res.close()` on an async response raised `RuntimeError` and hid the real error
     url = "https://lookaside.fbsbx.com/whatsapp_business/attachments/?mid=1"
-    wa = mock.Mock()
+    wa = mock.Mock(_max_download_size=None)
     wa.api.stream_media_bytes.return_value = httpx.AsyncClient(
         transport=_transport(404)
     ).stream("GET", url)
