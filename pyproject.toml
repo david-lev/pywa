@@ -132,6 +132,8 @@ extend-select = [
 "tests/test_flows.py" = ["E712"]
 "tests/smoke_test.py" = ["T201"]
 "examples/**" = ["T201"]
+# one-off docs migration scripts (Sphinx -> Markdown), removed once the Sphinx sources are gone
+"docs-mkdocs/tools/*" = ["T201", "E741", "UP031", "F841", "SIM222", "SIM115", "S110", "S112", "BLE001", "PIE810", "PLW1508"]
 
 [tool.ty.src]
 include = ["pywa*", "tests/static_typing"]

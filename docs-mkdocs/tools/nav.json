@@ -1,0 +1,254 @@
+[
+ {
+  "⚙️ Get Started": "content/getting-started.md"
+ },
+ {
+  "🔌 Client": [
+   "content/client/overview.md",
+   {
+    "Client Reference": "content/client/client_reference.md"
+   },
+   {
+    "API Reference": "content/client/api_reference.md"
+   }
+  ]
+ },
+ {
+  "🎛️ Handlers": [
+   "content/handlers/overview.md",
+   {
+    "Handler Decorators": "content/handlers/handler_decorators.md"
+   },
+   {
+    "Handler Objects": "content/handlers/handler_objects.md"
+   }
+  ]
+ },
+ {
+  "📥 Listeners": [
+   "content/listeners/overview.md",
+   {
+    "Listeners reference": "content/listeners/reference.md"
+   }
+  ]
+ },
+ {
+  "💬 Updates": [
+   "content/updates/overview.md",
+   {
+    "Message": "content/updates/message.md"
+   },
+   {
+    "Callback Button": "content/updates/callback_button.md"
+   },
+   {
+    "Callback Selection": "content/updates/callback_selection.md"
+   },
+   {
+    "Flow Completion": "content/updates/flow_completion.md"
+   },
+   {
+    "Message Status": "content/updates/message_status.md"
+   },
+   {
+    "Phone Number Change": "content/updates/phone_number_change.md"
+   },
+   {
+    "Identity Change": "content/updates/identity_change.md"
+   },
+   {
+    "Call Connect": "content/updates/call_connect.md"
+   },
+   {
+    "Call Terminate": "content/updates/call_terminate.md"
+   },
+   {
+    "Call Status": "content/updates/call_status.md"
+   },
+   {
+    "Call Permission Update": "content/updates/call_permission_update.md"
+   },
+   {
+    "User Marketing Preferences": "content/updates/user_marketing_preferences.md"
+   },
+   {
+    "Template Status Update": "content/updates/template_status_update.md"
+   },
+   {
+    "Template Category Update": "content/updates/template_category_update.md"
+   },
+   {
+    "Template Quality Update": "content/updates/template_quality_update.md"
+   },
+   {
+    "Template Components Update": "content/updates/template_components_update.md"
+   },
+   {
+    "Edited Message": "content/updates/edited_message.md"
+   },
+   {
+    "Deleted Message": "content/updates/deleted_message.md"
+   },
+   {
+    "Outgoing Message": "content/updates/outgoing_message.md"
+   },
+   {
+    "Outgoing Edited Message": "content/updates/outgoing_edited_message.md"
+   },
+   {
+    "Outgoing Deleted Message": "content/updates/outgoing_deleted_message.md"
+   },
+   {
+    "Account Update": "content/updates/account_update.md"
+   },
+   {
+    "Raw Update": "content/updates/raw_update.md"
+   },
+   {
+    "Common methods": "content/updates/common_methods.md"
+   }
+  ]
+ },
+ {
+  "♻️ Flows": [
+   "content/flows/overview.md",
+   {
+    "Flow JSON": "content/flows/flow_json.md"
+   },
+   {
+    "Flow Types": "content/flows/flow_types.md"
+   }
+  ]
+ },
+ {
+  "📄 Templates": [
+   "content/templates/overview.md",
+   {
+    "Template Types": "content/templates/types.md"
+   }
+  ]
+ },
+ {
+  "🔬 Filters": [
+   "content/filters/overview.md",
+   {
+    "Common filters": "content/filters/common_filters.md"
+   },
+   {
+    "Message Filters": "content/filters/message_filters.md"
+   },
+   {
+    "Message Status Filters": "content/filters/message_status_filters.md"
+   },
+   {
+    "Account Update Filters": "content/filters/account_update_filters.md"
+   },
+   {
+    "Calls Filters": "content/filters/calls_filters.md"
+   }
+  ]
+ },
+ {
+  "⚠️ Errors": [
+   "content/errors/overview.md",
+   {
+    "Sending Messages Errors": "content/errors/sending_messages_errors.md"
+   },
+   {
+    "Flows Errors": "content/errors/flows_errors.md"
+   },
+   {
+    "Authorization Errors": "content/errors/authorization_errors.md"
+   },
+   {
+    "Rate Limit Errors": "content/errors/rate_limit_errors.md"
+   },
+   {
+    "Integrity Errors": "content/errors/integrity_errors.md"
+   },
+   {
+    "Block Users Errors": "content/errors/block_users_errors.md"
+   },
+   {
+    "Calling Errors": "content/errors/calling_errors.md"
+   },
+   {
+    "Username Errors": "content/errors/username_errors.md"
+   },
+   {
+    "Template Creation Errors": "content/errors/template_creation_errors.md"
+   },
+   {
+    "Group Errors": "content/errors/group_errors.md"
+   }
+  ]
+ },
+ {
+  "❇️ Types": [
+   "content/types/overview.md",
+   {
+    "Media": "content/types/media.md"
+   },
+   {
+    "Keyboard": "content/types/keyboard.md"
+   },
+   {
+    "Others": "content/types/others.md"
+   }
+  ]
+ },
+ {
+  "👥 Groups": [
+   "content/groups/overview.md",
+   {
+    "Groups Types": "content/groups/types.md"
+   }
+  ]
+ },
+ {
+  "📞 Calls": [
+   "content/calls/overview.md",
+   {
+    "Call Types": "content/calls/types.md"
+   }
+  ]
+ },
+ {
+  "💡 Examples": [
+   "content/examples/overview.md",
+   {
+    "Template Examples": "content/examples/template.md"
+   },
+   {
+    "Flows Examples": "content/examples/flows.md"
+   },
+   {
+    "🤖 Demo Bots": "content/examples/demo-bots.md"
+   },
+   {
+    "Sending Messages": "content/examples/message.md"
+   },
+   {
+    "📲 Sending Interactive Messages": "content/examples/interactive.md"
+   },
+   {
+    "Sending Media Messages": "content/examples/media.md"
+   },
+   {
+    "Sign Up Flow": "content/examples/sign_up_flow.md"
+   }
+  ]
+ },
+ {
+  "💻 Command-Line Interface": "content/cli.md"
+ },
+ {
+  "changelog": "content/changelog.md"
+ },
+ {
+  "contributing": "content/contributing.md"
+ },
+ {
+  "migration": "content/migration.md"
+ }
+]
