@@ -39,6 +39,12 @@ def test_webhook_updates_validator():
     )
 
 
+def test_flow_media_cdn_url_must_be_trusted():
+    for url in ("http://scontent.whatsapp.net/x", "https://attacker.example/x"):
+        with pytest.raises(ValueError):
+            pywa_utils.flow_request_media_decryptor({"cdn_url": url})
+
+
 # This private key is already reset
 private_key = """
 -----BEGIN ENCRYPTED PRIVATE KEY-----

@@ -460,6 +460,7 @@ def flow_request_media_decryptor(
         HTTPStatusError: If the request to the CDN URL fails.
         ValueError: If any of the hash verifications fail.
     """
+    _ensure_trusted_media_url(encrypted_media["cdn_url"])
     res = (dl_session or httpx.Client()).get(encrypted_media["cdn_url"])
     res.raise_for_status()
     return FlowRequestDecryptedMedia(
@@ -482,15 +483,17 @@ def _flow_request_media_decryptor(
     ciphertext = cdn_file[:-10]
     sha256 = hashlib.sha256(cdn_file)
     calculated_hash = base64.b64encode(sha256.digest()).decode()
-    if calculated_hash != encryption_metadata["encrypted_hash"]:
+    if not hmac.compare_digest(
+        calculated_hash.encode(), str(encryption_metadata["encrypted_hash"]).encode()
+    ):
         raise ValueError("CDN file hash verification failed")
-    if (
+    if not hmac.compare_digest(
         hmac.new(
             base64.b64decode(encryption_metadata["hmac_key"]),
             base64.b64decode(encryption_metadata["iv"]) + ciphertext,
             hashlib.sha256,
-        ).digest()[:10]
-        != cdn_file[-10:]
+        ).digest()[:10],
+        cdn_file[-10:],
     ):
         raise ValueError("HMAC verification failed")
     decryptor = Cipher(
