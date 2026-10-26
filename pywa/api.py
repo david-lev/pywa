@@ -33,6 +33,13 @@ class _UnpauseTemplateResult(TypedDict):
     reason: str | None
 
 
+def _ensure_safe_id(value: str, what: str = "ID") -> str:
+    """Raise ``ValueError`` if ``value`` could change the Graph API path/query when interpolated into an endpoint."""
+    if not value or any(c in value for c in "/\\?#&%\x00 \t\r\n") or ".." in value:
+        raise ValueError(f"Invalid {what}: {value!r}")
+    return value
+
+
 class GraphAPI:
     """Internal methods for the WhatsApp client. Do not use this class directly."""
 
@@ -469,7 +476,9 @@ class GraphAPI:
         Returns:
             A dict with the URL and other info about the media file.
         """
-        return self._request(method="GET", endpoint=f"/{media_id}")
+        return self._request(
+            method="GET", endpoint=f"/{_ensure_safe_id(media_id, 'media ID')}"
+        )
 
     def stream_media_bytes(
         self,
@@ -519,7 +528,7 @@ class GraphAPI:
         """
         return self._request(
             method="DELETE",
-            endpoint=f"/{media_id}",
+            endpoint=f"/{_ensure_safe_id(media_id, 'media ID')}",
             params=self._filter_none(phone_number_id=phone_number_id),
         )
 

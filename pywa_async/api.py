@@ -15,6 +15,7 @@ from pywa._logging import (
 )
 from pywa.api import *
 from pywa.api import (
+    _ensure_safe_id,
     _ensure_trusted_media_url,
     _logger,
     _UnpauseTemplateResult,
@@ -433,7 +434,9 @@ class GraphAPIAsync(GraphAPI):
         Returns:
             A dict with the URL and other info about the media file.
         """
-        return await self._request(method="GET", endpoint=f"/{media_id}")
+        return await self._request(
+            method="GET", endpoint=f"/{_ensure_safe_id(media_id, 'media ID')}"
+        )
 
     def stream_media_bytes(
         self,
@@ -483,7 +486,7 @@ class GraphAPIAsync(GraphAPI):
         """
         return await self._request(
             method="DELETE",
-            endpoint=f"/{media_id}",
+            endpoint=f"/{_ensure_safe_id(media_id, 'media ID')}",
             params=self._filter_none(phone_number_id=phone_number_id),
         )
 

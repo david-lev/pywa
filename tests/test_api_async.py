@@ -293,6 +293,16 @@ async def test_get_media_url(api, req):
     req.assert_called_once_with(method="GET", endpoint="/m1")
 
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize("bad", ["../me", "1/2", "1?fields=x", "1#x", "", "a b"])
+async def test_media_id_cannot_alter_endpoint(api, req, bad):
+    with pytest.raises(ValueError):
+        await api.get_media_url(media_id=bad)
+    with pytest.raises(ValueError):
+        await api.delete_media(media_id=bad)
+    req.assert_not_called()
+
+
 def test_stream_media_bytes(api, mocker):
     stream_mock = mocker.patch.object(api._session, "stream")
     api.stream_media_bytes(media_url="https://lookaside.fbsbx.com/1", timeout=5)
