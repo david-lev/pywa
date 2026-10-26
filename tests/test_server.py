@@ -52,6 +52,14 @@ def test_flow_media_cdn_url_must_be_trusted():
             pywa_utils.flow_request_media_decryptor({"cdn_url": url})
 
 
+def test_challenge_requires_matching_verify_token():
+    wa = WhatsApp(phone_id="1", token="t", server=None, verify_token="secret")
+    assert wa.webhook_challenge_handler("secret", "c") == ("c", 200)
+    assert wa.webhook_challenge_handler("wrong", "c")[1] == 403
+    assert wa.webhook_challenge_handler(None, "c")[1] == 403
+    assert wa.webhook_challenge_handler("s\u00e9cret", "c")[1] == 403
+
+
 # This private key is already reset
 private_key = """
 -----BEGIN ENCRYPTED PRIVATE KEY-----

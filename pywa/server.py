@@ -1,6 +1,7 @@
 """This module contains the Server class, which is used to set up a webhook for receiving incoming updates."""
 
 import contextlib
+import hmac
 import logging
 import os
 import threading
@@ -221,7 +222,13 @@ class Server:
         Returns:
             A tuple containing the challenge and the status code.
         """
-        if self._verify_token and vt == self._verify_token:
+        if (
+            self._verify_token
+            and vt is not None
+            and hmac.compare_digest(
+                vt.encode("utf-8"), self._verify_token.encode("utf-8")
+            )
+        ):
             _logger.info(
                 "[%s] Webhook verified by WhatsApp (verification challenge passed)",
                 self._webhook_endpoint,
