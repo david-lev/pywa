@@ -206,10 +206,39 @@ def describe_request(method: str, endpoint: str) -> str:
     return f"{method.upper()} {str(endpoint).split('?', 1)[0]}"
 
 
+_SECRET_KEYS = frozenset(
+    {
+        "client_secret",
+        "app_secret",
+        "access_token",
+        "business_token",
+        "verify_token",
+        "token",
+        "password",
+        "authorization",
+        "private_key",
+    }
+)
+
+
+def _redact_secrets(obj: object) -> object:
+    """Copy of ``obj`` with the values of secret-looking keys (tokens, secrets, passwords) masked."""
+    if isinstance(obj, dict):
+        return {
+            k: "***"
+            if isinstance(k, str) and k.lower() in _SECRET_KEYS
+            else _redact_secrets(v)
+            for k, v in obj.items()
+        }
+    if isinstance(obj, (list, tuple)):
+        return type(obj)(_redact_secrets(v) for v in obj)
+    return obj
+
+
 def describe_request_kwargs(kwargs: dict, *, limit: int = 1000) -> str:
-    """Compact, truncated view of the ``httpx`` request kwargs (uploads shown as ``<files>``)."""
+    """Compact, truncated view of the ``httpx`` request kwargs (uploads shown as ``<files>``, secrets masked)."""
     shown = {
-        k: "<files>" if k == "files" else v
+        k: "<files>" if k == "files" else _redact_secrets(v)
         for k, v in kwargs.items()
         if v not in (None, {}, [])
     }

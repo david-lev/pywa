@@ -765,6 +765,21 @@ def test_wa_logger_follows_pywa_level_and_tags_lines_inside_a_handler(caplog):
         logging.getLogger("pywa").setLevel(logging.NOTSET)
 
 
+def test_request_kwargs_log_masks_secrets():
+    from pywa._logging import describe_request_kwargs
+
+    out = describe_request_kwargs(
+        {
+            "params": {"client_secret": "S3CR3T", "client_id": "1"},
+            "json": {"nested": [{"access_token": "T0K3N"}], "verify_token": "VT"},
+            "headers": {"Authorization": "Bearer ABC"},
+        }
+    )
+    for secret in ("S3CR3T", "T0K3N", "VT", "ABC"):
+        assert secret not in out
+    assert "client_id" in out
+
+
 def _flow_client(app_secret):
     import flask
 
