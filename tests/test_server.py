@@ -568,10 +568,26 @@ def test_warnings_are_logged_as_one_clean_line(clean_logging):
     assert "warnings.warn(" not in out  # the source line is not echoed
 
 
-def test_missing_app_secret_warning_points_at_user_code():
-    with pytest.warns(PywaWarning, match="No `app_secret`") as record:
+def test_missing_app_secret_is_a_startup_error():
+    with pytest.raises(ValueError, match="No `app_secret`"):
         _make_client_with_server()
-    assert record[0].filename == __file__
+    # the explicit opt-out still works, and so does an app secret
+    WhatsApp(
+        phone_id="1",
+        token="x",
+        server=Starlette(),
+        verify_token="v",
+        validate_updates=False,
+    )
+    WhatsApp(
+        phone_id="1", token="x", server=Starlette(), verify_token="v", app_secret="s"
+    )
+
+
+def test_validator_fails_closed_without_app_secret():
+    wa = WhatsApp(phone_id="1", token="x")  # custom server: no routes were registered
+    with pytest.raises(ValueError, match="No `app_secret`"):
+        wa.webhook_update_validator(b"{}", "sha256=00")
 
 
 def _make_client_with_server():
@@ -595,9 +611,8 @@ def test_async_warnings_point_at_user_code():
     with pytest.warns(PywaWarning) as record:
         WhatsAppAsync(phone_id="1", token="x", api_version="16.0")
     assert record[0].filename == __file__
-    with pytest.warns(PywaWarning, match="No `app_secret`") as record:
+    with pytest.raises(ValueError, match="No `app_secret`"):
         WhatsAppAsync(phone_id="1", token="x", server=Starlette(), verify_token="v")
-    assert record[0].filename == __file__
 
 
 def test_info_summary_does_not_leak_phone_number_embedded_in_wamid(caplog):

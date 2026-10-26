@@ -699,9 +699,10 @@ Pywa validates updates by default when ``app_secret`` is provided:
         ...
     )
 
-If no ``app_secret`` is provided, pywa disables validation and emits a warning. If validation is
-enabled and the signature is missing or invalid, pywa rejects the request before calling your
-handlers. You can disable validation explicitly with ``validate_updates=False``.
+If no ``app_secret`` is provided, pywa refuses to register the webhook (a ``ValueError`` at startup), because
+anyone who can reach the endpoint could forge updates. If validation is enabled and the signature is missing or
+invalid, pywa rejects the request before calling your handlers. If something in front of pywa already authenticates
+the requests, disable validation explicitly with ``validate_updates=False``.
 
 Using Other Web Frameworks
 --------------------------

@@ -71,6 +71,11 @@ _CALL_EVENTS: dict[str, type[handlers.Handler]] = {
 
 _logger = logging.getLogger(__name__)
 
+_MISSING_APP_SECRET = (
+    "No `app_secret` provided, so the signature of incoming updates can't be validated and anyone who can reach "
+    "the webhook endpoint could forge updates.\n>> Pass the `app_secret` of your app (App settings > Basic), or "
+    "`validate_updates=False` if the requests are already authenticated by something in front of pywa."
+)
 MAX_PROCESSED_UPDATES = 100_000
 ANYIO_THREADS_LIMIT: int | None = None
 
@@ -270,9 +275,10 @@ class Server:
             )
             return "Unauthorized", 401
 
-        assert (
-            self._app_secret is not None
-        )  # guaranteed when `_validate_updates` is True
+        if (
+            not self._app_secret
+        ):  # a custom server never went through `_register_routes`
+            raise ValueError(_MISSING_APP_SECRET)
         if not utils.webhook_updates_validator(
             app_secret=self._app_secret,
             request_body=update,
@@ -359,13 +365,7 @@ class Server:
                 "be any string. It is used to challenge the webhook endpoint to verify that the endpoint is valid."
             )
         if self._validate_updates and not self._app_secret:
-            warnings.warn(
-                message="No `app_secret` provided. Signature validation will be disabled "
-                "(not recommended! set `validate_updates=False` to suppress this warning)",
-                category=PywaWarning,
-                stacklevel=5 if self._async_allowed else 4,
-            )
-            self._validate_updates = False
+            raise ValueError(_MISSING_APP_SECRET)
 
         match self._server_type:
             case utils.CustomServerType.STARLETTE:
