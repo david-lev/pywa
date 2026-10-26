@@ -363,7 +363,11 @@ def webhook_updates_validator(
     signature = hmac.new(
         app_secret.encode("utf-8"), request_body, hashlib.sha256
     ).hexdigest()
-    return hmac.compare_digest(signature, x_hub_signature.removeprefix("sha256="))
+    # compare bytes: `compare_digest` raises `TypeError` on non-ASCII `str`, which a client controls
+    return hmac.compare_digest(
+        signature.encode("utf-8"),
+        x_hub_signature.removeprefix("sha256=").encode("utf-8"),
+    )
 
 
 _TRUSTED_MEDIA_HOST_SUFFIXES = (

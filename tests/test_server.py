@@ -39,6 +39,13 @@ def test_webhook_updates_validator():
     )
 
 
+def test_webhook_updates_validator_rejects_bad_signatures():
+    for bad in ("sha256=00", "", "sha256=\u00e9\u00e9", "\u202e"):
+        assert not pywa_utils.webhook_updates_validator(
+            app_secret="secret", request_body=b"{}", x_hub_signature=bad
+        )
+
+
 def test_flow_media_cdn_url_must_be_trusted():
     for url in ("http://scontent.whatsapp.net/x", "https://attacker.example/x"):
         with pytest.raises(ValueError):
