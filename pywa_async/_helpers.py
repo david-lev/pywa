@@ -90,6 +90,7 @@ from pywa._helpers import (
 from pywa._helpers import resolve_recipient as resolve_recipient
 from pywa._helpers import resolve_tracker_param as resolve_tracker_param
 from pywa._helpers import resolve_users as resolve_users
+from pywa._helpers import safe_filename as safe_filename
 from pywa._helpers import (
     template_header_formats_default_mime_types as template_header_formats_default_mime_types,
 )

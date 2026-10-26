@@ -503,8 +503,18 @@ def get_filename_from_httpx_response_headers(
         return None
     msg = email.message.Message()
     msg["Content-Disposition"] = content_disposition
-    filename = msg.get_filename()
-    return os.path.basename(filename) if filename else None
+    return safe_filename(msg.get_filename())
+
+
+def safe_filename(filename: str | None) -> str | None:
+    """
+    Reduce ``filename`` (e.g. from a ``Content-Disposition`` header) to a plain file name, so joining it to a
+    directory can't escape that directory. Returns ``None`` when nothing usable is left.
+    """
+    if not filename:
+        return None
+    name = filename.replace("\\", "/").rsplit("/", 1)[-1].replace("\x00", "").strip()
+    return None if name in ("", ".", "..") else name
 
 
 def media_info_from_response(

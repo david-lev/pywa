@@ -2150,7 +2150,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                         )
                         or ".bin"
                     )
-            path = pathlib.Path(path) / filename
+            path = pathlib.Path(path) / (helpers.safe_filename(filename) or "media.bin")
             with path.open("wb") as f:
                 for chunk in res.iter_bytes(chunk_size=chunk_size):
                     f.write(chunk)

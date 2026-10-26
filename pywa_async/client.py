@@ -1910,7 +1910,7 @@ class WhatsApp(Server, _AsyncListeners, _WhatsApp):
                         )
                         or ".bin"
                     )
-            path = pathlib.Path(path) / filename
+            path = pathlib.Path(path) / (helpers.safe_filename(filename) or "media.bin")
             with path.open("wb") as f:
                 async for chunk in res.aiter_bytes(chunk_size=chunk_size):
                     f.write(chunk)

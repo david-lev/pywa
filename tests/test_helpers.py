@@ -1387,3 +1387,20 @@ def test_whatsapp_error_propagates_while_a_download_is_open():
         )
         raise err
     assert exc.value is err
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ("../../etc/passwd", "passwd"),
+        ("..\\..\\evil.exe", "evil.exe"),
+        ("/abs/path.txt", "path.txt"),
+        ("..", None),
+        (".", None),
+        ("", None),
+        (None, None),
+        ("ok.pdf", "ok.pdf"),
+    ],
+)
+def test_safe_filename(raw, expected):
+    assert helpers.safe_filename(raw) == expected
