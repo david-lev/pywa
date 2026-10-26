@@ -763,3 +763,47 @@ def test_wa_logger_follows_pywa_level_and_tags_lines_inside_a_handler(caplog):
         assert wa.logger.isEnabledFor(logging.INFO)
     finally:
         logging.getLogger("pywa").setLevel(logging.NOTSET)
+
+
+def _flow_client(app_secret):
+    import flask
+
+    app = flask.Flask(__name__)
+    wa = WhatsApp(
+        phone_id="1",
+        token="t",
+        server=app,
+        verify_token="v",
+        app_secret=app_secret,
+        validate_updates=app_secret is not None,
+        business_private_key=private_key,
+        business_private_key_password="123456",
+    )
+
+    @wa.on_flow_request("/flow")
+    def _(_, req):
+        return req.respond(screen="X", data={})
+
+    return app.test_client()
+
+
+def test_flow_endpoint_requires_valid_signature():
+    import hashlib
+    import hmac
+
+    client = _flow_client("secret")
+    body = b'{"encrypted_flow_data": "x"}'
+    assert client.post("/flow", data=body).status_code == 401
+    assert (
+        client.post(
+            "/flow", data=body, headers={"X-Hub-Signature-256": "sha256=00"}
+        ).status_code
+        == 403
+    )
+    sig = "sha256=" + hmac.new(b"secret", body, hashlib.sha256).hexdigest()
+    res = client.post("/flow", data=body, headers={"X-Hub-Signature-256": sig})
+    assert res.status_code not in (401, 403)  # passed validation (decryption fails)
+    bad = b"not json"
+    sig = "sha256=" + hmac.new(b"secret", bad, hashlib.sha256).hexdigest()
+    res = client.post("/flow", data=bad, headers={"X-Hub-Signature-256": sig})
+    assert res.status_code == 400
