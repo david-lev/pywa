@@ -94,8 +94,6 @@ extra:
     link: https://pypi.org/project/pywa/
   - icon: fontawesome/brands/telegram
     link: https://t.me/py_wa
-hooks:
-- docs-mkdocs/hooks.py
 extra_css:
 - stylesheets/extra.css
 extra_javascript:

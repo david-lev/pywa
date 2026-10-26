@@ -89,14 +89,8 @@ dev = [
     "tomli>=2.0; python_version<'3.11'",
 ]
 docs = [
-    "sphinx-book-theme~=1.1",
-    "sphinx-copybutton~=0.5",
-    "sphinxext-opengraph~=0.13",
-    "sphinx-togglebutton~=0.4",
-    "myst-parser~=4.0",
-    "sphinxcontrib-googleanalytics~=0.5",
-    "sphinx-last-updated-by-git~=0.3",
-    "sphinx-favicon~=1.0",
+    "zensical==0.0.73; python_version>='3.11'",
+    "mkdocstrings[python]>=1.0,<2",
 ]
 
 [project.scripts]
@@ -132,8 +126,7 @@ extend-select = [
 "tests/test_flows.py" = ["E712"]
 "tests/smoke_test.py" = ["T201"]
 "examples/**" = ["T201"]
-# one-off docs migration scripts (Sphinx -> Markdown), removed once the Sphinx sources are gone
-"docs-mkdocs/tools/*" = ["T201", "E741", "UP031", "F841", "SIM222", "SIM115", "S110", "S112", "BLE001", "PIE810", "PLW1508"]
+"docs-mkdocs/tools/*" = ["T201", "E741", "S112", "BLE001"]
 
 [tool.ty.src]
 include = ["pywa*", "tests/static_typing"]
