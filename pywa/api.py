@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import pathlib
+import time
 from collections.abc import Iterator
 from contextlib import _GeneratorContextManager
 from typing import TYPE_CHECKING, Any, BinaryIO, TypedDict, cast
@@ -12,17 +13,31 @@ import httpx
 
 import pywa
 
+from ._logging import (
+    describe_request,
+    describe_request_kwargs,
+    get_context_logger,
+    log_api_response,
+)
 from .errors import WhatsAppError
+from .utils import _ensure_trusted_media_url
 
 if TYPE_CHECKING:
     from ._helpers import GeneratorStreamer
 
-_logger = logging.getLogger(__name__)
+_logger = get_context_logger(__name__)
 
 
 class _UnpauseTemplateResult(TypedDict):
     success: bool
     reason: str | None
+
+
+def _ensure_safe_id(value: str, what: str = "ID") -> str:
+    """Raise ``ValueError`` if ``value`` could change the Graph API path/query when interpolated into an endpoint."""
+    if not value or any(c in value for c in "/\\?#&%\x00 \t\r\n") or ".." in value:
+        raise ValueError(f"Invalid {what}: {value!r}")
+    return value
 
 
 class GraphAPI:
@@ -46,7 +61,6 @@ class GraphAPI:
             }
         )
         self._session = session
-        _logger.debug("GraphAPI initialized with base URL: %s", session.base_url)
 
     def __str__(self) -> str:
         return f"GraphAPI(session={self._session})"
@@ -96,28 +110,34 @@ class GraphAPI:
         kwargs.pop(
             "log_kwargs", None
         )  # backwards compatibility for old versions of pywa
-        _logger.debug(
-            "Making %s request to %s with kwargs: %s",
-            method,
-            endpoint,
-            {k: v if k != "files" else "<files>" for k, v in kwargs.items()},
-        )
+        if _logger.isEnabledFor(logging.DEBUG):
+            _logger.debug(
+                "%s request: %s",
+                describe_request(method, endpoint),
+                describe_request_kwargs(kwargs),
+            )
+        started = time.perf_counter()
         try:
             res = self._session.request(method=method, url=endpoint, **kwargs)
-        except (httpx.TimeoutException, httpx.ConnectError, httpx.ProxyError):
+        except (httpx.TimeoutException, httpx.ConnectError, httpx.ProxyError) as e:
             _logger.warning(
-                "You may want to provide your own `httpx.Client` instance. e.g. `WhatsApp(session=httpx.Client(timeout=..., proxies=...))`. See https://www.python-httpx.org/api/#client for more information."
+                "%s failed after %.0fms: %s: %s. You may want to provide your own `httpx.Client` instance, "
+                "e.g. `WhatsApp(session=httpx.Client(timeout=...))`. See https://www.python-httpx.org/api/#client",
+                describe_request(method, endpoint),
+                (time.perf_counter() - started) * 1000,
+                type(e).__name__,
+                e,
             )
             raise
         except httpx.RequestError as e:
-            _logger.debug("%s Request to %s failed: %s", method, endpoint, e)
+            _logger.warning(
+                "%s failed: %s: %s",
+                describe_request(method, endpoint),
+                type(e).__name__,
+                e,
+            )
             raise
-        _logger.debug(
-            "Response code %d from %s: %s",
-            res.status_code,
-            endpoint,
-            res.text,
-        )
+        log_api_response(_logger, method, endpoint, res, started)
         if res.status_code >= 400:
             raise WhatsAppError.from_dict(error=self._extract_error(res), response=res)
         return res.json()
@@ -456,7 +476,9 @@ class GraphAPI:
         Returns:
             A dict with the URL and other info about the media file.
         """
-        return self._request(method="GET", endpoint=f"/{media_id}")
+        return self._request(
+            method="GET", endpoint=f"/{_ensure_safe_id(media_id, 'media ID')}"
+        )
 
     def stream_media_bytes(
         self,
@@ -475,6 +497,7 @@ class GraphAPI:
         Returns:
             A context manager containing the response stream.
         """
+        _ensure_trusted_media_url(media_url)
         _logger.debug("Streaming media from %s", media_url)
         return self._session.stream(
             method="GET",
@@ -505,7 +528,7 @@ class GraphAPI:
         """
         return self._request(
             method="DELETE",
-            endpoint=f"/{media_id}",
+            endpoint=f"/{_ensure_safe_id(media_id, 'media ID')}",
             params=self._filter_none(phone_number_id=phone_number_id),
         )
 
@@ -2173,7 +2196,12 @@ class GraphAPI:
         """
         return self._request(
             method="POST",
-            endpoint=f"/{app_id}/uploads?file_name={file_name}&file_length={file_length}&file_type={file_type}",
+            endpoint=f"/{app_id}/uploads",
+            params={
+                "file_name": file_name,
+                "file_length": file_length,
+                "file_type": file_type,
+            },
         )
 
     def upload_file(

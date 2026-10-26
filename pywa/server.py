@@ -1,6 +1,7 @@
 """This module contains the Server class, which is used to set up a webhook for receiving incoming updates."""
 
 import contextlib
+import hmac
 import logging
 import os
 import threading
@@ -14,10 +15,17 @@ from . import _helpers as helpers
 from . import errors, handlers, utils
 from ._logging import (
     ENV_LOG_LEVEL,
+    TRACE,
+    access_log_from_env,
+    access_logger,
     bind_update_logger,
-    format_banner,
+    compact_repr,
+    describe_raw_update,
+    describe_update,
+    emit_banner,
     get_update_hash,
     setup_console_logging,
+    update_context,
 )
 from .errors import PywaDeprecationWarning, PywaWarning
 from .types import AccountUpdate, MessageType, RawUpdate, UserPreferenceCategory
@@ -63,6 +71,11 @@ _CALL_EVENTS: dict[str, type[handlers.Handler]] = {
 
 _logger = logging.getLogger(__name__)
 
+_MISSING_APP_SECRET = (
+    "No `app_secret` provided, so the signature of incoming updates can't be validated and anyone who can reach "
+    "the webhook endpoint could forge updates.\n>> Pass the `app_secret` of your app (App settings > Basic), or "
+    "`validate_updates=False` if the requests are already authenticated by something in front of pywa."
+)
 MAX_PROCESSED_UPDATES = 100_000
 ANYIO_THREADS_LIMIT: int | None = None
 
@@ -96,7 +109,9 @@ class Server:
         # multiple workers. Configuring logging here (rather than only where `run()`/the
         # CLI are invoked) guarantees it's applied in the process that actually handles
         # requests, not just in a parent/reloader process that never sees any traffic.
-        setup_console_logging(os.environ.get(ENV_LOG_LEVEL, "info"))
+        setup_console_logging(
+            os.environ.get(ENV_LOG_LEVEL, "info"), access_log=access_log_from_env()
+        )
         if self._server_type is not None:
             raise ValueError(
                 "When providing a custom `server` instance to the WhatsApp client, pywa assumes you will handle the webhook routes and server setup yourself. "
@@ -178,18 +193,16 @@ class Server:
         # ASGI factory) just applied.
         os.environ[ENV_LOG_LEVEL] = str(log_level)
         app = self._setup_and_get_starlette_app()
-        _logger.info(
-            format_banner(
-                [
-                    "🚀  Starting Pywa server",
-                    f"🌐  Server URL:   http://{host}:{port}",
-                    f"📝  Log Level:    {log_level}",
-                    (
-                        "💡  Tip:          Use the `pywa` CLI (`pywa dev`/`pywa run`) for hot-reload, "
-                        "multi-worker support and other features (`pywa run --help`)"
-                    ),
-                ]
-            )
+        emit_banner(
+            [
+                "🚀  Starting Pywa server",
+                f"🌐  Server URL:   http://{host}:{port}",
+                f"📝  Log Level:    {log_level}",
+                (
+                    "💡  Tip:          Use the `pywa` CLI (`pywa dev`/`pywa run`) for hot-reload, "
+                    "multi-worker support and other features (`pywa run --help`)"
+                ),
+            ]
         )
         uvicorn.run(
             app=app,
@@ -214,16 +227,29 @@ class Server:
         Returns:
             A tuple containing the challenge and the status code.
         """
-        if vt == self._verify_token:
-            _logger.debug(
-                "[%s] Passed verification challenge",
+        if (
+            self._verify_token
+            and vt is not None
+            and hmac.compare_digest(
+                vt.encode("utf-8"), self._verify_token.encode("utf-8")
+            )
+        ):
+            _logger.info(
+                "[%s] Webhook verified by WhatsApp (verification challenge passed)",
                 self._webhook_endpoint,
             )
             return ch, 200
-        _logger.warning(
-            "[%s] Failed verification challenge: invalid verify token",
-            self._webhook_endpoint,
-        )
+        if self._verify_token:
+            _logger.warning(
+                "[%s] Failed verification challenge: invalid verify token",
+                self._webhook_endpoint,
+            )
+        else:
+            _logger.warning(
+                "[%s] Verification challenge rejected: no `verify_token` configured. Pass the token set in "
+                "the app dashboard as `verify_token` to `WhatsApp(...)`",
+                self._webhook_endpoint,
+            )
         return "Forbidden", 403
 
     def webhook_update_validator(
@@ -249,18 +275,19 @@ class Server:
             )
             return "Unauthorized", 401
 
-        assert (
-            self._app_secret is not None
-        )  # guaranteed when `_validate_updates` is True
+        if (
+            not self._app_secret
+        ):  # a custom server never went through `_register_routes`
+            raise ValueError(_MISSING_APP_SECRET)
         if not utils.webhook_updates_validator(
             app_secret=self._app_secret,
             request_body=update,
             x_hub_signature=hmac_header,
         ):
             _logger.warning(
-                "[%s] Received an update with unmatching signature: '%s'",
+                "[%s] Rejected an update with a mismatching signature. Check that `app_secret` is the "
+                "secret of the app that owns this webhook",
                 self._webhook_endpoint,
-                hmac_header,
             )
             return "Forbidden", 403
 
@@ -294,32 +321,31 @@ class Server:
 
         update_hash = get_update_hash(update)
         log = bind_update_logger(_logger, update_hash, self._webhook_endpoint)
+        access = bind_update_logger(access_logger, update_hash, self._webhook_endpoint)
         try:
             raw_update = RawUpdate(
                 update, hmac_header=hmac_header, update_hash=update_hash
             )
-        except (TypeError, ValueError):
-            _logger.warning(
-                "[%s] Rejected a malformed (non-JSON) update body (%d bytes)",
-                self._webhook_endpoint,
+        except (TypeError, ValueError, RecursionError):
+            log.warning(
+                "Rejected a malformed (non-JSON) update body (%d bytes)",
                 len(update) if hasattr(update, "__len__") else -1,
             )
-            if _logger.isEnabledFor(logging.DEBUG):
-                preview = (
-                    update[:200]
-                    if isinstance(update, (bytes, bytearray))
-                    else str(update)[:200]
-                )
-                _logger.debug("[%s] preview=%r", self._webhook_endpoint, preview)
+            if log.isEnabledFor(logging.DEBUG):
+                log.debug("Malformed body preview: %r", bytes(update[:200]))
             return "Bad Request", 400
 
         if log.isEnabledFor(logging.DEBUG):
-            log.debug("Received raw update: %s", raw_update)
+            log.debug(
+                "Received %s (%d bytes)", describe_raw_update(raw_update), len(update)
+            )
+        if log.isEnabledFor(TRACE):
+            log.log(TRACE, "Raw payload: %s", bytes(update).decode(errors="replace"))
 
         if self._skip_duplicate_updates:
             with self._cache_lock:
                 if update_hash in self._processed_updates:
-                    log.info("Skipped duplicate update")
+                    access.info("Skipped duplicate update")
                     return "ok", 200
 
                 self._processed_updates[update_hash] = None
@@ -327,43 +353,38 @@ class Server:
                 if len(self._processed_updates) > MAX_PROCESSED_UPDATES:
                     self._processed_updates.popitem(last=False)
 
-        self._call_handlers(raw_update)
+        with update_context(update_hash, self._webhook_endpoint):
+            self._call_handlers(raw_update)
 
         return "ok", 200
 
     def _register_routes(self: "WhatsApp") -> None:
-        if not self._verify_token:
+        if self._callback_url is not None and not self._verify_token:
             raise ValueError(
-                "When listening for incoming updates, a `verify_token` must be provided.\n>> The verify token can "
+                "When registering a `callback_url`, a `verify_token` must be provided.\n>> The verify token can "
                 "be any string. It is used to challenge the webhook endpoint to verify that the endpoint is valid."
             )
         if self._validate_updates and not self._app_secret:
-            warnings.warn(
-                message="No `app_secret` provided. Signature validation will be disabled "
-                "(not recommended! set `validate_updates=False` to suppress this warning)",
-                category=PywaWarning,
-                stacklevel=1,
-            )
-            self._validate_updates = False
+            raise ValueError(_MISSING_APP_SECRET)
 
         match self._server_type:
             case utils.CustomServerType.STARLETTE:
-                _logger.debug(
-                    "Registered Starlette routes at %s", self._webhook_endpoint
-                )
                 helpers.register_routes_starlette(wa=self)
             case utils.CustomServerType.FASTAPI:
-                _logger.debug("Registered FastAPI routes at %s", self._webhook_endpoint)
                 helpers.register_routes_fastapi(wa=self)
             case utils.CustomServerType.FLASK:
-                _logger.debug("Registered Flask routes at %s", self._webhook_endpoint)
                 helpers.register_routes_flask(wa=self)
             case _:
                 raise ValueError(
                     f"The `server` must be one of {utils.CustomServerType.protocols_names()}, but got {type(self._server)}"
                 )
+        _logger.debug(
+            "Webhook routes registered at %s (%s)",
+            self._webhook_endpoint,
+            self._server_type.name.lower(),
+        )
         for wrapper in self._flow_handlers_to_register:
-            _logger.debug(
+            _logger.info(
                 "Registered flow request handler at %s%s",
                 self._webhook_endpoint,
                 wrapper._endpoint,
@@ -378,72 +399,96 @@ class Server:
         log = bind_update_logger(
             _logger, raw_update._update_hash, self._webhook_endpoint
         )
+        access = bind_update_logger(
+            access_logger, raw_update._update_hash, self._webhook_endpoint
+        )
         start = time.perf_counter()
         handler_type: type[handlers.Handler] | None = None
+        constructed_update: BaseUpdate | None = None
+        called: list[str] = []
         try:
             try:
                 handler_type = self._get_handler_type(raw_update)
             except (KeyError, ValueError, TypeError, IndexError):
                 log_fn = log.error if self._validate_updates else log.debug
                 log_fn(
-                    "Received unexpected update%s: field=%s waba_id=%s",
+                    "Received unexpected update%s: %s",
                     ""
                     if self._validate_updates
                     else " (Enable `validate_updates` to ignore updates with invalid data)",
-                    raw_update.field,
-                    raw_update.id,
+                    describe_raw_update(raw_update),
                 )
                 handler_type = None
 
             if handler_type is None:
-                log.debug("No handler resolved for update (field=%s)", raw_update.field)
+                if log.isEnabledFor(logging.DEBUG):
+                    log.debug(
+                        "No handler type resolved for %s",
+                        describe_raw_update(raw_update),
+                    )
                 return
-            log.debug("Dispatched to %s", handler_type.__name__)
+            log.debug("Resolved handler type %s", handler_type.__name__)
             try:
-                constructed_update: BaseUpdate = self._handlers_to_updates[
+                constructed_update = self._handlers_to_updates[
                     handler_type
                 ].from_update(client=self, update=raw_update)
                 if log.isEnabledFor(logging.DEBUG):
-                    log.debug("Constructed update: %s", constructed_update)
+                    log.debug("Parsed update: %s", compact_repr(constructed_update))
                 if self._process_listener(constructed_update):
+                    called.append("<listener>")
                     return
-                self._invoke_callbacks(handler_type, constructed_update)
+                called += self._invoke_callbacks(handler_type, constructed_update)
             except Exception:
-                log.exception("Failed to construct update (field=%s)", raw_update.field)
+                log.exception(
+                    "Failed to process update (%s)", describe_raw_update(raw_update)
+                )
         finally:
             # Always call raw update handler last
-            self._call_raw_update_handler(raw_update)
-            log.info(
-                "Finished processing update (handler=%s) in %.2fms",
-                handler_type.__name__ if handler_type else None,
-                (time.perf_counter() - start) * 1000,
+            called += self._call_raw_update_handler(raw_update)
+            what = (
+                describe_update(constructed_update)
+                if constructed_update is not None
+                else describe_raw_update(raw_update)
             )
+            elapsed = (time.perf_counter() - start) * 1000
+            if called:
+                access.info("%s -> %s (%.1fms)", what, ", ".join(called), elapsed)
+            else:
+                access.info("%s -> no handler matched (%.1fms)", what, elapsed)
 
-    def _call_raw_update_handler(self: "WhatsApp", update: RawUpdate) -> None:
+    def _call_raw_update_handler(self: "WhatsApp", update: RawUpdate) -> list[str]:
         """Invoke the raw update handler."""
-        self._invoke_callbacks(handlers.RawUpdateHandler, update)
+        return self._invoke_callbacks(handlers.RawUpdateHandler, update)
 
     def _invoke_callbacks(
         self: "WhatsApp",
         handler_type: type[handlers.Handler],
         update: BaseUpdate | RawUpdate,
-    ) -> None:
-        """Process and call registered handlers for the update."""
+    ) -> list[str]:
+        """Process and call registered handlers for the update, returning the called callbacks' names."""
         log = bind_update_logger(
             _logger, _update_hash_of(update), self._webhook_endpoint
         )
+        called: list[str] = []
         for handler in self._handlers[handler_type]:
             callback_name = getattr(
                 handler._callback, "__name__", repr(handler._callback)
             )
             try:
-                log.debug("Checking if handler %s should handle the update", handler)
                 checked_update = handler.check(self, update)
                 if checked_update is None:
+                    log.debug("Filters of '%s' did not match", callback_name)
                     continue
                 log.debug("Calling '%s'", callback_name)
+                called.append(callback_name)
+                call_start = time.perf_counter()
                 handler._callback(self, checked_update)
                 handled = True
+                log.debug(
+                    "'%s' finished in %.1fms",
+                    callback_name,
+                    (time.perf_counter() - call_start) * 1000,
+                )
             except StopHandling:
                 log.debug("Stopped further handling after '%s'", callback_name)
                 break
@@ -452,14 +497,14 @@ class Server:
                 continue
             except Exception:
                 handled = True
+                called[-1] = f"{callback_name} (raised)"
                 log.exception(
                     "Error occurred while '%s' was handling the update",
                     callback_name,
                 )
             if handled and not self._continue_handling:
-                log.debug("Stopped further handling after '%s'", callback_name)
                 break
-            log.debug("Continued further handling after '%s'", callback_name)
+        return called
 
     def _process_listener(self: "WhatsApp", update: BaseUpdate) -> bool:
         """Process and answer a listener if present."""
@@ -614,8 +659,10 @@ class Server:
 
             if not res["success"]:
                 raise RuntimeError("Failed to register callback URL.")
-            _logger.debug(
-                "Callback URL '%s' registered successfully", self._callback_url
+            _logger.info(
+                "Callback URL '%s' registered (scope=%s)",
+                self._callback_url,
+                self._callback_url_scope.name,
             )
         except errors.WhatsAppError as e:
             raise RuntimeError(
@@ -724,10 +771,10 @@ def _handle_messages_field(
             return handlers.GroupMessageStatusesHandler
         return handlers.MessageStatusHandler
 
-    if log.isEnabledFor(logging.DEBUG):
-        log.debug("Unrecognized update payload: %s", value)
-    else:
-        log.warning("Received update with unrecognized shape (keys=%s)", list(value))
+    log.warning(
+        "Received update with unrecognized shape (keys=%s). Set the log level to `trace` to see the full payload.",
+        list(value),
+    )
     return None
 
 
@@ -740,7 +787,10 @@ def _handle_calls_field(
     if "calls" in value:
         if (handler := _CALL_EVENTS.get(value["calls"][0]["event"])) is not None:
             return handler
-        log.warning("Unknown call event: %s.", value["calls"][0]["event"])
+        log.warning(
+            "Unknown call event: %s. Ignoring it. Please update pywa or report this issue.",
+            value["calls"][0]["event"],
+        )
     elif "statuses" in value:
         return handlers.CallStatusHandler
     return None
@@ -758,7 +808,7 @@ def _handle_user_preferences_field(
         return handlers.UserMarketingPreferencesHandler
     log = bind_update_logger(_logger, update._update_hash, wa._webhook_endpoint)
     log.warning(
-        "Unknown user preference category: %s.",
+        "Unknown user preference category: %s. Ignoring it. Please update pywa or report this issue.",
         value["user_preferences"][0]["category"],
     )
     return None

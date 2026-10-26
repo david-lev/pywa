@@ -46,6 +46,7 @@ class UserMarketingPreferences(BaseUserUpdate):
     signup_id: str | None
 
     _webhook_field = "user_preferences"
+    _log_attr = "value"
 
     @property
     def message_id_to_reply(self) -> str:

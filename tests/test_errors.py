@@ -1,3 +1,9 @@
+import asyncio
+import contextlib
+import dataclasses
+
+import pytest
+
 from pywa import errors
 
 exceptions: dict[type[errors.WhatsAppError], dict] = {
@@ -44,3 +50,57 @@ def test_error_codes():
             raise AssertionError(
                 f"Failed to assert exc={exc!r}, data={data!r}"
             ) from None
+
+
+def _make_errors() -> list[errors.WhatsAppError]:
+    return [
+        errors.WhatsAppError.from_dict({"code": 999999, "message": "unknown"}),
+        errors.ExpiredAccessToken.from_dict(exceptions[errors.ExpiredAccessToken]),
+    ]
+
+
+def test_error_is_still_read_only():
+    for exc in _make_errors():
+        for op in (
+            lambda e: setattr(e, "code", 1),
+            lambda e: setattr(e, "foo", 1),
+            lambda e: delattr(e, "code"),
+        ):
+            with pytest.raises(dataclasses.FrozenInstanceError):
+                op(exc)
+        assert hash(exc) == hash(exc)
+
+
+def test_error_accepts_interpreter_attributes():
+    for exc in _make_errors():
+        exc.__traceback__ = None
+        exc.__cause__ = ValueError("c")
+        exc.__context__ = ValueError("x")
+        exc.__suppress_context__ = True
+        exc.add_note("note") if hasattr(exc, "add_note") else None
+
+
+def test_error_propagates_through_contextmanager():
+    @contextlib.contextmanager
+    def cm():
+        yield
+
+    for exc in _make_errors():
+        with pytest.raises(errors.WhatsAppError) as info, cm():
+            raise exc
+        assert info.value is exc
+
+
+def test_error_propagates_through_asynccontextmanager():
+    @contextlib.asynccontextmanager
+    async def cm():
+        yield
+
+    async def run(exc):
+        async with cm():
+            raise exc
+
+    for exc in _make_errors():
+        with pytest.raises(errors.WhatsAppError) as info:
+            asyncio.run(run(exc))
+        assert info.value is exc

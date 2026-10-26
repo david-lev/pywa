@@ -4,6 +4,7 @@ import logging
 import pathlib
 import re
 
+import httpx
 import pytest
 
 from pywa import WhatsApp as WhatsAppSync
@@ -660,3 +661,18 @@ async def test_pii_present_at_debug_async(caplog):
     combined = "\n".join(r.getMessage() for r in caplog.records)
     assert _ASYNC_PHONE_NUMBER in combined
     assert _ASYNC_MESSAGE_TEXT in combined
+
+
+@pytest.mark.asyncio
+async def test_async_api_request_logs_summary(caplog):
+    api = GraphAPIAsync(
+        token="SECRET-TOKEN",
+        session=httpx.AsyncClient(
+            transport=httpx.MockTransport(lambda _: httpx.Response(200, json={}))
+        ),
+        api_version=26.0,
+    )
+    caplog.set_level(logging.DEBUG, logger="pywa")
+    await api._request("POST", "/123/messages", json={"to": "1"})
+    assert "POST /123/messages -> 200" in caplog.text
+    assert "SECRET-TOKEN" not in caplog.text

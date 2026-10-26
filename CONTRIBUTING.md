@@ -74,16 +74,17 @@ Now you are ready to start contributing!
    pytest
    ```
 
-   If you're making doc changes, you can build the docs locally:
+   If you're making doc changes (Markdown in `docs-mkdocs/docs/`), you can build the docs locally. The script also
+   checks that every old documentation URL still works:
 
    ```bash
-   make -C docs html
+   uv run docs-mkdocs/build_zensical.sh
    ```
 
    And run a local server to view the changes:
 
    ```bash
-   python3 -m http.server 8000 -d docs/build/html
+   python3 -m http.server 8000 -d site
    ```
 
    Then launch your browser and navigate to `http://localhost:8000`.

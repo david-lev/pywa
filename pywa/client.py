@@ -27,8 +27,9 @@ import httpx
 
 from . import _helpers as helpers
 from . import utils
+from ._logging import get_context_logger
 from .api import GraphAPI
-from .errors import PywaDeprecationWarning
+from .errors import PywaDeprecationWarning, PywaWarning
 from .filters import Filter
 from .handlers import (
     AccountUpdateHandler,
@@ -194,7 +195,8 @@ from .types.templates import (
 from .types.user import BaseUser
 from .utils import FastAPI, Flask, UserIdentifier
 
-_logger = logging.getLogger(__name__)
+_logger = get_context_logger(__name__)
+_app_logger = get_context_logger("pywa.app")
 
 _DEFAULT_VERIFY_DELAY_SEC = 3
 
@@ -275,6 +277,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             UserIdentifier.PARENT_BSUID,
         ),
         business_account_id: None = None,
+        max_download_size: int | None = helpers.DEFAULT_MAX_DOWNLOAD_SIZE,
     ) -> None:
         """
         The WhatsApp client.
@@ -306,7 +309,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             server: A `Flask <https://flask.palletsprojects.com>`_ or `FastAPI <https://fastapi.tiangolo.com>`_ app instance used for the webhook. Designed for cases where you want to use the same server for other routes or purposes; if you just want a simple webhook server, it's easier to leave this as ``None`` and let pywa create and manage the server for you.
             callback_url: The public server URL to register, without the endpoint. If you using static domain (e.g. ``utils.start_ngrok_tunnel(domain=...)``), you can comment this out after the first successful registration to avoid unnecessary re-registrations on every restart.
             callback_url_scope: The scope used when registering the callback URL (default: ``APP``). See `Webhook overrides <https://developers.facebook.com/documentation/business-messaging/whatsapp/webhooks/override>`_ for more information.
-            verify_token: A challenge string used to verify the webhook endpoint; can be any string and must match the value sent during verification. Required when handling updates.
+            verify_token: A challenge string used to verify the webhook endpoint; can be any string and must match the value sent during verification. Required when registering a ``callback_url``; if omitted, verification challenges are rejected (the webhook must already be verified).
             webhook_challenge_delay: Delay in seconds to wait for the webhook verification challenge (default: ``3``); useful when the server or network is slow to start.
             webhook_fields: The webhook `fields <https://developers.facebook.com/documentation/business-messaging/whatsapp/webhooks/overview#fields>`_ to register for the callback URL (optional). If not provided, all supported fields are registered; specify this to reduce unnecessary webhook traffic.
             app_id: The app ID from the `App Basic Settings <https://developers.facebook.com/docs/development/create-an-app/app-dashboard/basic-settings>`_ (optional; required when registering a ``callback_url`` with ``APP`` scope and when creating templates that contain media).
@@ -325,6 +328,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             handlers_modules: Python modules from which handlers should be automatically loaded. A convenient way to organize handlers in separate files without having to import and register them manually (default: ``None``).
             user_identifier_priority: The priority order of user identifiers to use when replying to messages, blocking users, etc (default: ``bsuid`` > ``wa_id`` > ``parent_bsuid``).
             business_account_id: Deprecated alias for ``waba_id`` (the WhatsApp Business Account ID that owns the ``phone_id``).
+            max_download_size: The largest media (in bytes) a download may be, bigger ones raise ``ValueError`` instead of filling the memory or disk (default: ``100MB``, the largest media WhatsApp accepts; ``None`` to disable).
         """
         try:
             utils.Version.GRAPH_API.validate_min_version(str(api_version))
@@ -332,8 +336,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             warnings.warn(
                 message=f"PyWa officially supports WhatsApp Cloud API version {utils.Version.GRAPH_API.min} and up. "
                 f"Using version {api_version} is not officially supported and may cause unexpected behavior.",
-                category=RuntimeWarning,
-                stacklevel=2,
+                category=PywaWarning,
+                stacklevel=3 if self._async_allowed else 2,
             )
 
         self.phone_id = str(phone_id) if phone_id is not None else None
@@ -394,11 +398,27 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         self._app_secret = app_secret
         self._flows_response_encryptor = flows_response_encryptor
         self._validate_updates = validate_updates
+        self._max_download_size = max_download_size
         self._continue_handling = continue_handling
         self._skip_duplicate_updates = skip_duplicate_updates
         self._uvicorn_workers = 0
+        self._listeners_near_thread_limit = False
 
         super().__init__()
+
+        _logger.debug(
+            "Initialized %s client: phone_id=%s waba_id=%s api=%s token=%s server=%s webhook_endpoint=%s "
+            "validate_updates=%s filter_updates=%s",
+            type(self).__module__.split(".")[0],
+            self.phone_id,
+            self.waba_id,
+            self._api._session.base_url if self._api else None,
+            "set" if token else "missing",
+            self._server_type.name if self._server_type else None,
+            webhook_endpoint,
+            validate_updates,
+            filter_updates,
+        )
 
         if handlers_modules:
             self.load_handlers_modules(*handlers_modules)
@@ -476,6 +496,24 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 "To access the WhatsApp Cloud API, you must provide a `token` when initializing the WhatsApp client."
             )
         return self._api
+
+    @property
+    def logger(self) -> logging.LoggerAdapter:
+        """
+        A logger for your own code inside handlers.
+
+        - Lines logged while a handler (or a Flow request callback) is running are tagged with the same
+          ``[hash] [endpoint]`` prefix as pywa's lines.
+        - It lives under the ``pywa`` logger, so it follows ``log_level`` / ``--log-level``. For other modules
+          use :func:`pywa.utils.get_logger`.
+
+        Example:
+
+            >>> @wa.on_message
+            ... def on_message(_: WhatsApp, msg: types.Message):
+            ...     wa.logger.info("got a message")  # -> [b49a799b] got a message
+        """
+        return _app_logger
 
     def __repr__(self) -> str:
         return f"WhatsApp(phone_id={self.phone_id!r})"
@@ -580,6 +618,13 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             self._check_for_async_filters(handler._filters)
             bisect.insort(
                 self._handlers[handler.__class__], handler, key=lambda x: -x._priority
+            )
+            _logger.debug(
+                "Added %s for '%s' (priority=%s, filters=%s)",
+                handler.__class__.__name__,
+                getattr(handler._callback, "__name__", repr(handler._callback)),
+                handler._priority,
+                handler._filters,
             )
 
     def remove_handlers(self, *handlers: Handler[Any], silent: bool = False) -> None:
@@ -1990,8 +2035,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
 
         Args:
             media: The media to upload (can be a URL, file path, bytes, bytes generator, file-like object, base64 or a :py:class:`~pywa.types.media.Media` instance).
-            mime_type: The MIME type of the media.
-            filename: The file name of the media.
+            mime_type: The MIME type of the media (optional). If not provided, it is taken from the media itself (file name, ``Content-Type`` header or data URI), then from ``media_type``, then guessed from the ``filename`` and finally from the first bytes of the content (PNG, JPEG, GIF, WebP, PDF, Ogg, MP3, AMR, MP4, M4A and 3GP are recognized).
+            filename: The file name of the media (optional. When not provided, it is taken from the media itself, e.g. the base name of a file or a URL path).
             ttl: Override the default 1-hour TTL for `No Storage-enabled <https://developers.facebook.com/documentation/business-messaging/whatsapp/no-storage>`_ business phone numbers. This value is in minutes from 1 hour (60) to 30 days (43200).
             dl_session: A httpx client to use when downloading the media from a URL (optional, for custom settings like proxies, headers, etc. If not provided, a new client will be created for the download).
             download_chunk_size: The size (in bytes) of each chunk to download when downloading media from a URL (default: ``64KB``). Defines the size of data read into memory at a time.
@@ -2108,10 +2153,23 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                         )
                         or ".bin"
                     )
-            path = pathlib.Path(path) / filename
-            with path.open("wb") as f:
-                for chunk in res.iter_bytes(chunk_size=chunk_size):
-                    f.write(chunk)
+            path = pathlib.Path(path) / (helpers.safe_filename(filename) or "media.bin")
+            helpers.check_declared_size(res.headers, self._max_download_size)
+            try:
+                with path.open("wb") as f:
+                    for chunk in helpers.iter_limited(
+                        res.iter_bytes(chunk_size=chunk_size), self._max_download_size
+                    ):
+                        f.write(chunk)
+            except ValueError:
+                path.unlink(missing_ok=True)  # don't leave a truncated file behind
+                raise
+            _logger.debug(
+                "Downloaded media to %s (%d bytes, %s)",
+                path,
+                path.stat().st_size,
+                mimetype,
+            )
             return path
 
     def get_media_bytes(self, url: str, **httpx_kwargs: Any) -> bytes:
@@ -2141,7 +2199,10 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         """
         with self.api.stream_media_bytes(media_url=url, **httpx_kwargs) as res:
             res.raise_for_status()
-            return res.read()
+            helpers.check_declared_size(res.headers, self._max_download_size)
+            return b"".join(
+                helpers.iter_limited(res.iter_bytes(), self._max_download_size)
+            )
 
     def stream_media(
         self,
@@ -2172,7 +2233,10 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         """
         with self.api.stream_media_bytes(media_url=url, **httpx_kwargs) as res:
             res.raise_for_status()
-            yield from res.iter_bytes(chunk_size=chunk_size)
+            helpers.check_declared_size(res.headers, self._max_download_size)
+            yield from helpers.iter_limited(
+                res.iter_bytes(chunk_size=chunk_size), self._max_download_size
+            )
 
     def delete_media(
         self,
@@ -2895,6 +2959,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         add_security_recommendation: bool | None = None,
         code_expiration_minutes: int | None = None,
         message_send_ttl_seconds: int | None = None,
+        is_primary_device_delivery_only: bool | None = None,
         waba_id: str | int | None = None,
     ) -> CreatedTemplates:
         """
@@ -2933,6 +2998,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             add_security_recommendation: Boolean value to add information to the template about not sharing authentication codes with anyone.
             code_expiration_minutes: Integer value to add information to the template on when the code will expire.
             message_send_ttl_seconds: The time-to-live (TTL) for the template message in seconds. (See `Time-to-live (TTL) <https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates#time-to-live--ttl---customization--defaults--min-max-values--and-compatibility>`_).
+            is_primary_device_delivery_only: Deliver the template only to the user's primary device.
             waba_id: The WhatsApp Business account ID (Overrides the client's business account ID, optional).
 
         Returns:
@@ -2949,6 +3015,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                 template=_AuthenticationTemplates(
                     name=name,
                     languages=list(languages),
+                    message_send_ttl_seconds=message_send_ttl_seconds,
+                    is_primary_device_delivery_only=is_primary_device_delivery_only,
                     components=[
                         AuthenticationBody(
                             add_security_recommendation=add_security_recommendation
@@ -3228,6 +3296,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
         new_components: list[TemplateBaseComponent] | None = None,
         new_message_send_ttl_seconds: int | None = None,
         new_parameter_format: ParamFormat | None = None,
+        new_cta_url_link_tracking_opted_out: bool | None = None,
+        new_is_primary_device_delivery_only: bool | None = None,
         app_id: str | int | None = None,
     ) -> UpdatedTemplate:
         """
@@ -3256,6 +3326,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             new_components: The new components of the template (optional, if not provided, the existing components will be used).
             new_message_send_ttl_seconds: The new message send TTL in seconds (optional, if not provided, the existing TTL will be used).
             new_parameter_format: The new parameter format (optional, if not provided, the existing format will be used).
+            new_cta_url_link_tracking_opted_out: Opt out (``True``) or in (``False``) of CTA URL link tracking (optional).
+            new_is_primary_device_delivery_only: Deliver the template only to the user's primary device (optional).
             app_id: The App ID to upload the template header example media to (optional, if not provided, the client's app ID will be used).
 
         Returns:
@@ -3276,6 +3348,8 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
                         components=new_components,
                         message_send_ttl_seconds=new_message_send_ttl_seconds,
                         parameter_format=new_parameter_format,
+                        cta_url_link_tracking_opted_out=new_cta_url_link_tracking_opted_out,
+                        is_primary_device_delivery_only=new_is_primary_device_delivery_only,
                     ).to_json()
                 ),
             ),

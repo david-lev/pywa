@@ -170,7 +170,7 @@ class SentMessage(_SentUpdate, _PinUnpinActions):
     def recipient(self) -> None:
         """Deprecated. Use ``sent.chat.id`` or ``sent.to`` instead."""
         warnings.warn(
-            "Deprecated. Use `sent.chat.id` or `sent.to` instead.",
+            "`sent.recipient` is deprecated, use `sent.chat.id` or `sent.to` instead.",
             PywaDeprecationWarning,
             stacklevel=2,
         )
@@ -180,7 +180,7 @@ class SentMessage(_SentUpdate, _PinUnpinActions):
     def sender(self) -> None:
         """Deprecated. Use ``sent.from_phone_id`` instead."""
         warnings.warn(
-            "Deprecated. Use `sent.from_phone_id` instead.",
+            "`sent.sender` is deprecated, use `sent.from_phone_id` instead.",
             PywaDeprecationWarning,
             stacklevel=2,
         )

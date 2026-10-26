@@ -72,6 +72,7 @@ import collections
 import dataclasses
 import functools
 import logging
+import time
 from collections.abc import Awaitable, Callable
 from typing import (
     TYPE_CHECKING,
@@ -86,6 +87,12 @@ from typing import (
 
 from . import _helpers as helpers
 from . import utils
+from ._logging import (
+    access_logger,
+    bind_update_logger,
+    get_update_hash,
+    update_context,
+)
 from .filters import Filter
 from .filters import new as new_filter
 from .types import (
@@ -217,7 +224,6 @@ class EncryptedFlowRequestType(TypedDict):
 
 
 _logger = logging.getLogger(__name__)
-_pywa_logger = logging.getLogger("pywa")
 
 
 _UpdateType = TypeVar("_UpdateType")
@@ -942,14 +948,6 @@ class RawUpdateHandler(Handler[RawUpdate]):
 _flow_req_has_error_filter = new_filter(
     lambda _, r: r.has_error, name="flow request has error"
 )
-
-
-def _log_flow_request(req: FlowRequest) -> None:
-    _pywa_logger.debug(
-        "Flow '%s' received for screen '%s'.",
-        req.action.value,
-        req.screen,
-    )
 
 
 def _get_filters_with_error_filter(
@@ -3491,6 +3489,38 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
         self._wa.add_handlers(handler)
         return self
 
+    @staticmethod
+    def _request_hash(payload: Any) -> str:
+        try:
+            key = str(payload["encrypted_flow_data"]).encode()
+        except (KeyError, TypeError):
+            key = repr(payload).encode()
+        return get_update_hash(key)
+
+    def _bind_log(
+        self, request_hash: str, logger: logging.Logger = _logger
+    ) -> logging.LoggerAdapter:
+        """A logger tagged with ``[hash] [endpoint]`` so every line of one Flow request can be correlated."""
+        return bind_update_logger(logger, request_hash, self._endpoint)
+
+    @staticmethod
+    def _describe_request(req: FlowRequest) -> str:
+        screen = f" screen={req.screen}" if req.screen else ""
+        return f"Flow {req.action.value}{screen}"
+
+    @staticmethod
+    def _describe_response(body: dict) -> str:
+        """Summarize a response body for logging: where the user goes next, never the data itself."""
+        next_screen = body.get("screen")
+        if next_screen == "SUCCESS":
+            return "closes flow"
+        if not next_screen:
+            return "responded"
+        has_error = (
+            isinstance(body.get("data"), dict) and "error_message" in body["data"]
+        )
+        return f"screen={next_screen}{' (with error_message)' if has_error else ''}"
+
     def _get_callback(self, req: FlowRequest) -> _FlowRequestCallback:
         """Resolve the callback to use for the incoming request."""
         for filters, callback in (
@@ -3521,17 +3551,25 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
         Returns:
             A tuple containing the response data (json string) and the status code.
         """
+        log = self._bind_log(self._request_hash(payload))
         try:
             decrypted_request, aes_key, iv = self._decrypt_request(payload)
         # untrusted webhook payload: never crash on malformed/tampered input
-        except Exception:  # noqa: BLE001
+        except Exception as e:
+            log.warning(
+                "Failed to decrypt Flow request (%s). Check that the `business_private_key` (and its password) "
+                "matches the public key uploaded to WhatsApp.",
+                type(e).__name__,
+            )
+            log.debug("Decryption failure details", exc_info=True)
             return "Decryption failed", FlowRequestCannotBeDecrypted.status_code
 
-        if decrypted_request["action"] == "ping":
-            _logger.debug(
-                "Flow Endpoint ('%s'): Received a health check request",
-                self._endpoint,
-            )
+        if not isinstance(decrypted_request, dict):
+            log.warning("Rejected a Flow request that is not a JSON object")
+            return "Bad Request", 400
+
+        if decrypted_request.get("action") == "ping":
+            log.debug("Received a health check request")
             return self._encrypt_response(
                 {
                     "data": {"status": "active"},
@@ -3545,13 +3583,10 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
                 data=decrypted_request, raw_encrypted=payload
             )
         except Exception:
-            _logger.exception(
-                "Flow Endpoint ('%s'): Failed to construct FlowRequest from decrypted data",
-                self._endpoint,
-            )
+            log.exception("Failed to construct FlowRequest from decrypted data")
             return "pywa: Failed to construct FlowRequest object", 500
 
-        _log_flow_request(req)
+        log.debug("Parsed %s", self._describe_request(req))
         return self._execute_callback(req, aes_key, iv)
 
     async def handle_async(self, payload: EncryptedFlowRequestType) -> tuple[str, int]:
@@ -3564,13 +3599,25 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
         Returns:
             A tuple containing the response data (json string) and the status code.
         """
+        log = self._bind_log(self._request_hash(payload))
         try:
             decrypted_request, aes_key, iv = self._decrypt_request(payload)
         # untrusted webhook payload: never crash on malformed/tampered input
-        except Exception:  # noqa: BLE001
+        except Exception as e:
+            log.warning(
+                "Failed to decrypt Flow request (%s). Check that the `business_private_key` (and its password) "
+                "matches the public key uploaded to WhatsApp.",
+                type(e).__name__,
+            )
+            log.debug("Decryption failure details", exc_info=True)
             return "Decryption failed", FlowRequestCannotBeDecrypted.status_code
 
-        if decrypted_request["action"] == "ping":
+        if not isinstance(decrypted_request, dict):
+            log.warning("Rejected a Flow request that is not a JSON object")
+            return "Bad Request", 400
+
+        if decrypted_request.get("action") == "ping":
+            log.debug("Received a health check request")
             return self._encrypt_response(
                 {
                     "data": {"status": "active"},
@@ -3584,13 +3631,10 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
                 data=decrypted_request, raw_encrypted=payload
             )
         except Exception:
-            _logger.exception(
-                "Flow Endpoint ('%s'): Failed to construct FlowRequest from decrypted data",
-                self._endpoint,
-            )
+            log.exception("Failed to construct FlowRequest from decrypted data")
             return "pywa: Failed to construct FlowRequest object", 500
 
-        _log_flow_request(req)
+        log.debug("Parsed %s", self._describe_request(req))
         return await self._execute_callback_async(req, aes_key, iv)
 
     def _decrypt_request(
@@ -3605,9 +3649,6 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
             self._private_key,
             self._private_key_password,
         )
-        _logger.debug(
-            "Flow Endpoint ('%s'): Received decrypted request", self._endpoint
-        )
         return decrypted_request, aes_key, iv
 
     def _encrypt_response(self, response: dict, aes_key: bytes, iv: bytes) -> str:
@@ -3617,28 +3658,43 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
     def _execute_callback(
         self, req: FlowRequest, aes_key: bytes, iv: bytes
     ) -> tuple[str, int]:
+        request_hash = self._request_hash(req.raw_encrypted)
+        log = self._bind_log(request_hash)
+        access = self._bind_log(request_hash, access_logger)
+        desc = self._describe_request(req)
+        start = time.perf_counter()
         callback = self._get_callback(req)
         try:
-            res = callback(self._wa, req)
+            with update_context(request_hash, self._endpoint):
+                res = callback(self._wa, req)
             if isinstance(
                 res, FlowResponseError
             ):  # typing backward compatibility. error should be raised, not returned
                 raise res
         except FlowResponseError as e:
+            access.info(
+                "%s -> %s raised %s (status %d) (%.0fms)",
+                desc,
+                getattr(callback, "__name__", repr(callback)),
+                type(e).__name__,
+                e.status_code,
+                (time.perf_counter() - start) * 1000,
+            )
             return self._encrypt_response(
                 e.body or {"error": e.__class__.__name__},
                 aes_key,
                 iv,
             ), e.status_code
         except Exception:
-            _logger.exception(
-                "Flow Endpoint ('%s'): An error occurred while %s was handling a flow request",
-                self._endpoint,
+            log.exception(
+                "%s -> error occurred while %s was handling the request",
+                desc,
                 getattr(callback, "__name__", repr(callback)),
             )
             return "An error occurred", 500
 
         if self._acknowledge_errors and req.has_error:
+            access.info("%s -> error from WhatsApp acknowledged", desc)
             return self._encrypt_response(
                 {
                     "version": req.version,
@@ -3654,44 +3710,63 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
                 f"Flow endpoint ('{self._endpoint}') callback ('{getattr(callback, '__name__', repr(callback))}') must return a `FlowResponse`"
                 f" or `dict`, not {type(res)}"
             )
-        return self._encrypt_response(
-            res.to_dict() if isinstance(res, FlowResponse) else res,
-            aes_key,
-            iv,
-        ), 200
+        body = res.to_dict() if isinstance(res, FlowResponse) else res
+        access.info(
+            "%s -> %s -> %s (%.0fms)",
+            desc,
+            getattr(callback, "__name__", repr(callback)),
+            self._describe_response(body),
+            (time.perf_counter() - start) * 1000,
+        )
+        return self._encrypt_response(body, aes_key, iv), 200
 
     async def _execute_callback_async(
         self, req: FlowRequest, aes_key: bytes, iv: bytes
     ) -> tuple[str, int]:
+        request_hash = self._request_hash(req.raw_encrypted)
+        log = self._bind_log(request_hash)
+        access = self._bind_log(request_hash, access_logger)
+        desc = self._describe_request(req)
+        start = time.perf_counter()
         callback = await self._get_callback_async(req)
         try:
-            res = (
-                await cast(
-                    "Callable[[WhatsApp, FlowRequest], Awaitable[FlowResponse | dict | None]]",
-                    callback,
-                )(self._wa, req)
-                if helpers.is_async_callable(callback)
-                else callback(self._wa, req)
-            )
+            with update_context(request_hash, self._endpoint):
+                res = (
+                    await cast(
+                        "Callable[[WhatsApp, FlowRequest], Awaitable[FlowResponse | dict | None]]",
+                        callback,
+                    )(self._wa, req)
+                    if helpers.is_async_callable(callback)
+                    else callback(self._wa, req)
+                )
             if isinstance(
                 res, FlowResponseError
             ):  # typing backward compatibility. error should be raised, not returned
                 raise res
         except FlowResponseError as e:
+            access.info(
+                "%s -> %s raised %s (status %d) (%.0fms)",
+                desc,
+                getattr(callback, "__name__", repr(callback)),
+                type(e).__name__,
+                e.status_code,
+                (time.perf_counter() - start) * 1000,
+            )
             return self._encrypt_response(
                 e.body or {"error": e.__class__.__name__},
                 aes_key,
                 iv,
             ), e.status_code
         except Exception:
-            _logger.exception(
-                "Flow Endpoint ('%s'): An error occurred while %s was handling a flow request",
-                self._endpoint,
+            log.exception(
+                "%s -> error occurred while %s was handling the request",
+                desc,
                 getattr(callback, "__name__", repr(callback)),
             )
             return "An error occurred", 500
 
         if self._acknowledge_errors and req.has_error:
+            access.info("%s -> error from WhatsApp acknowledged", desc)
             return self._encrypt_response(
                 {
                     "version": req.version,
@@ -3707,8 +3782,12 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
                 f"Flow endpoint ('{self._endpoint}') callback ('{getattr(callback, '__name__', repr(callback))}') must return a `FlowResponse`"
                 f" or `dict`, not {type(res)}"
             )
-        return self._encrypt_response(
-            res.to_dict() if isinstance(res, FlowResponse) else res,
-            aes_key,
-            iv,
-        ), 200
+        body = res.to_dict() if isinstance(res, FlowResponse) else res
+        access.info(
+            "%s -> %s -> %s (%.0fms)",
+            desc,
+            getattr(callback, "__name__", repr(callback)),
+            self._describe_response(body),
+            (time.perf_counter() - start) * 1000,
+        )
+        return self._encrypt_response(body, aes_key, iv), 200

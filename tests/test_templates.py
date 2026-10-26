@@ -1,13 +1,16 @@
 import datetime
 import importlib
+import io
 import json
 import pathlib
+from unittest import mock
 
 import pytest
 
 from pywa import _helpers as helpers
 from pywa import types
 from pywa.types import flows
+from pywa.types.media import Media
 from pywa.types.templates import *
 
 
@@ -1121,3 +1124,46 @@ def test_url_button_comp():
             url="https://example.com",
             example="https://example.com?ref=wa&utm=123",
         )
+
+
+# --- media header components: keeping the example after the upload ------------
+
+
+def test_media_header_set_uploaded_keeps_only_the_id_of_a_media():
+    media = Media(_client=mock.Mock(), _id="123", uploaded_to="p1", filename="a.png")
+    header = HeaderImage(media)
+    header._set_uploaded("4:handle")
+    assert header._handle == "4:handle"
+    assert header.example == "123"
+
+
+def test_media_header_set_uploaded_keeps_only_the_name_of_an_open_file(tmp_path):
+    p = tmp_path / "a.png"
+    p.write_bytes(b"png")
+    with open(p, "rb") as f:
+        header = HeaderImage(f)
+        header._set_uploaded("4:handle")
+    assert header.example == str(p)
+
+
+@pytest.mark.parametrize(
+    "example",
+    [
+        "https://example.com/a.png",
+        b"png",
+        io.BytesIO(b"png"),  # no name
+    ],
+)
+def test_media_header_set_uploaded_keeps_any_other_example(example):
+    header = HeaderImage(example)
+    header._set_uploaded("4:handle")
+    assert header._handle == "4:handle"
+    assert header.example is example
+
+
+def test_media_header_set_uploaded_does_not_take_a_file_descriptor_for_a_name():
+    f = io.BytesIO(b"png")
+    f.name = 5  # e.g. `tempfile.TemporaryFile()` on POSIX
+    header = HeaderImage(f)
+    header._set_uploaded("4:handle")
+    assert header.example is f

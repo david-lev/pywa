@@ -47,6 +47,7 @@ class PhoneNumberChange(BaseUserUpdate):
     body: str
 
     _webhook_field = "messages"
+    _log_attr = None
     _is_user_action = False
 
     @classmethod
@@ -127,6 +128,7 @@ class IdentityChange(BaseUserUpdate):
     identity: Identity
 
     _webhook_field = "messages"
+    _log_attr = None
     _is_user_action = False
 
     @classmethod

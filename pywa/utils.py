@@ -10,12 +10,14 @@ import importlib
 import importlib.util
 import json
 import logging
+import urllib.parse
 import warnings
 from collections.abc import Callable, Iterable
 from typing import TYPE_CHECKING, Any, Protocol, TypeAlias
 
 import httpx
 
+from ._logging import get_context_logger
 from .errors import PywaDeprecationWarning
 
 if TYPE_CHECKING:
@@ -24,6 +26,31 @@ if TYPE_CHECKING:
 is_cryptography_installed = importlib.util.find_spec("cryptography") is not None
 
 _logger = logging.getLogger(__name__)
+
+
+def get_logger(name: str) -> logging.LoggerAdapter:
+    """
+    Get a logger for code outside the client that runs inside handlers.
+
+    - Lines logged while a handler (or a Flow request callback) is running are tagged with the same
+      ``[hash] [endpoint]`` prefix as pywa's own lines. Outside a handler it's a regular logger.
+    - It inherits the root logger's level (``WARNING`` by default), not pywa's ``log_level``, so set the level
+      yourself to see ``.info()`` lines (e.g. ``logging.getLogger(__name__).setLevel(logging.INFO)``).
+      Where the client is at hand, prefer :attr:`WhatsApp.logger`.
+
+    Example:
+
+        >>> log = utils.get_logger(__name__)
+        >>> log.warning("got a message")  # -> [b49a799b] got a message
+
+    Args:
+        name: The logger name (usually ``__name__``).
+
+    Returns:
+        A logger that tags its lines with the update being handled.
+    """
+    return get_context_logger(name)
+
 
 HUB_VT = "hub.verify_token"
 """The key for the verify token in the query parameters of the webhook get request."""
@@ -336,7 +363,45 @@ def webhook_updates_validator(
     signature = hmac.new(
         app_secret.encode("utf-8"), request_body, hashlib.sha256
     ).hexdigest()
-    return hmac.compare_digest(signature, x_hub_signature.removeprefix("sha256="))
+    # compare bytes: `compare_digest` raises `TypeError` on non-ASCII `str`, which a client controls
+    return hmac.compare_digest(
+        signature.encode("utf-8"),
+        x_hub_signature.removeprefix("sha256=").encode("utf-8"),
+    )
+
+
+_TRUSTED_MEDIA_HOST_SUFFIXES = (
+    "fbsbx.com",
+    "whatsapp.net",
+    "whatsapp.com",
+    "fbcdn.net",
+    "facebook.com",
+)
+
+
+def _ensure_trusted_media_url(url: str) -> None:
+    """
+    Raise ``ValueError`` unless ``url`` is an ``https`` URL on a Meta/WhatsApp host.
+
+    The media URL of an incoming update is taken from the (possibly forged) webhook body and is fetched with the
+    access token attached, so it must never point at an arbitrary or internal host.
+    """
+    try:
+        parts = urllib.parse.urlsplit(url)
+        host = (parts.hostname or "").lower().rstrip(".")
+    except ValueError:
+        raise ValueError("Invalid media URL") from None
+    if parts.scheme != "https" or parts.username or parts.password:
+        raise ValueError(
+            f"Refusing to fetch a media URL that is not a plain https URL: {host or '?'}"
+        )
+    if not any(
+        host == suffix or host.endswith("." + suffix)
+        for suffix in _TRUSTED_MEDIA_HOST_SUFFIXES
+    ):
+        raise ValueError(
+            f"Refusing to fetch media from untrusted host {host!r} (the access token would be sent to it)"
+        )
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
@@ -357,7 +422,7 @@ class FlowRequestDecryptedMedia:
     def __iter__(self):
         """Allow iteration over the attributes."""
         warnings.warn(
-            "flow_request_media_decryptor() is no longer return (media_id, filename, data) tuple, but FlowRequestDecryptedMedia object.",
+            "`flow_request_media_decryptor()` now returns a `FlowRequestDecryptedMedia` object instead of a (media_id, filename, data) tuple: unpacking it is deprecated, use its attributes instead.",
             PywaDeprecationWarning,
             stacklevel=2,
         )
@@ -399,6 +464,7 @@ def flow_request_media_decryptor(
         HTTPStatusError: If the request to the CDN URL fails.
         ValueError: If any of the hash verifications fail.
     """
+    _ensure_trusted_media_url(encrypted_media["cdn_url"])
     res = (dl_session or httpx.Client()).get(encrypted_media["cdn_url"])
     res.raise_for_status()
     return FlowRequestDecryptedMedia(
@@ -421,15 +487,17 @@ def _flow_request_media_decryptor(
     ciphertext = cdn_file[:-10]
     sha256 = hashlib.sha256(cdn_file)
     calculated_hash = base64.b64encode(sha256.digest()).decode()
-    if calculated_hash != encryption_metadata["encrypted_hash"]:
+    if not hmac.compare_digest(
+        calculated_hash.encode(), str(encryption_metadata["encrypted_hash"]).encode()
+    ):
         raise ValueError("CDN file hash verification failed")
-    if (
+    if not hmac.compare_digest(
         hmac.new(
             base64.b64decode(encryption_metadata["hmac_key"]),
             base64.b64decode(encryption_metadata["iv"]) + ciphertext,
             hashlib.sha256,
-        ).digest()[:10]
-        != cdn_file[-10:]
+        ).digest()[:10],
+        cdn_file[-10:],
     ):
         raise ValueError("HMAC verification failed")
     decryptor = Cipher(
@@ -516,6 +584,6 @@ def start_ngrok_tunnel(
         **forward_options,
     ).url()
 
-    _logger.info(f"Tunnel established: {public_url} -> {host}:{port}")
+    _logger.info("Tunnel established: %s -> %s:%s", public_url, host, port)
 
     return public_url

@@ -24,7 +24,16 @@ class PywaUnknownEnumMemberWarning(PywaWarning):
     """Warning for unknown enum members in pywa."""
 
 
-@dataclasses.dataclass(slots=True, frozen=True)
+# Exception attributes the interpreter (and ``contextlib``, ``asyncio``, ``traceback``...) assigns on in-flight exceptions.
+_EXCEPTION_RUNTIME_ATTRS = frozenset(
+    {"__traceback__", "__cause__", "__context__", "__suppress_context__", "__notes__"}
+)
+
+
+# Not ``slots=True``: it recreates the class, which breaks the generated frozen ``__setattr__`` (``super()`` fails for
+# subclasses). The frozen ``__setattr__`` / ``__delattr__`` are also replaced below so the interpreter can still set
+# the exception attributes above.
+@dataclasses.dataclass(frozen=True)
 class WhatsAppError(Exception):
     """
     Base dataclass for WhatsApp errors.
@@ -103,6 +112,24 @@ class WhatsAppError(Exception):
 
     def __str__(self) -> str:
         return self.__repr__()
+
+
+def _setattr(self, name: str, value: object) -> None:
+    if name in _EXCEPTION_RUNTIME_ATTRS:
+        Exception.__setattr__(self, name, value)
+    else:
+        raise dataclasses.FrozenInstanceError(f"cannot assign to field '{name}'")
+
+
+def _delattr(self, name: str) -> None:
+    if name in _EXCEPTION_RUNTIME_ATTRS:
+        Exception.__delattr__(self, name)
+    else:
+        raise dataclasses.FrozenInstanceError(f"cannot delete field '{name}'")
+
+
+WhatsAppError.__setattr__ = _setattr  # ty: ignore[invalid-assignment]
+WhatsAppError.__delattr__ = _delattr  # ty: ignore[invalid-assignment]
 
 
 @functools.cache
