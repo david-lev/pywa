@@ -455,15 +455,14 @@ class _CreatedAndUpdatedTemplateActionsAsync:
             cancelers = (
                 cancelers or pywa_filters.false | pywa_filters.template_status_rejected
             )
-        return cast(
-            TemplateStatusUpdate,
-            await self._client.listen(
-                to=TemplateStatusUpdateListenerIdentifier(template_id=self.id),
-                filters=pywa_filters.template_status_approved,
-                cancelers=cancelers,
-                timeout=timeout,
-            ),
+        update = await self._client.listen(
+            to=TemplateStatusUpdateListenerIdentifier(template_id=self.id),
+            filters=pywa_filters.template_status_approved,
+            cancelers=cancelers,
+            timeout=timeout,
         )
+        assert isinstance(update, TemplateStatusUpdate)
+        return update
 
 
 class CreatedTemplate(_CreatedAndUpdatedTemplateActionsAsync, _CreatedTemplate):

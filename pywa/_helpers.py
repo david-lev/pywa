@@ -520,8 +520,33 @@ def get_filename_from_url(url: str) -> str | None:
     return pathlib.PurePosixPath(path).name or None
 
 
+# Windows reads its MIME types from the registry, where common (Office) extensions may be missing
+_FALLBACK_MIME_TYPES = {
+    ".doc": "application/msword",
+    ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ".xls": "application/vnd.ms-excel",
+    ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    ".ppt": "application/vnd.ms-powerpoint",
+    ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    ".pdf": "application/pdf",
+    ".txt": "text/plain",
+    ".webp": "image/webp",
+    ".amr": "audio/amr",
+    ".opus": "audio/ogg",
+    ".3gp": "video/3gpp",
+}
+
+
+def guess_mime_type(filename: str) -> str | None:
+    """The MIME type of ``filename``: the system's, then a built-in table for the types WhatsApp accepts."""
+    guessed = mimetypes.guess_type(filename)[0]
+    if guessed is not None:
+        return guessed
+    return _FALLBACK_MIME_TYPES.get(os.path.splitext(filename)[1].lower())
+
+
 def get_mime_type_from_url(url: str) -> str | None:
-    return mimetypes.guess_type(urllib.parse.urlsplit(url).path)[0]
+    return guess_mime_type(urllib.parse.urlsplit(url).path)
 
 
 def get_mime_type_from_httpx_response_headers(headers: httpx.Headers) -> str | None:
@@ -654,7 +679,7 @@ def get_media_from_path(
     return MediaInfo(
         content=file,
         filename=p.name,
-        mime_type=mimetypes.guess_type(p)[0],
+        mime_type=guess_mime_type(str(p)),
         length=os.fstat(file.fileno()).st_size,
     )
 
@@ -678,7 +703,7 @@ def get_media_from_file_like_obj(
     return MediaInfo(
         content=file_obj,
         filename=filename,
-        mime_type=mimetypes.guess_type(filename)[0] if filename else None,
+        mime_type=guess_mime_type(filename) if filename else None,
         length=length,
     )
 
@@ -839,7 +864,7 @@ def resolve_media_name_and_type(
         or media_types_default_mime_types.get(media_type)
     )
     if final_mimetype is None and final_filename:
-        final_mimetype = mimetypes.guess_type(final_filename)[0]
+        final_mimetype = guess_mime_type(final_filename)
     if not (final_filename and final_mimetype):
         sniffed = sniff_media_type(peek_media_head(media_info.content))
         if sniffed:

@@ -1357,6 +1357,17 @@ def test_upload_media_guesses_the_type_from_a_given_filename(filename, mime):
     assert _upload_media(b"opaque", filename=filename)[:2] == (mime, filename)
 
 
+def test_guess_mime_type_falls_back_when_the_system_does_not_know_the_type(monkeypatch):
+    # Windows reads the registry, where `.xlsx` and friends may be missing
+    monkeypatch.setattr(helpers.mimetypes, "guess_type", lambda _: (None, None))
+    assert (
+        helpers.guess_mime_type("Report.XLSX")
+        == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    assert helpers.guess_mime_type("clip.opus") == "audio/ogg"
+    assert helpers.guess_mime_type("unknown.xyz") is None
+
+
 def test_upload_media_filename_guess_comes_before_sniffing():
     assert _upload_media(_PNG, filename="photo.jpg")[0] == "image/jpeg"
 
