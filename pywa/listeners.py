@@ -286,6 +286,10 @@ class _Listeners:
             filters=filters,
             cancelers=cancelers,
         )
+        if (previous := self._listeners.get(to)) is not None:
+            # a second listener for the same identifier replaces the first, which would otherwise wait
+            # until its timeout and then remove the new one
+            previous.stop("replaced by a new listener")
         self._listeners[to] = listener
         _logger.debug(
             "Listening for %r (timeout=%s, active listeners=%d)",
@@ -309,7 +313,7 @@ class _Listeners:
             assert listener.result is not None
             return cast("_UpdateT", listener.result)
         finally:
-            self._remove_listener(identifier=to)
+            self._remove_listener(identifier=to, listener=listener)
 
     def stop_listening(
         self: WhatsApp,
@@ -338,7 +342,14 @@ class _Listeners:
         _logger.debug("Stopped listener %r (reason=%s)", to, reason)
         self._remove_listener(identifier=to)
 
-    def _remove_listener(self: WhatsApp, identifier: BaseListenerIdentifier) -> None:
+    def _remove_listener(
+        self: WhatsApp,
+        identifier: BaseListenerIdentifier,
+        listener: Listener | None = None,
+    ) -> None:
+        """Remove the listener of ``identifier`` (only if it is still ``listener``, when given)."""
+        if listener is not None and self._listeners.get(identifier) is not listener:
+            return
         try:
             del self._listeners[identifier]
         except KeyError:
