@@ -20,6 +20,7 @@ from ._logging import (
     log_api_response,
 )
 from .errors import WhatsAppError
+from .utils import _ensure_trusted_media_url
 
 if TYPE_CHECKING:
     from ._helpers import GeneratorStreamer
@@ -487,6 +488,7 @@ class GraphAPI:
         Returns:
             A context manager containing the response stream.
         """
+        _ensure_trusted_media_url(media_url)
         _logger.debug("Streaming media from %s", media_url)
         return self._session.stream(
             method="GET",

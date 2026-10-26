@@ -10,6 +10,7 @@ import importlib
 import importlib.util
 import json
 import logging
+import urllib.parse
 import warnings
 from collections.abc import Callable, Iterable
 from typing import TYPE_CHECKING, Any, Protocol, TypeAlias
@@ -363,6 +364,40 @@ def webhook_updates_validator(
         app_secret.encode("utf-8"), request_body, hashlib.sha256
     ).hexdigest()
     return hmac.compare_digest(signature, x_hub_signature.removeprefix("sha256="))
+
+
+_TRUSTED_MEDIA_HOST_SUFFIXES = (
+    "fbsbx.com",
+    "whatsapp.net",
+    "whatsapp.com",
+    "fbcdn.net",
+    "facebook.com",
+)
+
+
+def _ensure_trusted_media_url(url: str) -> None:
+    """
+    Raise ``ValueError`` unless ``url`` is an ``https`` URL on a Meta/WhatsApp host.
+
+    The media URL of an incoming update is taken from the (possibly forged) webhook body and is fetched with the
+    access token attached, so it must never point at an arbitrary or internal host.
+    """
+    try:
+        parts = urllib.parse.urlsplit(url)
+        host = (parts.hostname or "").lower().rstrip(".")
+    except ValueError:
+        raise ValueError("Invalid media URL") from None
+    if parts.scheme != "https" or parts.username or parts.password:
+        raise ValueError(
+            f"Refusing to fetch a media URL that is not a plain https URL: {host or '?'}"
+        )
+    if not any(
+        host == suffix or host.endswith("." + suffix)
+        for suffix in _TRUSTED_MEDIA_HOST_SUFFIXES
+    ):
+        raise ValueError(
+            f"Refusing to fetch media from untrusted host {host!r} (the access token would be sent to it)"
+        )
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
