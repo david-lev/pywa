@@ -148,6 +148,12 @@ TESTS: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
             lambda s: s.sys_type == SystemType.USER_CHANGED_NUMBER,
             lambda s: s.from_user.wa_id == s.old_wa_id,
         ],
+        "user_id_change": [
+            lambda s: s.sys_type == SystemType.USER_CHANGED_USER_ID,
+            lambda s: s.from_user.wa_id is None,
+            lambda s: s.old_wa_id is None,
+            lambda s: s.new_user_id == "MX.2100000000000001",
+        ],
         "identity_change": [
             lambda s: s.sys_type == SystemType.CUSTOMER_IDENTITY_CHANGED,
         ],
