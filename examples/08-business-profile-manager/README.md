@@ -24,8 +24,7 @@ checking phone number health, all from chat commands. No separate admin dashboar
 
 ```bash
 cd examples/08-business-profile-manager
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+uv sync && source .venv/bin/activate
 cp .env.example .env
 # edit .env — set ADMIN_NUMBERS to your own WhatsApp ID!
 ```

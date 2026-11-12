@@ -28,8 +28,7 @@ know exactly what happened to an outbound notification instead of firing it and 
 
 ```bash
 cd examples/03-delivery-tracker
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+uv sync && source .venv/bin/activate
 cp .env.example .env
 # edit .env with your credentials
 ```

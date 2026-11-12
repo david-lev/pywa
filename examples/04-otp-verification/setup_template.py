@@ -44,8 +44,8 @@ auth_template = Template(
 
 async def main():
     wa = WhatsApp(
-        token=os.environ["WHATSAPP_TOKEN"],
-        waba_id=os.environ["WHATSAPP_BUSINESS_ACCOUNT_ID"],
+        token=os.environ["PYWA_TOKEN"],
+        waba_id=os.environ["PYWA_WABA_ID"],
     )
     created = await wa.create_template(auth_template)
     print(

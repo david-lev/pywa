@@ -41,7 +41,7 @@ TREE = {
     "tree": [
         {"path": "examples/examples.json", "type": "blob"},
         {"path": "examples/01-message-router/main.py", "type": "blob"},
-        {"path": "examples/01-message-router/requirements.txt", "type": "blob"},
+        {"path": "examples/01-message-router/pyproject.toml", "type": "blob"},
         {"path": "examples/02-order-bot/main.py", "type": "blob"},
     ],
     "truncated": False,
@@ -49,7 +49,7 @@ TREE = {
 
 RAW_FILES = {
     "examples/01-message-router/main.py": MAIN_PY_SRC,
-    "examples/01-message-router/requirements.txt": "pywa[server]\n",
+    "examples/01-message-router/pyproject.toml": "pywa[server]\n",
 }
 
 
@@ -573,7 +573,7 @@ def test_download_example_async_writes_files_unmodified(mocker, tmp_path):
     )
     dest = tmp_path / "01-message-router"
     assert (dest / "main.py").read_text() == MAIN_PY_SRC
-    assert (dest / "requirements.txt").read_text() == "pywa[server]\n"
+    assert (dest / "pyproject.toml").read_text() == "pywa[server]\n"
 
 
 def test_download_example_sync_converts_python_files(mocker, tmp_path):
@@ -588,7 +588,7 @@ def test_download_example_sync_converts_python_files(mocker, tmp_path):
     assert "async def" not in converted
     assert "await " not in converted
     # non-python files are copied byte-for-byte, never converted
-    assert (dest / "requirements.txt").read_text() == "pywa[server]\n"
+    assert (dest / "pyproject.toml").read_text() == "pywa[server]\n"
 
 
 def test_download_example_only_fetches_files_under_example_prefix(mocker, tmp_path):
@@ -597,7 +597,7 @@ def test_download_example_only_fetches_files_under_example_prefix(mocker, tmp_pa
         name="01-message-router", is_async=True, out_path=tmp_path, ref="master"
     )
     dest = tmp_path / "01-message-router"
-    assert sorted(p.name for p in dest.iterdir()) == ["main.py", "requirements.txt"]
+    assert sorted(p.name for p in dest.iterdir()) == ["main.py", "pyproject.toml"]
 
 
 def test_download_example_respects_custom_out_path(mocker, tmp_path):
@@ -861,19 +861,17 @@ class _NoOpTimer:
 
 
 def _example_env() -> dict[str, str]:
-    """Fake credentials/ids so `WhatsApp(...)` construction succeeds without ever making
-    a real network call, plus values for the handful of extra `os.environ[...]` reads
-    some examples do at import time (`WHATSAPP_BUSINESS_ACCOUNT_ID`, `LOAN_FLOW_ID`)."""
+    """Fake `PYWA_*` credentials so `WhatsApp(...)`
+    construction succeeds without ever making a real network call, plus values for the
+    handful of extra `os.environ[...]` reads some examples do at import time."""
     return {
-        "WHATSAPP_PHONE_ID": "100000000000000",
-        "WHATSAPP_TOKEN": "test-token",
-        "WHATSAPP_APP_ID": "100000000000000",
-        "WHATSAPP_APP_SECRET": "test-app-secret",
-        "WHATSAPP_BUSINESS_ACCOUNT_ID": "100000000000000",
+        "PYWA_PHONE_ID": "100000000000000",
+        "PYWA_TOKEN": "test-token",
+        "PYWA_APP_ID": "100000000000000",
+        "PYWA_APP_SECRET": "test-app-secret",
+        "PYWA_WABA_ID": "100000000000000",
+        "PYWA_FLOW_PRIVATE_KEY": "dummy-private-key-for-import-smoke-test",
         "LOAN_FLOW_ID": "test-flow-id",
-        # Truthy, so examples skip their `if not callback_url: start_ngrok_tunnel(...)`
-        # branch entirely instead of trying to open a real ngrok tunnel.
-        "CALLBACK_URL": "https://example.com/callback",
     }
 
 
@@ -896,11 +894,6 @@ def test_example_main_is_importable(example_main, tmp_path, monkeypatch):
     monkeypatch.syspath_prepend(str(example_dir))
     for key, value in _example_env().items():
         monkeypatch.setenv(key, value)
-
-    # Only 05-loan-application-flow reads this, but it's harmless to set unconditionally.
-    private_key_path = example_dir / "business_private_key.pem"
-    private_key_path.write_text("dummy-private-key-for-import-smoke-test")
-    monkeypatch.setenv("BUSINESS_PRIVATE_KEY_PATH", str(private_key_path))
 
     try:
         runpy.run_path(str(example_dir / "main.py"), run_name="pywa_example_under_test")

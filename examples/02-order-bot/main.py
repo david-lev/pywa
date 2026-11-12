@@ -10,21 +10,14 @@ import os
 import dotenv
 
 from pywa_async import WhatsApp, filters, types
-from pywa_async.utils import start_ngrok_tunnel
 
 dotenv.load_dotenv()
 
-callback_url = os.getenv("CALLBACK_URL")
-if not callback_url:
-    callback_url = start_ngrok_tunnel(auth_token=os.environ["NGROK_AUTH_TOKEN"])
-
 wa = WhatsApp(
-    phone_id=os.environ["WHATSAPP_PHONE_ID"],
-    token=os.environ["WHATSAPP_TOKEN"],
-    app_id=os.environ["WHATSAPP_APP_ID"],
-    app_secret=os.environ["WHATSAPP_APP_SECRET"],
-    callback_url=callback_url,
-    verify_token=os.environ.get("WHATSAPP_VERIFY_TOKEN", "xyzxyz"),
+    phone_id=os.environ["PYWA_PHONE_ID"],
+    token=os.environ["PYWA_TOKEN"],
+    app_id=os.environ.get("PYWA_APP_ID"),
+    app_secret=os.environ["PYWA_APP_SECRET"],
 )
 
 TRACK_ORDER_URL = os.getenv("TRACK_ORDER_URL", "https://example.com/track-order")
@@ -106,7 +99,11 @@ async def show_menu(_: WhatsApp, msg: types.Message):
 @wa.on_callback_selection(filters.startswith("item:"))
 async def show_item(_: WhatsApp, sel: types.CallbackSelection):
     item_id = sel.data.split(":")[1]
-    item = MENU[item_id]
+    if (item := MENU.get(item_id)) is None:
+        await sel.reply(
+            "That item is no longer on the menu — send /menu to see what's new."
+        )
+        return
     caption = f"*{item['name']}* — ${item['price']:.2f}\n{item['desc']}"
     buttons = [
         types.Button(title="➕ Add to cart", callback_data=f"cart:add:{item_id}"),
@@ -121,6 +118,11 @@ async def show_item(_: WhatsApp, sel: types.CallbackSelection):
 @wa.on_callback_button(filters.startswith("cart:add:"))
 async def add_to_cart(_: WhatsApp, clb: types.CallbackButton):
     item_id = clb.data.split(":")[2]
+    if item_id not in MENU:
+        await clb.reply(
+            "That item is no longer on the menu — send /menu to see what's new."
+        )
+        return
     CARTS.setdefault(clb.from_user.bsuid, []).append(item_id)
     await clb.react("✅")
     await clb.reply(

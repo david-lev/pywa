@@ -1,0 +1,9 @@
+[project]
+name = "03-delivery-tracker"
+version = "0.1.0"
+description = "Track sent/delivered/read/failed message statuses and react to callback-button confirmations."
+requires-python = ">=3.10"
+dependencies = [
+    "pywa[server]",
+    "python-dotenv",
+]

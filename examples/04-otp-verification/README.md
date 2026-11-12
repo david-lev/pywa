@@ -28,8 +28,7 @@ copy + a "Copy Code" button) — this is exactly how apps send WhatsApp-based lo
 
 ```bash
 cd examples/04-otp-verification
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+uv sync && source .venv/bin/activate
 cp .env.example .env
 # edit .env with your credentials
 ```

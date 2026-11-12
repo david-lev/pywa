@@ -29,8 +29,7 @@ abusive numbers, and a catch-all fallback — all without a single `if`/`else` c
 
 ```bash
 cd examples/01-message-router
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+uv sync && source .venv/bin/activate
 cp .env.example .env
 # edit .env with your credentials
 ```
@@ -41,9 +40,9 @@ cp .env.example .env
 pywa dev
 ```
 
-`pywa dev` starts a local server with hot-reload and (if `CALLBACK_URL` is empty) opens a
-temporary ngrok tunnel so Meta can reach your webhook. Point your Meta App's webhook to the
-printed URL and subscribe to the `messages` field.
+`pywa dev` starts a local server with hot-reload. Meta must be able to reach your webhook, so expose
+the server with a public HTTPS tunnel (e.g. ngrok or cloudflared), point your Meta App's
+webhook to that URL and subscribe to the `messages` field.
 
 ## Try it
 

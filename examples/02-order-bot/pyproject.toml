@@ -1,0 +1,9 @@
+[project]
+name = "02-order-bot"
+version = "0.1.0"
+description = "Browse a categorized menu and check out with SectionList, Button and URLButton, plus image replies."
+requires-python = ">=3.10"
+dependencies = [
+    "pywa[server]",
+    "python-dotenv",
+]

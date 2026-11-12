@@ -308,22 +308,23 @@ def send_messages(
             ) from e
 
 
-DEFAULT_PROJECT = """from pywa_async import WhatsApp, filters, types, utils
+DEFAULT_PROJECT = """import os
 
-ngrok_url = utils.start_ngrok_tunnel(auth_token="NGROK_AUTH_TOKEN")
+from pywa_async import WhatsApp, filters, types
 
 wa = WhatsApp(
-    token="YOUR_TOKEN",
-    phone_id="YOUR_PHONE_ID",
-    app_id="YOUR_APP_ID",
-    app_secret="YOUR_APP_SECRET",
-    callback_url=ngrok_url,
-    verify_token="xyzxyz",
+    phone_id=os.environ["PYWA_PHONE_ID"],
+    token=os.environ["PYWA_TOKEN"],
+    waba_id=os.environ.get("PYWA_WABA_ID"),
+    app_id=os.environ.get("PYWA_APP_ID"),
+    app_secret=os.environ["PYWA_APP_SECRET"],
 )
+
 
 @wa.on_message(filters.text)
 async def echo_handler(_: WhatsApp, message: types.Message):
     await message.reply(f"You said: {message.text}")
+
 
 # Run in your terminal: pywa dev
 """
@@ -440,9 +441,7 @@ def download_example(
     print(
         f"✅ Downloaded example {name!r} ({'async' if is_async else 'sync'}) to {dest_dir.resolve()}"
     )
-    print(
-        f"   cd {dest_dir} && pip install -r requirements.txt && cp .env.example .env"
-    )
+    print(f"   cd {dest_dir} && uv sync && cp .env.example .env")
 
 
 def main() -> None:

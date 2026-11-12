@@ -20,22 +20,15 @@ from pywa_async.types.templates import (
     TemplateLanguage,
     TemplateStatus,
 )
-from pywa_async.utils import start_ngrok_tunnel
 
 dotenv.load_dotenv()
 
-callback_url = os.getenv("CALLBACK_URL")
-if not callback_url:
-    callback_url = start_ngrok_tunnel(auth_token=os.environ["NGROK_AUTH_TOKEN"])
-
 wa = WhatsApp(
-    phone_id=os.environ["WHATSAPP_PHONE_ID"],
-    token=os.environ["WHATSAPP_TOKEN"],
-    app_id=os.environ["WHATSAPP_APP_ID"],
-    app_secret=os.environ["WHATSAPP_APP_SECRET"],
-    waba_id=os.environ["WHATSAPP_BUSINESS_ACCOUNT_ID"],
-    callback_url=callback_url,
-    verify_token=os.environ.get("WHATSAPP_VERIFY_TOKEN", "xyzxyz"),
+    phone_id=os.environ["PYWA_PHONE_ID"],
+    token=os.environ["PYWA_TOKEN"],
+    app_id=os.environ.get("PYWA_APP_ID"),
+    app_secret=os.environ["PYWA_APP_SECRET"],
+    waba_id=os.environ["PYWA_WABA_ID"],
 )
 
 TEMPLATE_NAME = os.getenv("OTP_TEMPLATE_NAME", "account_verification_code")
@@ -84,9 +77,11 @@ async def send_otp(_: WhatsApp, msg: types.Message):
 @wa.on_template_status_update
 async def on_template_status(_: WhatsApp, update: TemplateStatusUpdate):
     if update.new_status == TemplateStatus.APPROVED:
-        print(f"Template {update.template_id} approved — the bot can now send OTPs!")
+        wa.logger.info(
+            "Template %s approved — the bot can now send OTPs!", update.template_id
+        )
     elif update.new_status == TemplateStatus.REJECTED:
-        print(f"Template {update.template_id} rejected: {update.reason}")
+        wa.logger.warning("Template %s rejected: %s", update.template_id, update.reason)
 
 
 # Run with: pywa dev

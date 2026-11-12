@@ -29,7 +29,7 @@ for loan applications, job applications, sign-ups, or any structured-data collec
 
 - Python 3.10+
 - A Meta App with the WhatsApp product added, and a WhatsApp Business Account (WABA) ID
-- `pip install "pywa[cryptography]"` (bundled in `requirements.txt`) for flow encryption/decryption
+- `pip install "pywa[cryptography]"` (declared in `pyproject.toml`) for flow encryption/decryption
 - A **stable** public HTTPS URL — a static ngrok domain or a real deployment. Flows are registered
   against a fixed endpoint URL, so a URL that changes on every restart will break them.
 
@@ -37,8 +37,7 @@ for loan applications, job applications, sign-ups, or any structured-data collec
 
 ```bash
 cd examples/05-loan-application-flow
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+uv sync && source .venv/bin/activate
 cp .env.example .env
 ```
 
@@ -49,10 +48,8 @@ openssl genrsa -des3 -out private.pem 2048
 openssl rsa -in private.pem -outform PEM -pubout -out public.pem
 ```
 
-Fill in `.env` with your credentials, plus a stable `CALLBACK_URL` (e.g. `pywa dev` will print
-one if you set `NGROK_AUTH_TOKEN` and a static `domain=` — see
-[`start_ngrok_tunnel`](https://pywa.readthedocs.io/en/latest/content/client/overview.html) — or
-use your real domain).
+Fill in `.env` with your credentials, plus a stable `CALLBACK_URL` (your real domain or a static
+tunnel domain), and put the contents of `private.pem` in `PYWA_FLOW_PRIVATE_KEY`.
 
 **One-time step — create the flow:**
 

@@ -1,0 +1,9 @@
+[project]
+name = "06-onboarding-survey"
+version = "0.1.0"
+description = "A linear onboarding survey built with wait_for_reply/wait_for_click/wait_for_selection instead of separate handlers."
+requires-python = ">=3.10"
+dependencies = [
+    "pywa[server]",
+    "python-dotenv",
+]

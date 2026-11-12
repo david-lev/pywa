@@ -1,0 +1,9 @@
+[project]
+name = "11-media-inbox-bot"
+version = "0.1.0"
+description = "Download inbound images/video/audio/documents to disk, and send outbound media straight from a URL."
+requires-python = ">=3.10"
+dependencies = [
+    "pywa[server]",
+    "python-dotenv",
+]

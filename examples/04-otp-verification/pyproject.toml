@@ -1,0 +1,9 @@
+[project]
+name = "04-otp-verification"
+version = "0.1.0"
+description = "Create and send an authentication template with a one-time code, then verify the user's reply."
+requires-python = ">=3.10"
+dependencies = [
+    "pywa[server]",
+    "python-dotenv",
+]

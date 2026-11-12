@@ -27,8 +27,7 @@ them to a cart, and check out — all without leaving WhatsApp.
 
 ```bash
 cd examples/02-order-bot
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+uv sync && source .venv/bin/activate
 cp .env.example .env
 # edit .env with your credentials
 ```

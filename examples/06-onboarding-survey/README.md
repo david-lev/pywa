@@ -37,8 +37,7 @@ worker thread.
 
 ```bash
 cd examples/06-onboarding-survey
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+uv sync && source .venv/bin/activate
 cp .env.example .env
 # edit .env with your credentials
 ```
