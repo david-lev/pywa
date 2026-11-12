@@ -253,7 +253,10 @@ class Server:
         return "Forbidden", 403
 
     def webhook_update_validator(
-        self: "WhatsApp", update: bytes, hmac_header: str | None
+        self: "WhatsApp",
+        update: bytes,
+        hmac_header: str | None,
+        app_secret: str | None = None,
     ) -> tuple[str, int] | None:
         """
         Validate the incoming webhook update signature.
@@ -261,6 +264,7 @@ class Server:
         Args:
             update: The incoming raw update from the webhook (bytes)
             hmac_header: The ``X-Hub-Signature-256`` header (to validate the signature, use ``utils.HUB_SIG`` for the key).
+            app_secret: The app secret to validate with (Override the global ``app_secret``, e.g. for a Flow that belongs to another app).
 
         Returns:
             A tuple of (error_message, status_code) if validation fails, otherwise None.
@@ -275,12 +279,11 @@ class Server:
             )
             return "Unauthorized", 401
 
-        if (
-            not self._app_secret
-        ):  # a custom server never went through `_register_routes`
+        app_secret = app_secret or self._app_secret
+        if not app_secret:  # a custom server never went through `_register_routes`
             raise ValueError(_MISSING_APP_SECRET)
         if not utils.webhook_updates_validator(
-            app_secret=self._app_secret,
+            app_secret=app_secret,
             request_body=update,
             x_hub_signature=hmac_header,
         ):
@@ -677,6 +680,7 @@ class Server:
         acknowledge_errors: bool = True,
         private_key: str | None = None,
         private_key_password: str | None = None,
+        app_secret: str | None = None,
         request_decryptor: utils.FlowRequestDecryptor | None = None,
         response_encryptor: utils.FlowResponseEncryptor | None = None,
     ) -> handlers.FlowRequestCallbackWrapper:
@@ -693,6 +697,7 @@ class Server:
              pywa will acknowledge the error automatically).
             private_key: The private key to use to decrypt the requests (Override the global ``business_private_key``).
             private_key_password: The password to use to decrypt the private key (Override the global ``business_private_key_password``).
+            app_secret: The app secret used to validate the signature of the requests, when the Flow belongs to a different app than the one used to validate webhooks (Override the global ``app_secret``).
             request_decryptor: The function to use to decrypt the requests (Override the global ``flows_request_decryptor``)
             response_encryptor: The function to use to encrypt the responses (Override the global ``flows_response_encryptor``)
 
@@ -706,6 +711,7 @@ class Server:
             acknowledge_errors=acknowledge_errors,
             private_key=private_key,
             private_key_password=private_key_password,
+            app_secret=app_secret,
             request_decryptor=request_decryptor,
             response_encryptor=response_encryptor,
         )

@@ -55,7 +55,10 @@ class Server:
         return super().webhook_challenge_handler(vt=vt, ch=ch)
 
     async def webhook_update_validator(
-        self: "WhatsApp", update: bytes, hmac_header: str | None
+        self: "WhatsApp",
+        update: bytes,
+        hmac_header: str | None,
+        app_secret: str | None = None,
     ) -> tuple[str, int] | None:
         """
         Validate the incoming webhook update signature.
@@ -63,11 +66,14 @@ class Server:
         Args:
             update: The incoming raw update from the webhook (bytes)
             hmac_header: The ``X-Hub-Signature-256`` header (to validate the signature, use ``utils.HUB_SIG`` for the key).
+            app_secret: The app secret to validate with (Override the global ``app_secret``, e.g. for a Flow that belongs to another app).
 
         Returns:
             A tuple of (error_message, status_code) if validation fails, otherwise None.
         """
-        return super().webhook_update_validator(update=update, hmac_header=hmac_header)
+        return super().webhook_update_validator(
+            update=update, hmac_header=hmac_header, app_secret=app_secret
+        )
 
     async def webhook_update_handler(
         self: "WhatsApp", update: bytes, hmac_header: None = None

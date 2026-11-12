@@ -577,6 +577,7 @@ class WhatsApp(Server, _HandlerDecorators, _Listeners):
             acknowledge_errors=handler._acknowledge_errors,
             private_key=handler._private_key,
             private_key_password=handler._private_key_password,
+            app_secret=handler._app_secret,
             request_decryptor=handler._request_decryptor,
             response_encryptor=handler._response_encryptor,
         )

@@ -1293,6 +1293,7 @@ class FlowRequestHandler(_CallbackWrapperDecorators):
          pywa will acknowledge the error automatically).
         private_key: The private key to use to decrypt the requests (Override the global ``business_private_key``).
         private_key_password: The password to use to decrypt the private key (Override the global ``business_private_key_password``).
+        app_secret: The app secret used to validate the signature of the requests, when the Flow belongs to a different app than the one used to validate webhooks (Override the global ``app_secret``).
         request_decryptor: The function to use to decrypt the requests (Override the global ``flows_request_decryptor``)
         response_encryptor: The function to use to encrypt the responses (Override the global ``flows_response_encryptor``)
     """
@@ -1305,6 +1306,7 @@ class FlowRequestHandler(_CallbackWrapperDecorators):
         acknowledge_errors: bool = True,
         private_key: str | None = None,
         private_key_password: str | None = None,
+        app_secret: str | None = None,
         request_decryptor: utils.FlowRequestDecryptor | None = None,
         response_encryptor: utils.FlowResponseEncryptor | None = None,
     ):
@@ -1318,6 +1320,7 @@ class FlowRequestHandler(_CallbackWrapperDecorators):
         self._acknowledge_errors = acknowledge_errors
         self._private_key = private_key
         self._private_key_password = private_key_password
+        self._app_secret = app_secret
         self._request_decryptor = request_decryptor
         self._response_encryptor = response_encryptor
 
@@ -3254,6 +3257,7 @@ class _HandlerDecorators:
         acknowledge_errors: bool = True,
         private_key: str | None = None,
         private_key_password: str | None = None,
+        app_secret: str | None = None,
         request_decryptor: utils.FlowRequestDecryptor | None = None,
         response_encryptor: utils.FlowResponseEncryptor | None = None,
     ) -> Callable[
@@ -3274,6 +3278,7 @@ class _HandlerDecorators:
         acknowledge_errors: bool = True,
         private_key: str | None = None,
         private_key_password: str | None = None,
+        app_secret: str | None = None,
         request_decryptor: utils.FlowRequestDecryptor | None = None,
         response_encryptor: utils.FlowResponseEncryptor | None = None,
     ) -> Callable[
@@ -3288,6 +3293,7 @@ class _HandlerDecorators:
         acknowledge_errors: bool = True,
         private_key: str | None = None,
         private_key_password: str | None = None,
+        app_secret: str | None = None,
         request_decryptor: utils.FlowRequestDecryptor | None = None,
         response_encryptor: utils.FlowResponseEncryptor | None = None,
     ) -> Callable[
@@ -3322,6 +3328,7 @@ class _HandlerDecorators:
              pywa will acknowledge the error automatically).
             private_key: The private key to use to decrypt the requests (Override the global ``business_private_key``).
             private_key_password: The password to use to decrypt the private key (Override the global ``business_private_key_password``).
+            app_secret: The app secret used to validate the signature of the requests, when the Flow belongs to a different app than the one used to validate webhooks (Override the global ``app_secret``).
             request_decryptor: The function to use to decrypt the requests (Override the global ``flows_request_decryptor``)
             response_encryptor: The function to use to encrypt the responses (Override the global ``flows_response_encryptor``)
         """
@@ -3339,6 +3346,7 @@ class _HandlerDecorators:
                 acknowledge_errors=acknowledge_errors,
                 private_key=private_key,
                 private_key_password=private_key_password,
+                app_secret=app_secret,
                 request_decryptor=request_decryptor,
                 response_encryptor=response_encryptor,
             )
@@ -3385,6 +3393,7 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
         acknowledge_errors: bool = True,
         private_key: str | None = None,
         private_key_password: str | None = None,
+        app_secret: str | None = None,
         request_decryptor: utils.FlowRequestDecryptor | None = None,
         response_encryptor: utils.FlowResponseEncryptor | None = None,
     ):
@@ -3399,6 +3408,7 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
         self._acknowledge_errors = acknowledge_errors
         self._private_key = private_key or wa._private_key
         self._private_key_password = private_key_password or wa._private_key_password
+        self._app_secret = app_secret or wa._app_secret
 
         if self._endpoint == wa._webhook_endpoint:
             raise ValueError(

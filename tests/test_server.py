@@ -839,6 +839,42 @@ def test_flow_endpoint_requires_valid_signature():
     assert res.status_code == 400
 
 
+def test_flow_endpoint_uses_its_own_app_secret():
+    import hashlib
+    import hmac
+
+    import flask
+
+    app = flask.Flask(__name__)
+    wa = WhatsApp(
+        phone_id="1",
+        token="t",
+        server=app,
+        verify_token="v",
+        app_secret="webhook-app-secret",
+        business_private_key=private_key,
+        business_private_key_password="123456",
+    )
+
+    @wa.on_flow_request("/flow", app_secret="flow-app-secret")
+    def _(_, req):
+        return req.respond(screen="X", data={})
+
+    client = app.test_client()
+    body = b'{"encrypted_flow_data": "x"}'
+
+    def sign(secret: bytes) -> dict:
+        digest = hmac.new(secret, body, hashlib.sha256).hexdigest()
+        return {"X-Hub-Signature-256": f"sha256={digest}"}
+
+    # signed with the global (webhook) secret: rejected, the flow belongs to another app
+    res = client.post("/flow", data=body, headers=sign(b"webhook-app-secret"))
+    assert res.status_code == 403
+    # signed with the flow's own secret: passes validation (decryption fails afterwards)
+    res = client.post("/flow", data=body, headers=sign(b"flow-app-secret"))
+    assert res.status_code not in (401, 403)
+
+
 _MEDIA_URL = "https://lookaside.fbsbx.com/whatsapp_business/attachments/?mid=1"
 
 
