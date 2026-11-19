@@ -12,6 +12,7 @@ from pywa._logging import (
     describe_request,
     describe_request_kwargs,
     log_api_response,
+    url_host,
 )
 from pywa.api import *
 from pywa.api import (
@@ -456,7 +457,7 @@ class GraphAPIAsync(GraphAPI):
             A context manager containing the response stream.
         """
         _ensure_trusted_media_url(media_url)
-        _logger.debug("Streaming media from %s", media_url)
+        _logger.debug("Streaming media from %s", url_host(media_url))
         return self._session.stream(
             method="GET",
             url=media_url,

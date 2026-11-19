@@ -18,6 +18,7 @@ from ._logging import (
     describe_request_kwargs,
     get_context_logger,
     log_api_response,
+    url_host,
 )
 from .errors import WhatsAppError
 from .utils import _ensure_trusted_media_url
@@ -498,7 +499,7 @@ class GraphAPI:
             A context manager containing the response stream.
         """
         _ensure_trusted_media_url(media_url)
-        _logger.debug("Streaming media from %s", media_url)
+        _logger.debug("Streaming media from %s", url_host(media_url))
         return self._session.stream(
             method="GET",
             url=media_url,

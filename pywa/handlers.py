@@ -3514,6 +3514,15 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
         return bind_update_logger(logger, request_hash, self._endpoint)
 
     @staticmethod
+    def _log_decrypt_failure(log: logging.LoggerAdapter, e: Exception) -> None:
+        log.warning(
+            "Failed to decrypt Flow request (%s). Check that the `business_private_key` (and its password) "
+            "matches the public key uploaded to WhatsApp.",
+            type(e).__name__,
+        )
+        log.debug("Decryption failure details", exc_info=e)
+
+    @staticmethod
     def _describe_request(req: FlowRequest) -> str:
         screen = f" screen={req.screen}" if req.screen else ""
         return f"Flow {req.action.value}{screen}"
@@ -3565,13 +3574,8 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
         try:
             decrypted_request, aes_key, iv = self._decrypt_request(payload)
         # untrusted webhook payload: never crash on malformed/tampered input
-        except Exception as e:
-            log.warning(
-                "Failed to decrypt Flow request (%s). Check that the `business_private_key` (and its password) "
-                "matches the public key uploaded to WhatsApp.",
-                type(e).__name__,
-            )
-            log.debug("Decryption failure details", exc_info=True)
+        except Exception as e:  # noqa: BLE001
+            self._log_decrypt_failure(log, e)
             return "Decryption failed", FlowRequestCannotBeDecrypted.status_code
 
         if not isinstance(decrypted_request, dict):
@@ -3593,7 +3597,11 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
                 data=decrypted_request, raw_encrypted=payload
             )
         except Exception:
-            log.exception("Failed to construct FlowRequest from decrypted data")
+            log.exception(
+                "Failed to construct FlowRequest from decrypted data (action=%s, screen=%s)",
+                decrypted_request.get("action"),
+                decrypted_request.get("screen"),
+            )
             return "pywa: Failed to construct FlowRequest object", 500
 
         log.debug("Parsed %s", self._describe_request(req))
@@ -3613,13 +3621,8 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
         try:
             decrypted_request, aes_key, iv = self._decrypt_request(payload)
         # untrusted webhook payload: never crash on malformed/tampered input
-        except Exception as e:
-            log.warning(
-                "Failed to decrypt Flow request (%s). Check that the `business_private_key` (and its password) "
-                "matches the public key uploaded to WhatsApp.",
-                type(e).__name__,
-            )
-            log.debug("Decryption failure details", exc_info=True)
+        except Exception as e:  # noqa: BLE001
+            self._log_decrypt_failure(log, e)
             return "Decryption failed", FlowRequestCannotBeDecrypted.status_code
 
         if not isinstance(decrypted_request, dict):
@@ -3641,7 +3644,11 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
                 data=decrypted_request, raw_encrypted=payload
             )
         except Exception:
-            log.exception("Failed to construct FlowRequest from decrypted data")
+            log.exception(
+                "Failed to construct FlowRequest from decrypted data (action=%s, screen=%s)",
+                decrypted_request.get("action"),
+                decrypted_request.get("screen"),
+            )
             return "pywa: Failed to construct FlowRequest object", 500
 
         log.debug("Parsed %s", self._describe_request(req))
@@ -3716,10 +3723,12 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
                 iv,
             ), 200
         if not isinstance(res, (FlowResponse, dict)):
-            raise TypeError(
+            msg = (
                 f"Flow endpoint ('{self._endpoint}') callback ('{getattr(callback, '__name__', repr(callback))}') must return a `FlowResponse`"
                 f" or `dict`, not {type(res)}"
             )
+            log.error("%s -> %s", desc, msg)
+            raise TypeError(msg)
         body = res.to_dict() if isinstance(res, FlowResponse) else res
         access.info(
             "%s -> %s -> %s (%.0fms)",
@@ -3788,10 +3797,12 @@ class FlowRequestCallbackWrapper(_CallbackWrapperDecorators):
                 iv,
             ), 200
         if not isinstance(res, (FlowResponse, dict)):
-            raise TypeError(
+            msg = (
                 f"Flow endpoint ('{self._endpoint}') callback ('{getattr(callback, '__name__', repr(callback))}') must return a `FlowResponse`"
                 f" or `dict`, not {type(res)}"
             )
+            log.error("%s -> %s", desc, msg)
+            raise TypeError(msg)
         body = res.to_dict() if isinstance(res, FlowResponse) else res
         access.info(
             "%s -> %s -> %s (%.0fms)",

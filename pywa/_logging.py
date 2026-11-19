@@ -252,6 +252,21 @@ def _is_throttling_code(code: object) -> bool:
     )
 
 
+_ERROR_HINTS: dict[int, str] = {
+    190: "access token is invalid or expired: check `token` (system-user tokens don't expire)",
+    10: "missing permission: the token needs `whatsapp_business_messaging`/`whatsapp_business_management`",
+    200: "missing permission: the token needs `whatsapp_business_messaging`/`whatsapp_business_management`",
+    33: "the object doesn't exist or the token can't access it: check `phone_id`/`waba_id`",
+    131030: "recipient is not in the allowed list: add it in the app dashboard (test numbers only)",
+    131047: "outside the 24-hour customer service window: send a template message instead",
+    131026: "message undeliverable: the recipient may not be on WhatsApp or has not accepted the latest terms",
+}
+
+
+def _error_hint(code: object) -> str | None:
+    return _ERROR_HINTS.get(code) if isinstance(code, int) else None
+
+
 def log_api_response(
     logger: logging.Logger | logging.LoggerAdapter,
     method: str,
@@ -284,11 +299,44 @@ def log_api_response(
             detail = "non-standard error body"
         if status == 429 or _is_throttling_code(err_code):
             detail += " [rate limit hit: slow down and retry later]"
+        elif hint := _error_hint(err_code):
+            detail += f" [{hint}]"
         logger.warning("%s -> %d (%.0fms) %s", what, status, elapsed, detail)
     if logger.isEnabledFor(logging.DEBUG):
         logger.debug("%s response: %s", what, _truncate(response.text, 500))
     if logger.isEnabledFor(TRACE):
         logger.log(TRACE, "%s full response: %s", what, response.text)
+
+
+_logged_once: set[tuple[str, str]] = set()
+
+
+def log_once(
+    logger: logging.Logger | logging.LoggerAdapter,
+    level: int,
+    key: str,
+    msg: str,
+    *args: object,
+) -> None:
+    """Log ``msg`` only the first time ``key`` is seen for this logger in this process."""
+    name = getattr(logger, "name", None) or getattr(
+        getattr(logger, "logger", None), "name", ""
+    )
+    marker = (name, key)
+    if marker in _logged_once:
+        return
+    _logged_once.add(marker)
+    logger.log(level, msg, *args)
+
+
+def url_host(url: str) -> str:
+    """The host of ``url`` (signed media URLs carry tokens in the path/query, so never log them whole)."""
+    from urllib.parse import urlsplit
+
+    try:
+        return urlsplit(url).hostname or "<unknown host>"
+    except ValueError:
+        return "<invalid url>"
 
 
 def format_banner(lines: list[str]) -> str:

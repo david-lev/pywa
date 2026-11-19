@@ -89,6 +89,7 @@ from typing import (
     overload,
 )
 
+from .._logging import log_once
 from ..errors import PywaDeprecationWarning
 
 _T = TypeVar("_T")
@@ -4064,11 +4065,16 @@ _otp_types_to_component: dict[OtpType, type[BaseOTPButton]] = {
 
 
 def _unknown_comp_warning(comp: dict, unknown: str, template_id: str | None) -> None:
-    _logger.warning(
-        "%sUnknown %s (%s). Defaulting to raw dictionary representation. Please update pywa or report this issue.",
+    kind = comp.get("format") or comp.get("type")
+    log_once(
+        _logger,
+        logging.WARNING,
+        f"{unknown}:{kind}",
+        "%sUnknown %s (%s). Defaulting to raw dictionary representation. Please update pywa or report this issue. "
+        "(Logged once per kind; see DEBUG for every occurrence.)",
         f"Template {template_id}: " if template_id else "",
         unknown,
-        comp.get("format") or comp.get("type"),
+        kind,
     )
     _logger.debug("Unknown %s payload: %s", unknown, comp)
 

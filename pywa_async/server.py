@@ -103,7 +103,6 @@ class Server:
 
         update_hash = get_update_hash(update)
         log = bind_update_logger(_logger, update_hash, self._webhook_endpoint)
-        access = bind_update_logger(access_logger, update_hash, self._webhook_endpoint)
         try:
             raw_update = RawUpdate(
                 update, hmac_header=hmac_header, update_hash=update_hash
@@ -126,7 +125,7 @@ class Server:
 
         if self._skip_duplicate_updates:
             if update_hash in self._processed_updates:
-                access.info("Skipped duplicate update")
+                log.debug("Skipped duplicate update")
                 return "ok", 200
 
             self._processed_updates[update_hash] = None
@@ -287,7 +286,11 @@ class Server:
         except StopHandling:
             return True
         except Exception as e:
-            log.exception("Exception while processing listener")
+            log.exception(
+                "Exception while processing listener %r for %s",
+                identifier,
+                describe_update(update),
+            )
             listener.set_exception(e)
 
         return not self._continue_handling
@@ -351,6 +354,11 @@ class Server:
                     raise ValueError("Invalid callback URL scope")
 
             if not res["success"]:
+                _logger.error(
+                    "Callback URL '%s' was not registered (scope=%s): the API returned success=false",
+                    self._callback_url,
+                    self._callback_url_scope.name,
+                )
                 raise RuntimeError("Failed to register callback URL.")
             _logger.info(
                 "Callback URL '%s' registered (scope=%s)",
@@ -358,6 +366,13 @@ class Server:
                 self._callback_url_scope.name,
             )
         except errors.WhatsAppError as e:
+            _logger.error(
+                "Failed to register callback URL '%s' (scope=%s): %s. If you are using a slow/custom server, "
+                "increase `webhook_challenge_delay`.",
+                self._callback_url,
+                self._callback_url_scope.name,
+                e,
+            )
             raise RuntimeError(
                 f"Failed to register callback URL '{self._callback_url}'. if you are using a slow/custom server, you can "
                 "increase the delay using the `webhook_challenge_delay` parameter when initializing the WhatsApp client."

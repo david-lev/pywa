@@ -41,7 +41,7 @@ from typing import (
 
 import httpx
 
-from ._logging import get_context_logger
+from ._logging import get_context_logger, url_host
 from .errors import PywaUnknownEnumMemberWarning, WhatsAppError
 
 if TYPE_CHECKING:
@@ -602,6 +602,7 @@ def media_info_from_response(
     try:
         res.raise_for_status()
     except httpx.HTTPError as e:
+        logger.warning("Media download from %s failed: %s", url_host(url), e)
         raise ValueError(f"An error occurred while downloading from {url}: {e}") from e
     check_declared_size(res.headers, max_size)
     length = get_content_length_from_httpx_response_headers(res.headers)

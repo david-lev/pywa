@@ -101,6 +101,7 @@ from pywa._helpers import (
 from pywa._helpers import timestamp_to_datetime as timestamp_to_datetime
 from pywa._helpers import upload_comps_example as upload_comps_example
 from pywa._helpers import upload_params_media as upload_params_media
+from pywa._logging import url_host
 from pywa.errors import WhatsAppError
 from pywa.types.media import Media
 from pywa.types.templates import (
@@ -186,6 +187,7 @@ async def media_info_from_response(
         )
         body = None if stream else b"".join([c async for c in limited])
     except httpx.HTTPError as e:
+        logger.warning("Media download from %s failed: %s", url_host(url), e)
         raise ValueError(f"An error occurred while downloading from {url}: {e}") from e
     if body is None:
         content = limited
