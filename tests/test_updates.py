@@ -99,6 +99,16 @@ TESTS: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
             lambda s: s.from_user.bsuid is None,
             lambda s: s.from_user.wa_id is not None,
         ],
+        "failed_no_contacts": [
+            lambda s: s.status == MessageStatusType.FAILED,
+            lambda s: s.error is not None,
+            lambda s: s.from_user.wa_id == "972987654321",
+            lambda s: s.from_user.bsuid is None,
+        ],
+        "failed_no_contacts_bsuid": [  # synthetic: `recipient_user_id` is not in a real payload we have seen
+            lambda s: s.error is not None,
+            lambda s: s.from_user.bsuid == "US.13491208655302741918",
+        ],
         "with_tracker": [lambda s: s.tracker is not None],
         "group": [lambda s: s.group_id is not None],
     },

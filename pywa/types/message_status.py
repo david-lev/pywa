@@ -193,6 +193,17 @@ class MessageStatus(BaseUserUpdate, Generic[_CallbackDataT]):
             "statuses"
         ][status_idx]
         error = value.get("errors", status.get("errors", (None,)))[0]
+        if "contacts" in value:
+            contact = value["contacts"][contact_idx]
+        else:
+            # Meta omits `contacts` for `failed` statuses (and `sent` statuses of group messages), so the
+            # recipient is built from the status item. Only `recipient_id` is confirmed by a real payload.
+            contact = {
+                "wa_id": status.get("recipient_id"),
+                "user_id": status.get("recipient_user_id"),
+                "parent_user_id": status.get("recipient_parent_user_id"),
+                "identity_key_hash": status.get("recipient_identity_key_hash"),
+            }
         return cls(
             _client=client,
             raw=update,
@@ -201,9 +212,7 @@ class MessageStatus(BaseUserUpdate, Generic[_CallbackDataT]):
             metadata=Metadata.from_dict(value["metadata"]),
             status=MessageStatusType(status["status"]),
             timestamp=helpers.timestamp_to_datetime(status["timestamp"]),
-            from_user=cls._usr_cls.from_contact(
-                value["contacts"][contact_idx], client=client
-            ),
+            from_user=cls._usr_cls.from_contact(contact, client=client),
             tracker=status.get("biz_opaque_callback_data"),
             conversation=Conversation.from_dict(status["conversation"])
             if "conversation" in status
