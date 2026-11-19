@@ -36,6 +36,7 @@ from typing import (
     NamedTuple,
     Protocol,
     TypedDict,
+    TypeGuard,
     cast,
 )
 
@@ -960,17 +961,28 @@ def group_by_media(
     return list(groups.values())
 
 
+def _is_not_uploaded(
+    comp: TemplateBaseComponent | dict,
+) -> TypeGuard[_BaseMediaHeaderComponent]:
+    """A media header with an example that is waiting to be uploaded (one read back without sample media has none)."""
+    return (
+        isinstance(comp, _BaseMediaHeaderComponent)
+        and comp._handle is None
+        and comp._example is not None
+    )
+
+
 def filter_not_uploaded_comps(
     components: Sequence[TemplateBaseComponent | dict],
 ) -> list[_BaseMediaHeaderComponent]:
     not_uploaded = []
     for comp in components:
-        if isinstance(comp, _BaseMediaHeaderComponent) and comp._handle is None:
+        if _is_not_uploaded(comp):
             not_uploaded.append(comp)
         elif isinstance(comp, Carousel):
             for card in comp.cards:
                 for cc in card.components:
-                    if isinstance(cc, _BaseMediaHeaderComponent) and cc._handle is None:
+                    if _is_not_uploaded(cc):
                         not_uploaded.append(cc)
     return not_uploaded
 

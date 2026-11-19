@@ -1566,6 +1566,8 @@ class _BaseMediaHeaderComponent(BaseHeaderComponent, abc.ABC):
     ):
         """
         Returns the example media for the header component.
+
+        It is ``None`` only for a header read back from WhatsApp without sample media.
         """
         return self._example
 
@@ -1599,6 +1601,17 @@ class _BaseMediaHeaderComponent(BaseHeaderComponent, abc.ABC):
 
     @classmethod
     def from_dict(cls, data: dict) -> _BaseMediaHeaderComponent:
+        if "example" not in data:
+            # WhatsApp does not always return the sample media when a template is read back (e.g. the sample
+            # templates Meta provisions on a new WABA come back as `{"type": "HEADER", "format": "IMAGE"}`).
+            # The public constructor requires an example, so build the component without it. It has nothing
+            # to upload, and `to_dict` reports it if it is submitted. A present but unexpected `example`
+            # still raises, so an actual API change is reported instead of silently parsed.
+            comp = cls.__new__(cls)
+            comp._example = None  # ty: ignore[invalid-assignment]
+            comp._mime_type = None
+            comp._handle = None
+            return comp
         return cls(example=data["example"]["header_handle"][0])
 
     def to_dict(self) -> dict:
