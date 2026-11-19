@@ -1,0 +1,27 @@
+/* Signature colouring: Pygments tags params/types as plain names (.n); give constants and type links colour. */
+.doc-signature .kc,
+.doc-signature .mi,
+.doc-signature .mf { color: var(--md-code-hl-constant-color); }
+.doc-signature .s1, .doc-signature .s2, .doc-signature .sa { color: var(--md-code-hl-string-color); }
+.doc-signature .nf { color: var(--md-code-hl-function-color); }
+.doc-signature .o { color: var(--md-code-hl-operator-color); }
+.doc-signature a.autorefs { color: var(--md-code-hl-special-color); text-decoration-style: dotted; }
+[data-md-color-scheme="slate"] .doc-signature .n { color: #e4b78a; }          /* param names */
+[data-md-color-scheme="default"] .doc-signature .n { color: #8a5a1f; }
+.md-header__button.md-logo img { height: 1.6rem; width: auto; }
+
+/* Richer syntax colours (Material leaves plain names/operators uncoloured) */
+[data-md-color-scheme="slate"] {
+  --pw-name: #9cc7ff; --pw-builtin: #6fd3c4; --pw-op: #ff9ac1; --pw-attr: #7fb2f0; --pw-deco: #f0c674; --pw-num: #f4a261;
+}
+[data-md-color-scheme="default"] {
+  --pw-name: #1d5fa8; --pw-builtin: #0b7f73; --pw-op: #c2255c; --pw-attr: #2b6cb0; --pw-deco: #a86a00; --pw-num: #c25e00;
+}
+.highlight .n, .highlight .nx { color: var(--pw-name); }
+.highlight .nb, .highlight .bp, .highlight .nn { color: var(--pw-builtin); }
+.highlight .o, .highlight .ow { color: var(--pw-op); }
+.highlight .na, .highlight .py { color: var(--pw-attr); }
+.highlight .nd { color: var(--pw-deco); }
+.highlight .mi, .highlight .mf, .highlight .mh, .highlight .kc { color: var(--pw-num); }
+.highlight .p { color: var(--md-code-fg-color); opacity: .75; }
+.highlight .gp { color: var(--md-default-fg-color--light); user-select: none; }

@@ -11,6 +11,7 @@ __all__ = [
 import abc
 import dataclasses
 import datetime
+import enum
 import json
 import pathlib
 import warnings
@@ -222,6 +223,8 @@ class BaseUpdate(abc.ABC, _HandlingFlow):
     The field name of the webhook update
     https://developers.facebook.com/docs/graph-api/webhooks/reference/whatsapp-business-account
     """
+    _log_attr: ClassVar[str | None] = "type"
+    """Name of the enum field that best describes the update in logs (``None`` for no label)."""
     _client: WhatsApp = dataclasses.field(repr=False, hash=False, compare=False)
     """The WhatsApp client that received the update."""
     id: str
@@ -235,6 +238,12 @@ class BaseUpdate(abc.ABC, _HandlingFlow):
     def shared_data(self) -> dict:
         """Shared data for the update. This data is shared between all handlers for the same update."""
         return self.raw.shared_data
+
+    @property
+    def _log_label(self) -> str | None:
+        """Short, PII-free label for logs, e.g. ``image`` for a message or ``failed`` for a status."""
+        value = getattr(self, self._log_attr, None) if self._log_attr else None
+        return str(value.value).lower() if isinstance(value, enum.Enum) else None
 
     @property
     def listener_identifiers(self) -> Iterable[BaseListenerIdentifier] | None:
@@ -1326,7 +1335,7 @@ class BaseUserUpdate(BaseUpdate, _ClientShortcuts, abc.ABC):
         Deprecated. Use ``update.from_user.wa_id`` instead.
         """
         warnings.warn(
-            "Deprecated. Use `update.from_user.wa_id` instead.",
+            "`update.sender` is deprecated, use `update.from_user.wa_id` instead.",
             PywaDeprecationWarning,
             stacklevel=2,
         )
@@ -1338,7 +1347,7 @@ class BaseUserUpdate(BaseUpdate, _ClientShortcuts, abc.ABC):
         Deprecated. Use ``update.metadata.phone_number_id`` instead.
         """
         warnings.warn(
-            "Deprecated. Use `update.metadata.phone_number_id` instead.",
+            "`update.recipient` is deprecated, use `update.metadata.phone_number_id` instead.",
             PywaDeprecationWarning,
             stacklevel=2,
         )

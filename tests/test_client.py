@@ -10,6 +10,7 @@ import pytest
 from pywa import WhatsApp, filters, types, utils
 from pywa import _helpers as helpers
 from pywa._helpers import MediaSource
+from pywa.errors import PywaWarning
 from pywa.types import Contact
 from pywa.types.media import Media
 from pywa.types.sent_update import RecipientType
@@ -52,8 +53,9 @@ def test_api_usage_without_token():
 
 
 def test_warning_when_version_lower_than_min():
-    with pytest.warns(RuntimeWarning):
+    with pytest.warns(PywaWarning) as record:
         WhatsApp(phone_id="123", token="123", api_version="16.0")
+    assert record[0].filename == __file__  # points at the caller, not pywa internals
 
 
 def test_wa_callback_scopes():

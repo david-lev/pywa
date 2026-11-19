@@ -1,0 +1,192 @@
+site_name: Pywa
+site_description: Build WhatsApp Bots in Python • Fast, Effortless, Powerful
+site_url: https://pywa.readthedocs.io/en/latest/
+repo_url: https://github.com/david-lev/pywa
+repo_name: david-lev/pywa
+edit_uri: edit/master/docs-mkdocs/docs/
+docs_dir: docs-mkdocs/docs
+use_directory_urls: true
+copyright: Copyright © David Lev
+theme:
+  name: material
+  logo: _static/pywa-logo.png
+  favicon: _static/favicon.ico
+  palette:
+  - media: '(prefers-color-scheme: light)'
+    scheme: default
+    primary: green
+    accent: teal
+    toggle:
+      icon: material/brightness-7
+      name: Switch to dark mode
+  - media: '(prefers-color-scheme: dark)'
+    scheme: slate
+    primary: green
+    accent: teal
+    toggle:
+      icon: material/brightness-4
+      name: Switch to light mode
+  features:
+  - navigation.instant
+  - navigation.tracking
+  - navigation.sections
+  - navigation.top
+  - navigation.indexes
+  - toc.follow
+  - search.suggest
+  - search.highlight
+  - content.code.copy
+  - content.code.annotate
+  - content.action.edit
+plugins:
+- search
+- mkdocstrings:
+    handlers:
+      python:
+        paths:
+        - .
+        options:
+          docstring_style: google
+          show_source: false
+          show_root_heading: true
+          show_root_full_path: false
+          show_symbol_type_heading: true
+          show_symbol_type_toc: true
+          members_order: source
+          separate_signature: true
+          show_signature_annotations: true
+          signature_crossrefs: true
+          merge_init_into_class: false
+          docstring_section_style: table
+          heading_level: 3
+          inherited_members: false
+          show_if_no_docstring: false
+          extensions:
+          - docs-mkdocs/tools/pywa_griffe_ext.py
+        inventories:
+        - https://docs.python.org/3/objects.inv
+markdown_extensions:
+- admonition
+- attr_list
+- md_in_html
+- tables
+- toc
+- toc:
+    permalink: true
+- pymdownx.details
+- pymdownx.superfences
+- pymdownx.highlight
+- pymdownx.inlinehilite
+- pymdownx.snippets:
+    base_path:
+    - .
+    check_paths: true
+- pymdownx.tabbed
+- pymdownx.emoji
+extra:
+  analytics:
+    provider: google
+    property: G-N8G048V8GB
+  social:
+  - icon: fontawesome/brands/github
+    link: https://github.com/david-lev/pywa
+  - icon: fontawesome/brands/python
+    link: https://pypi.org/project/pywa/
+  - icon: fontawesome/brands/telegram
+    link: https://t.me/py_wa
+extra_css:
+- stylesheets/extra.css
+extra_javascript:
+- javascripts/copy-clean.js
+- javascripts/anchor-aliases.js
+- javascripts/anchor-redirect.js
+nav:
+- Home: index.md
+- ⚙️ Get Started: content/getting-started.md
+- 🔌 Client:
+  - 🔌 Client: content/client/index.md
+  - Client Reference: content/client/client_reference.md
+  - API Reference: content/client/api_reference.md
+- 🎛️ Handlers:
+  - 🎛️ Handlers: content/handlers/index.md
+  - Handler Decorators: content/handlers/handler_decorators.md
+  - Handler Objects: content/handlers/handler_objects.md
+- 📥 Listeners:
+  - 📥 Listeners: content/listeners/index.md
+  - Listeners reference: content/listeners/reference.md
+- 💬 Updates:
+  - 💬 Updates: content/updates/index.md
+  - Message: content/updates/message.md
+  - Callback Button: content/updates/callback_button.md
+  - Callback Selection: content/updates/callback_selection.md
+  - Flow Completion: content/updates/flow_completion.md
+  - Message Status: content/updates/message_status.md
+  - Phone Number Change: content/updates/phone_number_change.md
+  - Identity Change: content/updates/identity_change.md
+  - Call Connect: content/updates/call_connect.md
+  - Call Terminate: content/updates/call_terminate.md
+  - Call Status: content/updates/call_status.md
+  - Call Permission Update: content/updates/call_permission_update.md
+  - User Marketing Preferences: content/updates/user_marketing_preferences.md
+  - Template Status Update: content/updates/template_status_update.md
+  - Template Category Update: content/updates/template_category_update.md
+  - Template Quality Update: content/updates/template_quality_update.md
+  - Template Components Update: content/updates/template_components_update.md
+  - Edited Message: content/updates/edited_message.md
+  - Deleted Message: content/updates/deleted_message.md
+  - Outgoing Message: content/updates/outgoing_message.md
+  - Outgoing Edited Message: content/updates/outgoing_edited_message.md
+  - Outgoing Deleted Message: content/updates/outgoing_deleted_message.md
+  - Account Update: content/updates/account_update.md
+  - Raw Update: content/updates/raw_update.md
+  - Common methods: content/updates/common_methods.md
+- ♻️ Flows:
+  - ♻️ Flows: content/flows/index.md
+  - Flow JSON: content/flows/flow_json.md
+  - Flow Types: content/flows/flow_types.md
+- 📄 Templates:
+  - 📄 Templates: content/templates/index.md
+  - Template Types: content/templates/types.md
+- 🔬 Filters:
+  - 🔬 Filters: content/filters/index.md
+  - Common filters: content/filters/common_filters.md
+  - Message Filters: content/filters/message_filters.md
+  - Message Status Filters: content/filters/message_status_filters.md
+  - Account Update Filters: content/filters/account_update_filters.md
+  - Calls Filters: content/filters/calls_filters.md
+- ⚠️ Errors:
+  - ⚠️ Errors: content/errors/index.md
+  - Sending Messages Errors: content/errors/sending_messages_errors.md
+  - Flows Errors: content/errors/flows_errors.md
+  - Authorization Errors: content/errors/authorization_errors.md
+  - Rate Limit Errors: content/errors/rate_limit_errors.md
+  - Integrity Errors: content/errors/integrity_errors.md
+  - Block Users Errors: content/errors/block_users_errors.md
+  - Calling Errors: content/errors/calling_errors.md
+  - Username Errors: content/errors/username_errors.md
+  - Template Creation Errors: content/errors/template_creation_errors.md
+  - Group Errors: content/errors/group_errors.md
+- ❇️ Types:
+  - ❇️ Types: content/types/index.md
+  - Media: content/types/media.md
+  - Keyboard: content/types/keyboard.md
+  - Others: content/types/others.md
+- 👥 Groups:
+  - 👥 Groups: content/groups/index.md
+  - Groups Types: content/groups/types.md
+- 📞 Calls:
+  - 📞 Calls: content/calls/index.md
+  - Call Types: content/calls/types.md
+- 💡 Examples:
+  - 💡 Examples: content/examples/index.md
+  - Template Examples: content/examples/template.md
+  - Flows Examples: content/examples/flows.md
+  - 🤖 Demo Bots: content/examples/demo-bots.md
+  - Sending Messages: content/examples/message.md
+  - 📲 Sending Interactive Messages: content/examples/interactive.md
+  - Sending Media Messages: content/examples/media.md
+  - Sign Up Flow: content/examples/sign_up_flow.md
+- 💻 Command-Line Interface: content/cli.md
+- changelog: content/changelog.md
+- contributing: content/contributing.md
+- migration: content/migration.md

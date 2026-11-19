@@ -1,0 +1,9 @@
+[project]
+name = "08-business-profile-manager"
+version = "0.1.0"
+description = "Read/update your business profile and commerce settings, and check phone number health, from chat commands."
+requires-python = ">=3.10"
+dependencies = [
+    "pywa[server]",
+    "python-dotenv",
+]

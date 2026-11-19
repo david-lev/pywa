@@ -12,7 +12,6 @@ import dotenv
 from fastapi import FastAPI
 
 from pywa_async import WhatsApp, filters, types
-from pywa_async.utils import start_ngrok_tunnel
 
 dotenv.load_dotenv()
 
@@ -31,19 +30,13 @@ async def health():
     return {"status": "healthy"}
 
 
-callback_url = os.getenv("CALLBACK_URL")
-if not callback_url:
-    callback_url = start_ngrok_tunnel(auth_token=os.environ["NGROK_AUTH_TOKEN"])
-
 wa = WhatsApp(
-    phone_id=os.environ["WHATSAPP_PHONE_ID"],
-    token=os.environ["WHATSAPP_TOKEN"],
-    app_id=os.environ["WHATSAPP_APP_ID"],
-    app_secret=os.environ["WHATSAPP_APP_SECRET"],
+    phone_id=os.environ["PYWA_PHONE_ID"],
+    token=os.environ["PYWA_TOKEN"],
+    app_id=os.environ.get("PYWA_APP_ID"),
+    app_secret=os.environ["PYWA_APP_SECRET"],
     server=app,  # attach to the app above instead of letting pywa create its own
     webhook_endpoint="/webhook/whatsapp",  # avoid clashing with the app's own "/" route
-    callback_url=callback_url,
-    verify_token=os.environ.get("WHATSAPP_VERIFY_TOKEN", "xyzxyz"),
 )
 
 

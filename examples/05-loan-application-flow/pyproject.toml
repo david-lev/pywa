@@ -1,0 +1,9 @@
+[project]
+name = "05-loan-application-flow"
+version = "0.1.0"
+description = "A multi-screen WhatsApp Flow (personal info, loan details, review) with server-side validation."
+requires-python = ">=3.10"
+dependencies = [
+    "pywa[server,cryptography]",
+    "python-dotenv",
+]

@@ -293,16 +293,45 @@ async def test_get_media_url(api, req):
     req.assert_called_once_with(method="GET", endpoint="/m1")
 
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize("bad", ["../me", "1/2", "1?fields=x", "1#x", "", "a b"])
+async def test_media_id_cannot_alter_endpoint(api, req, bad):
+    with pytest.raises(ValueError):
+        await api.get_media_url(media_id=bad)
+    with pytest.raises(ValueError):
+        await api.delete_media(media_id=bad)
+    req.assert_not_called()
+
+
 def test_stream_media_bytes(api, mocker):
     stream_mock = mocker.patch.object(api._session, "stream")
-    api.stream_media_bytes(media_url="https://media/1", timeout=5)
+    api.stream_media_bytes(media_url="https://lookaside.fbsbx.com/1", timeout=5)
     stream_mock.assert_called_once_with(
         method="GET",
-        url="https://media/1",
+        url="https://lookaside.fbsbx.com/1",
         headers=api._session.headers.copy(),
         follow_redirects=True,
         timeout=5,
     )
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "http://lookaside.fbsbx.com/1",
+        "https://attacker.example/leak",
+        "https://lookaside.fbsbx.com.attacker.example/1",
+        "https://user@attacker.example/1",
+        "https://evilfbsbx.com/1",
+        "http://127.0.0.1:8080/",
+        "file:///etc/passwd",
+    ],
+)
+def test_stream_media_bytes_rejects_untrusted_url(api, mocker, url):
+    stream_mock = mocker.patch.object(api._session, "stream")
+    with pytest.raises(ValueError):
+        api.stream_media_bytes(media_url=url)
+    stream_mock.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -962,7 +991,8 @@ async def test_create_upload_session(api, req):
     )
     req.assert_called_once_with(
         method="POST",
-        endpoint="/a1/uploads?file_name=f.png&file_length=10&file_type=image/png",
+        endpoint="/a1/uploads",
+        params={"file_name": "f.png", "file_length": 10, "file_type": "image/png"},
     )
 
 

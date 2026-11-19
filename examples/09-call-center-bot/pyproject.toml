@@ -1,0 +1,9 @@
+[project]
+name = "09-call-center-bot"
+version = "0.1.0"
+description = "Request call permission, initiate/accept calls, and handle the full WhatsApp Calling API lifecycle."
+requires-python = ">=3.10"
+dependencies = [
+    "pywa[server]",
+    "python-dotenv",
+]

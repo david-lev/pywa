@@ -24,8 +24,8 @@ dotenv.load_dotenv()
 
 async def main():
     wa = WhatsApp(
-        token=os.environ["WHATSAPP_TOKEN"],
-        waba_id=os.environ["WHATSAPP_BUSINESS_ACCOUNT_ID"],
+        token=os.environ["PYWA_TOKEN"],
+        waba_id=os.environ["PYWA_WABA_ID"],
     )
 
     # Upload your business public key once (required for encrypted flow data exchange).

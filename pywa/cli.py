@@ -10,7 +10,6 @@ from __future__ import annotations
 import argparse
 import importlib
 import itertools
-import logging
 import os
 import pathlib
 import sys
@@ -20,15 +19,18 @@ from typing import TypedDict
 import httpx
 
 from . import __version__ as pywa_version
-from ._logging import ENV_LOG_LEVEL, format_banner, setup_console_logging
+from ._logging import (
+    ENV_ACCESS_LOG,
+    ENV_LOG_LEVEL,
+    emit_banner,
+    setup_console_logging,
+)
 from .client import WhatsApp
 from .errors import SendMessageError
 
 GITHUB_REPO = "david-lev/pywa"
 GITHUB_API_BASE = "https://api.github.com/repos"
 GITHUB_RAW_BASE = "https://raw.githubusercontent.com"
-
-_logger = logging.getLogger(__name__)
 
 
 class PywaCLIException(Exception):
@@ -197,14 +199,16 @@ def serve_application(
 
     host = uvicorn_kwargs.get("host", "127.0.0.1")
     port = uvicorn_kwargs.get("port", 8000)
-    default_log_level = "debug" if command == "dev" else "info"
-    log_level = uvicorn_kwargs.pop("log_level", None) or default_log_level
+    log_level = uvicorn_kwargs.pop("log_level", None) or "info"
+    access_log = uvicorn_kwargs.pop("access_log", True)
+    http_log = uvicorn_kwargs.pop("http_log", False)
 
     # `--reload`/multi-worker runs spawn a subprocess that re-imports the app fresh, so
     # the env var is what actually reaches the worker; this direct call only styles the
     # parent/reloader process's own logs (e.g. its "watching for changes" messages).
     os.environ[ENV_LOG_LEVEL] = log_level
-    setup_console_logging(log_level)
+    os.environ[ENV_ACCESS_LOG] = "1" if access_log else "0"
+    setup_console_logging(log_level, access_log=access_log)
 
     mode = "development" if command == "dev" else "production"
     banner_lines = [
@@ -213,16 +217,20 @@ def serve_application(
         f"🔍  App Instance: {base_import_string}",
         f"🌐  Server URL:   http://{host}:{port}",
         f"📝  Log Level:    {log_level}",
+        f"🧾  Access Log:   {'on' if access_log else 'off'}",
     ]
+    if http_log:
+        banner_lines.append("🌍  HTTP Log:     on")
     if command == "dev":
         banner_lines.append("⚠️  Auto-reload:  Enabled (Use 'pywa run' for production)")
-    _logger.info(format_banner(banner_lines))
+    emit_banner(banner_lines)
 
     clean_kwargs = {k: v for k, v in uvicorn_kwargs.items() if v is not None}
 
     clean_kwargs["app"] = uvicorn_app_string
     clean_kwargs["factory"] = True
     clean_kwargs["log_config"] = None
+    clean_kwargs["access_log"] = http_log
 
     uvicorn.run(**clean_kwargs)
 
@@ -300,22 +308,23 @@ def send_messages(
             ) from e
 
 
-DEFAULT_PROJECT = """from pywa_async import WhatsApp, filters, types, utils
+DEFAULT_PROJECT = """import os
 
-ngrok_url = utils.start_ngrok_tunnel(auth_token="NGROK_AUTH_TOKEN")
+from pywa_async import WhatsApp, filters, types
 
 wa = WhatsApp(
-    token="YOUR_TOKEN",
-    phone_id="YOUR_PHONE_ID",
-    app_id="YOUR_APP_ID",
-    app_secret="YOUR_APP_SECRET",
-    callback_url=ngrok_url,
-    verify_token="xyzxyz",
+    phone_id=os.environ["PYWA_PHONE_ID"],
+    token=os.environ["PYWA_TOKEN"],
+    waba_id=os.environ.get("PYWA_WABA_ID"),
+    app_id=os.environ.get("PYWA_APP_ID"),
+    app_secret=os.environ["PYWA_APP_SECRET"],
 )
+
 
 @wa.on_message(filters.text)
 async def echo_handler(_: WhatsApp, message: types.Message):
     await message.reply(f"You said: {message.text}")
+
 
 # Run in your terminal: pywa dev
 """
@@ -432,9 +441,7 @@ def download_example(
     print(
         f"✅ Downloaded example {name!r} ({'async' if is_async else 'sync'}) to {dest_dir.resolve()}"
     )
-    print(
-        f"   cd {dest_dir} && pip install -r requirements.txt && cp .env.example .env"
-    )
+    print(f"   cd {dest_dir} && uv sync && cp .env.example .env")
 
 
 def main() -> None:
@@ -495,7 +502,21 @@ def main() -> None:
         "--log-level",
         type=str,
         choices=["critical", "error", "warning", "info", "debug", "trace"],
-        help="Log level. Default: info for `run`, debug for `dev`.",
+        help="Log level. Default: info. `debug` and `trace` may include personal data from your users.",
+    )
+    serve_parser.add_argument(
+        "--access-log",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Enable/Disable pywa's access log: one line per handled update or Flow request "
+        "(e.g. `Message(text) wamid.X -> callback (0.5ms)`). Default: on.",
+    )
+    serve_parser.add_argument(
+        "--http-log",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="Enable/Disable uvicorn's raw HTTP request log (e.g. `POST /webhook 200`), "
+        "including requests that never become updates. Default: off.",
     )
     serve_parser.add_argument("--ssl-keyfile", type=str, help="SSL key file.")
     serve_parser.add_argument(
@@ -539,12 +560,6 @@ def main() -> None:
         type=int,
         help="Close Keep-Alive connections if no new data is received within this timeout (in seconds).",
     )
-    run_parser.add_argument(
-        "--access-log",
-        action=argparse.BooleanOptionalAction,
-        default=False,
-        help="Enable/Disable HTTP access log. Default: False (off) for production runs.",
-    )
 
     # --- DEV PARSER ---
     dev_parser = subparsers.add_parser(
@@ -577,12 +592,6 @@ def main() -> None:
         "--reload-delay",
         type=float,
         help="Delay between previous and next check if application needs to be reloaded.",
-    )
-    dev_parser.add_argument(
-        "--access-log",
-        action=argparse.BooleanOptionalAction,
-        default=True,
-        help="Enable/Disable HTTP access log. Default: True (on) for development runs.",
     )
 
     # ==========================================

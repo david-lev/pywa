@@ -29,8 +29,7 @@ WhatsApp bot is one feature bolted onto an existing product API.
 
 ```bash
 cd examples/12-existing-app-integration
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+uv sync && source .venv/bin/activate
 cp .env.example .env
 # edit .env with your credentials
 ```

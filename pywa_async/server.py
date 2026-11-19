@@ -5,7 +5,16 @@ import time
 import warnings
 from typing import TYPE_CHECKING
 
-from pywa._logging import bind_update_logger, get_update_hash
+from pywa._logging import (
+    TRACE,
+    access_logger,
+    bind_update_logger,
+    compact_repr,
+    describe_raw_update,
+    describe_update,
+    get_update_hash,
+    update_context,
+)
 from pywa.server import _logger, _update_hash_of
 from pywa.types.base_update import BaseUpdate
 
@@ -46,7 +55,10 @@ class Server:
         return super().webhook_challenge_handler(vt=vt, ch=ch)
 
     async def webhook_update_validator(
-        self: "WhatsApp", update: bytes, hmac_header: str | None
+        self: "WhatsApp",
+        update: bytes,
+        hmac_header: str | None,
+        app_secret: str | None = None,
     ) -> tuple[str, int] | None:
         """
         Validate the incoming webhook update signature.
@@ -54,11 +66,14 @@ class Server:
         Args:
             update: The incoming raw update from the webhook (bytes)
             hmac_header: The ``X-Hub-Signature-256`` header (to validate the signature, use ``utils.HUB_SIG`` for the key).
+            app_secret: The app secret to validate with (Override the global ``app_secret``, e.g. for a Flow that belongs to another app).
 
         Returns:
             A tuple of (error_message, status_code) if validation fails, otherwise None.
         """
-        return super().webhook_update_validator(update=update, hmac_header=hmac_header)
+        return super().webhook_update_validator(
+            update=update, hmac_header=hmac_header, app_secret=app_secret
+        )
 
     async def webhook_update_handler(
         self: "WhatsApp", update: bytes, hmac_header: None = None
@@ -92,20 +107,25 @@ class Server:
             raw_update = RawUpdate(
                 update, hmac_header=hmac_header, update_hash=update_hash
             )
-        except (TypeError, ValueError):
-            _logger.warning(
-                "[%s] Rejected a malformed (non-JSON) update body (%d bytes)",
-                self._webhook_endpoint,
+        except (TypeError, ValueError, RecursionError):
+            log.warning(
+                "Rejected a malformed (non-JSON) update body (%d bytes)",
                 len(update) if hasattr(update, "__len__") else -1,
             )
+            if log.isEnabledFor(logging.DEBUG):
+                log.debug("Malformed body preview: %r", bytes(update[:200]))
             return "Bad Request", 400
 
         if log.isEnabledFor(logging.DEBUG):
-            log.debug("Received raw update: %s", raw_update)
+            log.debug(
+                "Received %s (%d bytes)", describe_raw_update(raw_update), len(update)
+            )
+        if log.isEnabledFor(TRACE):
+            log.log(TRACE, "Raw payload: %s", bytes(update).decode(errors="replace"))
 
         if self._skip_duplicate_updates:
             if update_hash in self._processed_updates:
-                log.info("Skipped duplicate update")
+                log.debug("Skipped duplicate update")
                 return "ok", 200
 
             self._processed_updates[update_hash] = None
@@ -113,7 +133,8 @@ class Server:
             if len(self._processed_updates) > MAX_PROCESSED_UPDATES:
                 self._processed_updates.popitem(last=False)
 
-        await self._call_handlers(raw_update)
+        with update_context(update_hash, self._webhook_endpoint):
+            await self._call_handlers(raw_update)
 
         return "ok", 200
 
@@ -122,74 +143,100 @@ class Server:
         log = bind_update_logger(
             _logger, raw_update._update_hash, self._webhook_endpoint
         )
+        access = bind_update_logger(
+            access_logger, raw_update._update_hash, self._webhook_endpoint
+        )
         start = time.perf_counter()
         handler_type: type[Handler] | None = None
+        constructed_update: BaseUpdate | None = None
+        called: list[str] = []
         try:
             try:
                 handler_type = self._get_handler_type(raw_update)
             except (KeyError, ValueError, TypeError, IndexError):
                 log_fn = log.error if self._validate_updates else log.debug
                 log_fn(
-                    "Received unexpected update%s: field=%s waba_id=%s",
+                    "Received unexpected update%s: %s",
                     ""
                     if self._validate_updates
                     else " (Enable `validate_updates` to ignore updates with invalid data)",
-                    raw_update.field,
-                    raw_update.id,
+                    describe_raw_update(raw_update),
                 )
                 handler_type = None
 
             if handler_type is None:
-                log.info("No handler resolved for update (field=%s)", raw_update.field)
+                if log.isEnabledFor(logging.DEBUG):
+                    log.debug(
+                        "No handler type resolved for %s",
+                        describe_raw_update(raw_update),
+                    )
                 return
-            log.debug("Dispatched to %s", handler_type.__name__)
+            log.debug("Resolved handler type %s", handler_type.__name__)
             try:
-                constructed_update: BaseUpdate = self._handlers_to_updates[
+                constructed_update = self._handlers_to_updates[
                     handler_type
                 ].from_update(client=self, update=raw_update)
                 if log.isEnabledFor(logging.DEBUG):
-                    log.debug("Constructed update: %s", constructed_update)
+                    log.debug("Parsed update: %s", compact_repr(constructed_update))
                 if await self._process_listener(constructed_update):
+                    called.append("<listener>")
                     return
-                await self._invoke_callbacks(handler_type, constructed_update)
+                called += await self._invoke_callbacks(handler_type, constructed_update)
             except Exception:
-                log.exception("Failed to construct update (field=%s)", raw_update.field)
+                log.exception(
+                    "Failed to process update (%s)", describe_raw_update(raw_update)
+                )
         finally:
             # Always call raw update handler last
-            await self._call_raw_update_handler(raw_update)
-            log.info(
-                "Finished processing update (handler=%s) in %.2fms",
-                handler_type.__name__ if handler_type else None,
-                (time.perf_counter() - start) * 1000,
+            called += await self._call_raw_update_handler(raw_update)
+            what = (
+                describe_update(constructed_update)
+                if constructed_update is not None
+                else describe_raw_update(raw_update)
             )
+            elapsed = (time.perf_counter() - start) * 1000
+            if called:
+                access.info("%s -> %s (%.1fms)", what, ", ".join(called), elapsed)
+            else:
+                access.info("%s -> no handler matched (%.1fms)", what, elapsed)
 
-    async def _call_raw_update_handler(self: "WhatsApp", update: RawUpdate) -> None:
+    async def _call_raw_update_handler(
+        self: "WhatsApp", update: RawUpdate
+    ) -> list[str]:
         """Invoke the raw update handler."""
-        await self._invoke_callbacks(RawUpdateHandler, update)
+        return await self._invoke_callbacks(RawUpdateHandler, update)
 
     async def _invoke_callbacks(
         self: "WhatsApp", handler_type: type[Handler], update: BaseUpdate | RawUpdate
-    ) -> None:
-        """Process and call registered handlers for the update."""
+    ) -> list[str]:
+        """Process and call registered handlers for the update, returning the called callbacks' names."""
         log = bind_update_logger(
             _logger, _update_hash_of(update), self._webhook_endpoint
         )
+        called: list[str] = []
         for handler in self._handlers[handler_type]:
             callback_name = getattr(
                 handler._callback, "__name__", repr(handler._callback)
             )
             try:
-                log.debug("Checking if handler %s should handle the update", handler)
                 checked_update = await handler.acheck(self, update)
                 if checked_update is None:
+                    log.debug("Filters of '%s' did not match", callback_name)
                     continue
                 log.debug("Calling '%s'", callback_name)
+                called.append(callback_name)
+                call_start = time.perf_counter()
                 await handler._callback(
                     self, checked_update
                 ) if handler._is_async_callback else handler._callback(
                     self, checked_update
                 )
                 handled = True
+                log.debug(
+                    "'%s' finished in %.1fms",
+                    callback_name,
+                    (time.perf_counter() - call_start) * 1000,
+                )
             except StopHandling:
                 log.debug("Stopped further handling after '%s'", callback_name)
                 break
@@ -198,14 +245,14 @@ class Server:
                 continue
             except Exception:
                 handled = True
+                called[-1] = f"{callback_name} (raised)"
                 log.exception(
                     "Error occurred while '%s' was handling the update",
                     callback_name,
                 )
             if handled and not self._continue_handling:
-                log.debug("Stopped further handling after '%s'", callback_name)
                 break
-            log.debug("Continued further handling after '%s'", callback_name)
+        return called
 
     async def _process_listener(self: "WhatsApp", update: BaseUpdate) -> bool:
         """Process and answer a listener if present."""
@@ -220,7 +267,7 @@ class Server:
         for identifier in listener_identifiers:
             listener = self._listeners.get(identifier)
             if listener is not None:
-                log.info("Found matching listener")
+                log.debug("Found matching listener")
                 break
         else:
             return False
@@ -239,7 +286,11 @@ class Server:
         except StopHandling:
             return True
         except Exception as e:
-            log.exception("Exception while processing listener")
+            log.exception(
+                "Exception while processing listener %r for %s",
+                identifier,
+                describe_update(update),
+            )
             listener.set_exception(e)
 
         return not self._continue_handling
@@ -303,11 +354,25 @@ class Server:
                     raise ValueError("Invalid callback URL scope")
 
             if not res["success"]:
+                _logger.error(
+                    "Callback URL '%s' was not registered (scope=%s): the API returned success=false",
+                    self._callback_url,
+                    self._callback_url_scope.name,
+                )
                 raise RuntimeError("Failed to register callback URL.")
             _logger.info(
-                "Callback URL '%s' registered successfully", self._callback_url
+                "Callback URL '%s' registered (scope=%s)",
+                self._callback_url,
+                self._callback_url_scope.name,
             )
         except errors.WhatsAppError as e:
+            _logger.error(
+                "Failed to register callback URL '%s' (scope=%s): %s. If you are using a slow/custom server, "
+                "increase `webhook_challenge_delay`.",
+                self._callback_url,
+                self._callback_url_scope.name,
+                e,
+            )
             raise RuntimeError(
                 f"Failed to register callback URL '{self._callback_url}'. if you are using a slow/custom server, you can "
                 "increase the delay using the `webhook_challenge_delay` parameter when initializing the WhatsApp client."

@@ -6,6 +6,10 @@ from pywa.types import (
     MessageStatusType,
     MessageType,
 )
+from pywa.types.account_update import (
+    CertificationRejectionReason,
+    CertificationStatus,
+)
 from pywa.types.calls import (
     CallDirection,
     CallEvent,
@@ -95,6 +99,16 @@ TESTS: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
             lambda s: s.from_user.bsuid is None,
             lambda s: s.from_user.wa_id is not None,
         ],
+        "failed_no_contacts": [
+            lambda s: s.status == MessageStatusType.FAILED,
+            lambda s: s.error is not None,
+            lambda s: s.from_user.wa_id == "972987654321",
+            lambda s: s.from_user.bsuid is None,
+        ],
+        "failed_no_contacts_bsuid": [  # synthetic: `recipient_user_id` is not in a real payload we have seen
+            lambda s: s.error is not None,
+            lambda s: s.from_user.bsuid == "US.13491208655302741918",
+        ],
         "with_tracker": [lambda s: s.tracker is not None],
         "group": [lambda s: s.group_id is not None],
     },
@@ -144,6 +158,14 @@ TESTS: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
             lambda s: s.sys_type == SystemType.USER_CHANGED_NUMBER,
             lambda s: s.from_user.wa_id == s.old_wa_id,
         ],
+        "user_id_change": [
+            lambda s: s.sys_type == SystemType.USER_CHANGED_USER_ID,
+            lambda s: s.from_user.bsuid == s.new_user_id == "MX.0987654321",
+            lambda s: s.from_user.wa_id is None,
+            lambda s: s.old_wa_id is None,
+            lambda s: s.new_wa_id is None,
+            lambda s: s.old_user_id == "CO.1234567890",
+        ],
         "identity_change": [
             lambda s: s.sys_type == SystemType.CUSTOMER_IDENTITY_CHANGED,
         ],
@@ -191,10 +213,19 @@ TESTS: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
         "partner_added": [],
         "partner_app_installed": [],
         "partner_app_uninstalled": [],
-        "partner_led_business_verification_status": [],
+        "partner_led_business_verification_status": [
+            lambda u: (
+                u.partner_client_certification_info.client_business_id
+                == "2729063490586005"
+                and u.partner_client_certification_info.status
+                == CertificationStatus.APPROVED
+                and u.partner_client_certification_info.rejection_reasons
+                == (CertificationRejectionReason.NONE,)
+            ),
+        ],
         "partner_removed": [],
         "partner_removed_wa_app_disconnection": [],
-        "primary_business_location_set": [],
+        "primary_business_location_set": [lambda u: u.country == "IN"],
         "pricing_tiering_update": [],
         "account_offboarded": [],
         "account_reconnected": [],

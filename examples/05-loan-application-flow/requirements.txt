@@ -1,3 +1,0 @@
-pywa[server,cryptography]
-python-dotenv
-ngrok

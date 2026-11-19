@@ -6,26 +6,22 @@ instead of registering a separate handler for every step of a conversation.
 """
 
 import os
+import re
 
 import dotenv
 
 from pywa_async import WhatsApp, filters, types
-from pywa_async.utils import start_ngrok_tunnel
 
 dotenv.load_dotenv()
 
-callback_url = os.getenv("CALLBACK_URL")
-if not callback_url:
-    callback_url = start_ngrok_tunnel(auth_token=os.environ["NGROK_AUTH_TOKEN"])
-
 wa = WhatsApp(
-    phone_id=os.environ["WHATSAPP_PHONE_ID"],
-    token=os.environ["WHATSAPP_TOKEN"],
-    app_id=os.environ["WHATSAPP_APP_ID"],
-    app_secret=os.environ["WHATSAPP_APP_SECRET"],
-    callback_url=callback_url,
-    verify_token=os.environ.get("WHATSAPP_VERIFY_TOKEN", "xyzxyz"),
+    phone_id=os.environ["PYWA_PHONE_ID"],
+    token=os.environ["PYWA_TOKEN"],
+    app_id=os.environ.get("PYWA_APP_ID"),
+    app_secret=os.environ["PYWA_APP_SECRET"],
 )
+
+EMAIL_RE = re.compile(r"[^@\s]+@[^@\s]+\.[^@\s]+")
 
 # bsuid -> collected answers. Swap for a real database/CRM in production.
 SURVEY_RESPONSES: dict[str, dict] = {}
@@ -89,8 +85,8 @@ async def start_onboarding(_: WhatsApp, msg: types.Message):
             email_reply = await sent.wait_for_reply(
                 filters=filters.text, cancelers=cancel_filter, timeout=120
             )
-            if "@" in email_reply.text and "." in email_reply.text.split("@")[-1]:
-                answers["email"] = email_reply.text
+            if EMAIL_RE.fullmatch(email_reply.text.strip()):
+                answers["email"] = email_reply.text.strip()
                 break
             sent = await email_reply.reply(
                 "That doesn't look like a valid email — try again?"

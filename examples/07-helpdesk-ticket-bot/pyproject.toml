@@ -1,0 +1,9 @@
+[project]
+name = "07-helpdesk-ticket-bot"
+version = "0.1.0"
+description = "Multiple handlers per update type, coordinated with priority, continue_handling and stop_handling()."
+requires-python = ">=3.10"
+dependencies = [
+    "pywa[server]",
+    "python-dotenv",
+]

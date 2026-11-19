@@ -1,0 +1,9 @@
+[project]
+name = "01-message-router"
+version = "0.1.0"
+description = "Route messages with composable filters: FAQ keywords, a /human escalation command, attachment handling, a denylist and a fallback."
+requires-python = ">=3.10"
+dependencies = [
+    "pywa[server]",
+    "python-dotenv",
+]

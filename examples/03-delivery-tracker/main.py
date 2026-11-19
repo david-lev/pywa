@@ -11,21 +11,14 @@ import os
 import dotenv
 
 from pywa_async import WhatsApp, errors, filters, types
-from pywa_async.utils import start_ngrok_tunnel
 
 dotenv.load_dotenv()
 
-callback_url = os.getenv("CALLBACK_URL")
-if not callback_url:
-    callback_url = start_ngrok_tunnel(auth_token=os.environ["NGROK_AUTH_TOKEN"])
-
 wa = WhatsApp(
-    phone_id=os.environ["WHATSAPP_PHONE_ID"],
-    token=os.environ["WHATSAPP_TOKEN"],
-    app_id=os.environ["WHATSAPP_APP_ID"],
-    app_secret=os.environ["WHATSAPP_APP_SECRET"],
-    callback_url=callback_url,
-    verify_token=os.environ.get("WHATSAPP_VERIFY_TOKEN", "xyzxyz"),
+    phone_id=os.environ["PYWA_PHONE_ID"],
+    token=os.environ["PYWA_TOKEN"],
+    app_id=os.environ.get("PYWA_APP_ID"),
+    app_secret=os.environ["PYWA_APP_SECRET"],
 )
 
 # WhatsApp number of a staff member to alert when a notification can't be delivered
@@ -72,7 +65,7 @@ async def on_sent(_: WhatsApp, status: types.MessageStatus):
     order_id = status.tracker
     if order_id in ORDERS:
         ORDERS[order_id]["status"] = "sent"
-        print(f"[{order_id}] left our servers")
+        wa.logger.info("[%s] left our servers", order_id)
 
 
 @wa.on_message_status(filters.delivered)
@@ -80,7 +73,7 @@ async def on_delivered(_: WhatsApp, status: types.MessageStatus):
     order_id = status.tracker
     if order_id in ORDERS:
         ORDERS[order_id]["status"] = "delivered"
-        print(f"[{order_id}] delivered to the customer's device")
+        wa.logger.info("[%s] delivered to the customer's device", order_id)
 
 
 @wa.on_message_status(filters.read)
@@ -88,7 +81,7 @@ async def on_read(_: WhatsApp, status: types.MessageStatus):
     order_id = status.tracker
     if order_id in ORDERS:
         ORDERS[order_id]["status"] = "read"
-        print(f"[{order_id}] read by the customer")
+        wa.logger.info("[%s] read by the customer", order_id)
 
 
 @wa.on_message_status(
@@ -115,7 +108,7 @@ async def on_other_failure(_: WhatsApp, status: types.MessageStatus):
     order_id = status.tracker
     if order_id in ORDERS:
         ORDERS[order_id]["status"] = "failed"
-    print(f"[{order_id}] failed to send: {status.error}")
+    wa.logger.warning("[%s] failed to send: %s", order_id, status.error)
 
 
 @wa.on_callback_button(filters.startswith("order:confirm:"))

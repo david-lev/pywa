@@ -288,6 +288,10 @@ class CallbackButton(BaseUserUpdate, Generic[_CallbackDataT]):
     _txt_fields = ("data",)
     _webhook_field = "messages"
 
+    @property
+    def _log_label(self) -> str:
+        return "quick_reply" if self.type == MessageType.BUTTON else "button"
+
     @classmethod
     def from_update(cls, client: "WhatsApp", update: RawUpdate) -> "CallbackButton":
         msg = (value := (entry := update["entry"][0])["changes"][0]["value"])[
@@ -401,6 +405,7 @@ class CallbackSelection(BaseUserUpdate, Generic[_CallbackDataT]):
 
     _txt_fields = ("data",)
     _webhook_field = "messages"
+    _log_attr = None
 
     @classmethod
     def from_update(cls, client: "WhatsApp", update: RawUpdate) -> "CallbackSelection":

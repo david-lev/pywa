@@ -26,8 +26,7 @@ approving/rejecting join requests, all via chat commands.
 
 ```bash
 cd examples/10-community-group-manager
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+uv sync && source .venv/bin/activate
 cp .env.example .env
 # edit .env — set ADMIN_NUMBERS to your own WhatsApp ID!
 ```

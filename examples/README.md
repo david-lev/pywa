@@ -5,7 +5,7 @@
 > read the code before you run it, and don't treat them as vetted, production-ready software.
 
 Twelve complete, runnable WhatsApp bots — most built around a single core pywa feature. Every
-directory is self-contained: an async `main.py`, a `.env.example`, a `requirements.txt`, and a
+directory is self-contained: an async `main.py`, a `.env.example`, a `pyproject.toml`, and a
 `README.md` with setup/run/try-it instructions.
 
 | # | Bot | Feature focus |
@@ -43,8 +43,7 @@ version — the CLI does the `pywa_async` → `pywa` / `async def` → `def` / `
 
 ```bash
 cd <example-dir>
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+uv sync && source .venv/bin/activate
 cp .env.example .env   # fill in your credentials
 pywa dev
 ```

@@ -1,0 +1,9 @@
+[project]
+name = "12-existing-app-integration"
+version = "0.1.0"
+description = "Attach pywa's webhook to an app you already own instead of letting pywa create and manage its own server."
+requires-python = ">=3.10"
+dependencies = [
+    "pywa[fastapi]",
+    "python-dotenv",
+]
