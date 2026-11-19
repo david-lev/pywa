@@ -404,6 +404,21 @@ def _ensure_trusted_media_url(url: str) -> None:
         )
 
 
+def _safe_media_filename(file_name: Any, media_id: Any) -> str:
+    """
+    Reduce the user-controlled ``file_name`` of a Flow media to a plain file name (no directories), so it can be
+    safely joined to a directory. Falls back to the media ID when nothing usable is left.
+    """
+    name = (
+        str(file_name or "")
+        .replace("\\", "/")
+        .rsplit("/", 1)[-1]
+        .replace("\x00", "")
+        .strip()
+    )
+    return name if name not in ("", ".", "..") else str(media_id)
+
+
 @dataclasses.dataclass(frozen=True, slots=True)
 class FlowRequestDecryptedMedia:
     """
@@ -465,11 +480,17 @@ def flow_request_media_decryptor(
         ValueError: If any of the hash verifications fail.
     """
     _ensure_trusted_media_url(encrypted_media["cdn_url"])
-    res = (dl_session or httpx.Client()).get(encrypted_media["cdn_url"])
+    if dl_session is not None:
+        res = dl_session.get(encrypted_media["cdn_url"])
+    else:
+        with httpx.Client() as session:
+            res = session.get(encrypted_media["cdn_url"])
     res.raise_for_status()
     return FlowRequestDecryptedMedia(
         media_id=encrypted_media["media_id"],
-        filename=encrypted_media["file_name"],
+        filename=_safe_media_filename(
+            encrypted_media["file_name"], encrypted_media["media_id"]
+        ),
         data=_flow_request_media_decryptor(
             res.content, encrypted_media["encryption_metadata"]
         ),

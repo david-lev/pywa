@@ -3,7 +3,11 @@ from typing import Any
 import httpx
 
 from pywa.utils import *
-from pywa.utils import _ensure_trusted_media_url, _flow_request_media_decryptor
+from pywa.utils import (
+    _ensure_trusted_media_url,
+    _flow_request_media_decryptor,
+    _safe_media_filename,
+)
 
 
 async def flow_request_media_decryptor(
@@ -45,11 +49,17 @@ async def flow_request_media_decryptor(
         ValueError: If any of the hash verifications fail.
     """
     _ensure_trusted_media_url(encrypted_media["cdn_url"])
-    res = await (dl_session or httpx.AsyncClient()).get(encrypted_media["cdn_url"])
+    if dl_session is not None:
+        res = await dl_session.get(encrypted_media["cdn_url"])
+    else:
+        async with httpx.AsyncClient() as session:
+            res = await session.get(encrypted_media["cdn_url"])
     res.raise_for_status()
     return FlowRequestDecryptedMedia(
         media_id=encrypted_media["media_id"],
-        filename=encrypted_media["file_name"],
+        filename=_safe_media_filename(
+            encrypted_media["file_name"], encrypted_media["media_id"]
+        ),
         data=_flow_request_media_decryptor(
             res.content, encrypted_media["encryption_metadata"]
         ),
