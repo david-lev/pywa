@@ -61,6 +61,22 @@ class User(_User):
             identity_key_hash=data.get("identity_key_hash"),
         )
 
+    @classmethod
+    def from_status(cls, data: dict, client: WhatsApp) -> User:
+        # Meta omits the `contacts` block for `failed` statuses (and for
+        # `sent` statuses of group messages), so build the user from the
+        # status item itself. `recipient_user_id` is omitted as well when
+        # the message was sent to a phone number, leaving `bsuid` as None.
+        return cls(
+            _client=client,
+            bsuid=data.get("recipient_user_id"),
+            wa_id=data.get("recipient_id") or None,  # avoid empty string
+            name=None,
+            username=None,
+            parent_bsuid=data.get("recipient_parent_user_id"),
+            identity_key_hash=data.get("recipient_identity_key_hash"),
+        )
+
 
 class MessageStatusType(helpers.StrEnum):
     """
@@ -202,7 +218,9 @@ class MessageStatus(BaseUserUpdate, Generic[_CallbackDataT]):
             timestamp=helpers.timestamp_to_datetime(status["timestamp"]),
             from_user=cls._usr_cls.from_contact(
                 value["contacts"][contact_idx], client=client
-            ),
+            )
+            if "contacts" in value
+            else cls._usr_cls.from_status(status, client=client),
             tracker=status.get("biz_opaque_callback_data"),
             conversation=Conversation.from_dict(status["conversation"])
             if "conversation" in status

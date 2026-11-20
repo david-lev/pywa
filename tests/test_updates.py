@@ -95,6 +95,13 @@ TESTS: dict[str, dict[str, list[Callable[[Any], bool]]]] = {
             lambda s: s.from_user.bsuid is None,
             lambda s: s.from_user.wa_id is not None,
         ],
+        "failed_no_contacts": [
+            lambda s: s.status == MessageStatusType.FAILED,
+            lambda s: s.error is not None,
+            lambda s: s.error.code == 131049,
+            lambda s: s.from_user.wa_id == "15550001111",
+            lambda s: s.from_user.bsuid is None,
+        ],
         "with_tracker": [lambda s: s.tracker is not None],
         "group": [lambda s: s.group_id is not None],
     },

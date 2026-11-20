@@ -288,6 +288,45 @@
       }
     ]
   },
+  "failed_no_contacts": {
+    "object": "whatsapp_business_account",
+    "entry": [
+      {
+        "id": "100000000000001",
+        "changes": [
+          {
+            "value": {
+              "messaging_product": "whatsapp",
+              "metadata": {
+                "display_phone_number": "15550000000",
+                "phone_number_id": "100000000000002"
+              },
+              "statuses": [
+                {
+                  "id": "wamid.FAKE0000000000000000000000",
+                  "status": "failed",
+                  "timestamp": "1751142888",
+                  "recipient_id": "15550001111",
+                  "errors": [
+                    {
+                      "code": 131049,
+                      "title": "This message was not delivered to maintain healthy ecosystem engagement.",
+                      "message": "This message was not delivered to maintain healthy ecosystem engagement.",
+                      "error_data": {
+                        "details": "In order to maintain a healthy ecosystem engagement, the message failed to be delivered."
+                      },
+                      "href": "/documentation/business-messaging/whatsapp/support/error-codes"
+                    }
+                  ]
+                }
+              ]
+            },
+            "field": "messages"
+          }
+        ]
+      }
+    ]
+  },
   "with_tracker": {
     "object": "whatsapp_business_account",
     "entry": [
